@@ -62,6 +62,8 @@ ISR(CONTROL_INT_vect)
 {
   uint8_t pin = system_control_get_state();
   if (pin) {
+	//printPgmString(PSTR("pin:"));
+	//printInteger(pin);
     if (bit_istrue(pin,CONTROL_PIN_INDEX_RESET)) {
       mc_reset();
     } else if (bit_istrue(pin,CONTROL_PIN_INDEX_CYCLE_START)) {

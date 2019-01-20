@@ -153,11 +153,17 @@ uint8_t limits_get_state()
     #endif
     if (bit_isfalse(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) { pin ^= LIMIT_MASK; }
     if (pin) {  
-      uint8_t idx;
-      for (idx=0; idx<N_AXIS; idx++) {
-        if (pin & get_limit_pin_mask(idx)) { limit_state |= (1 << idx); }
-      }
-    }
+		  if (pin & (1<<X_LIMIT_BIT)){ limit_state |= (1<<X_AXIS); PORTL &=~(1<<AC_XLIM_MIN_RED);}
+		  else {PORTL |=(1<<AC_XLIM_MIN_RED);}
+		  if (pin & (1<<X_LIM_MAX_BIT)){ limit_state |= (1<< X_AXIS_MAX); PORTL &=~(1<<AC_XLIM_MAX_RED);}
+		  else {PORTL |=(1<<AC_XLIM_MAX_RED);}
+		  if (pin & (1<<Y_LIMIT_BIT)){ limit_state |= (1<<Y_AXIS); PORTL &=~(1<<AC_YLIM_MIN_RED);}
+		  else {PORTL |=(1<<AC_YLIM_MIN_RED);}
+		  if (pin & (1<<Y_LIM_MAX_BIT)){ limit_state |= (1<< Y_AXIS_MAX); PORTL &=~(1<<AC_YLIM_MAX_RED);}
+		  else {PORTL |=(1<<AC_YLIM_MAX_RED);}
+		  if (pin & (1<<Z_LIMIT_BIT)){ limit_state |= (1<<Z_AXIS); PORTL &=~(1<<AC_ZLIM_MAX_RED);}
+		  else {PORTL |=(1<<AC_ZLIM_MAX_RED);}
+    } else {PORTL |=AC_LIM_RED_MASK_XZ;} //PORTB |=AC_LIM_RED_MASK_Y;}
     return(limit_state);
   #endif //DEFAULTS_RAMPS_BOARD
 }
@@ -211,8 +217,11 @@ uint8_t limits_get_state()
         if (!(sys_rt_exec_alarm)) {
           // Check limit pin state. 
           if (limits_get_state()) {
+//ASM Modification to allow limit red LED's to function HARD LIMIT ENABLED check moved to interrupt
+        	if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)){
             mc_reset(); // Initiate system kill.
             system_set_exec_alarm(EXEC_ALARM_HARD_LIMIT); // Indicate hard limit critical event
+        	}
           }
         }  
       }
@@ -451,7 +460,7 @@ void limits_go_home(uint8_t cycle_mask)
                   if (idx==Z_AXIS) { axislock &= ~(step_pin[Z_AXIS]); }
                   else { axislock &= ~(step_pin[A_MOTOR]|step_pin[B_MOTOR]); }
                 #else
-                  axislock &= ~(step_pin[idx]);
+                  axislock &= ~(step_pin[idx]);	//TODO: Add de-acceleration for homing
                 #endif
               }
             }
