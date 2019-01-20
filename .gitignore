@@ -5,3 +5,5 @@
 *.d
 
 README.md
+desktop.ini
+*.bak
