@@ -61,8 +61,8 @@
   #define LIMIT_DDR       DDRB
   #define LIMIT_PORT      PORTB
   #define LIMIT_PIN       PINB
-  #define X_LIM_MAX_BIT   3 // ASMCNC MEGA2560 Digital Pin 50
-  #define Y_LIM_MAX_BIT   2 // ASMCNC MEGA2560 Digital Pin 51
+  #define X_LIM_MAX_BIT   7 // POC1 use 3 ASMCNC MEGA2560 Digital Pin 50
+  #define Y_LIM_MAX_BIT   0 // POC1 use 2 ASMCNC MEGA2560 Digital Pin 51
   #define X_LIMIT_BIT     4 // MEGA2560 Digital Pin 10
   #define Y_LIMIT_BIT     5 // MEGA2560 Digital Pin 11
   #define Z_LIMIT_BIT     6 // MEGA2560 Digital Pin 12
