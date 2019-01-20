@@ -38,9 +38,9 @@
 // Port direction pins
 #define AC_RGB_DDR			DDRE
 // Port bits
-#define AC_RGB_R		4 //Red LED
-#define AC_RGB_G		5 //Green LED
-#define AC_RGB_B		3 //Blue LED
+#define AC_RGB_R		3 //Red LED
+#define AC_RGB_G		4 //Green LED
+#define AC_RGB_B		5 //Blue LED
 
 #define AC_RGB_MASK		((1<<AC_RGB_R)|(1<<AC_RGB_G)|(1<<AC_RGB_B))
 

@@ -54,19 +54,33 @@ uint8_t asmcnc_execute_line(char *line)
     	switch( line[2] ) {
     	case 'R': {
     		switch(line[3]){
-    			case '0' :OCR3B=0x00; break;
-    			case '1' :OCR3B=0x0F; break;
-    			case '2' :OCR3B=0x1F; break;
-    			case '3' :OCR3B=0x2F; break;
-    			case '4' :OCR3B=0x3F; break;
-    			case '5' :OCR3B=0x4F; break;
-    			case '6' :OCR3B=0x5F; break;
-    			case '7' :OCR3B=0x6F; break;
-    			case '8' :OCR3B=0x7F; break;
-    			case '9' :OCR3B=0xFF; break;
+    			case '0' :OCR3A=0x00; break;
+    			case '1' :OCR3A=0x0F; break;
+    			case '2' :OCR3A=0x1F; break;
+    			case '3' :OCR3A=0x2F; break;
+    			case '4' :OCR3A=0x3F; break;
+    			case '5' :OCR3A=0x4F; break;
+    			case '6' :OCR3A=0x5F; break;
+    			case '7' :OCR3A=0x6F; break;
+    			case '8' :OCR3A=0x7F; break;
+    			case '9' :OCR3A=0xFF; break;
     			} break;
     		}
     	case 'G': {
+    		switch(line[3]){
+				case '0' :OCR3B=0x00; break;
+				case '1' :OCR3B=0x0F; break;
+				case '2' :OCR3B=0x1F; break;
+				case '3' :OCR3B=0x2F; break;
+				case '4' :OCR3B=0x3F; break;
+				case '5' :OCR3B=0x4F; break;
+				case '6' :OCR3B=0x5F; break;
+				case '7' :OCR3B=0x6F; break;
+				case '8' :OCR3B=0x7F; break;
+				case '9' :OCR3B=0xFF; break;
+				} break;
+    		}
+    	case 'B': {
     		switch(line[3]){
 				case '0' :OCR3C=0x00; break;
 				case '1' :OCR3C=0x0F; break;
@@ -78,20 +92,6 @@ uint8_t asmcnc_execute_line(char *line)
 				case '7' :OCR3C=0x6F; break;
 				case '8' :OCR3C=0x7F; break;
 				case '9' :OCR3C=0xFF; break;
-				} break;
-    		}
-    	case 'B': {
-    		switch(line[3]){
-				case '0' :OCR3A=0x00; break;
-				case '1' :OCR3A=0x0F; break;
-				case '2' :OCR3A=0x1F; break;
-				case '3' :OCR3A=0x2F; break;
-				case '4' :OCR3A=0x3F; break;
-				case '5' :OCR3A=0x4F; break;
-				case '6' :OCR3A=0x5F; break;
-				case '7' :OCR3A=0x6F; break;
-				case '8' :OCR3A=0x7F; break;
-				case '9' :OCR3A=0xFF; break;
 				} break;
     		}
     	}break;
@@ -120,13 +120,13 @@ void asmcnc_RGB_white(){
 	OCR3B=0xFF; OCR3C=0xFF; OCR3A=0xFF;}
 
 
-void asmcnc_RGB_red(){OCR3B=0xFF; OCR3C=0; OCR3A=0;}
+void asmcnc_RGB_red(){OCR3A=0xFF; OCR3B=0; OCR3C=0;}
 
 void asmcnc_RGB_red_flash(){		 //Configure PWM for long run time to give visable flash
 	TCCR3B |=((1<<CS32)|(1<<WGM33)); //Set timer to 1024 pre-scaler
 	TCCR3A |=(1<<WGM31);
 	TCCR3A &=~(1<<WGM30);
 	ICR3 = 0x2FFF;					//Timer max count
-	OCR3B=0x20F0; OCR3C=0; OCR3A=0; //MOSFET settings
+	OCR3A=0x20F0; OCR3B=0; OCR3C=0; //MOSFET settings
 }
 
