@@ -152,6 +152,8 @@ ISR(SERIAL_RX)
     case CMD_STATUS_REPORT: system_set_exec_state_flag(EXEC_STATUS_REPORT); break; // Set as true
     case CMD_CYCLE_START:   system_set_exec_state_flag(EXEC_CYCLE_START); break; // Set as true
     case CMD_FEED_HOLD:     system_set_exec_state_flag(EXEC_FEED_HOLD); break; // Set as true
+    //ASM Mod to turn off door flashing red LED on sytem cycle start command
+    case CMD_RGB_WHITE:	{asmcnc_RGB_off(); asmcnc_RGB_white();} break;
     default :
       if (data > 0x7F) { // Real-time control characters are extended ACSII only.
         switch(data) {

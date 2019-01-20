@@ -43,6 +43,7 @@ int main(void)
   settings_init(); // Load Grbl settings from EEPROM
   stepper_init();  // Configure stepper pins and interrupt timers
   system_init();   // Configure pinout pins and pin-change interrupt
+  asmcnc_init();	//Configure AMSCNC extra pins Extra limits RED LED's RGB etc.
 
   memset(sys_position,0,sizeof(sys_position)); // Clear machine position.
   sei(); // Enable interrupts
@@ -91,7 +92,7 @@ int main(void)
     coolant_init();
     limits_init();
     probe_init();
-    sleep_init();
+//    sleep_init();
     plan_reset(); // Clear block buffer and planner variables
     st_reset(); // Clear stepper subsystem variables.
 

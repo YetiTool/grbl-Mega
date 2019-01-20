@@ -169,6 +169,8 @@ void report_feedback_message(uint8_t message_code)
 // Welcome message
 void report_init_message()
 {
+//ASM Mod to add ASM mesage to start
+  printPgmString(PSTR("\r\nASM CNC Skava CNC Router [Ver " ASMCNC_VERSION "]"));
   printPgmString(PSTR("\r\nGrbl " GRBL_VERSION " ['$' for help]\r\n"));
 }
 
@@ -361,6 +363,8 @@ void report_build_info(char *line)
   printPgmString(PSTR("[VER:" GRBL_VERSION "." GRBL_VERSION_BUILD ":"));
   printString(line);
   report_util_feedback_line_feed();
+  printPgmString(PSTR("[ASM CNC VER:" ASMCNC_VERSION "." ASMCNC_VERSION_BUILD ":"));
+  report_util_feedback_line_feed();
   printPgmString(PSTR("[OPT:")); // Generate compile-time build option list
   serial_write('V');
   serial_write('N');
@@ -539,12 +543,17 @@ void report_realtime_status()
     uint8_t lim_pin_state = limits_get_state();
     uint8_t ctrl_pin_state = system_control_get_state();
     uint8_t prb_pin_state = probe_get_state();
-    if (lim_pin_state | ctrl_pin_state | prb_pin_state) {
+//ASM Mod to get probe holder state & max limit switch states
+    uint8_t prb_hold_state = !(PINL & AC_PROBE_HOLDER_MASK);
+    if (lim_pin_state | ctrl_pin_state | prb_pin_state | prb_hold_state) {
       printPgmString(PSTR("|Pn:"));
       if (prb_pin_state) { serial_write('P'); }
+      if (prb_hold_state) { serial_write('p'); }
       if (lim_pin_state) {
-        if (bit_istrue(lim_pin_state,bit(X_AXIS))) { serial_write('X'); }
-        if (bit_istrue(lim_pin_state,bit(Y_AXIS))) { serial_write('Y'); }
+        if (bit_istrue(lim_pin_state,bit(X_AXIS))) { serial_write('x'); }
+        if (bit_istrue(lim_pin_state,bit(X_AXIS_MAX))) { serial_write('X'); }
+        if (bit_istrue(lim_pin_state,bit(Y_AXIS))) { serial_write('y'); }
+        if (bit_istrue(lim_pin_state,bit(Y_AXIS_MAX))) { serial_write('Y'); }
         if (bit_istrue(lim_pin_state,bit(Z_AXIS))) { serial_write('Z'); }
       }
       if (ctrl_pin_state) {

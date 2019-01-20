@@ -68,9 +68,12 @@ ISR(CONTROL_INT_vect)
       bit_true(sys_rt_exec_state, EXEC_CYCLE_START);
     } else if (bit_istrue(pin,CONTROL_PIN_INDEX_FEED_HOLD)) {
       bit_true(sys_rt_exec_state, EXEC_FEED_HOLD); 
-    } else if (bit_istrue(pin,CONTROL_PIN_INDEX_SAFETY_DOOR)) {
-      bit_true(sys_rt_exec_state, EXEC_SAFETY_DOOR);
-    } 
+    } else if (bit_istrue(pin,CONTROL_PIN_INDEX_SAFETY_DOOR)){
+    	asmcnc_RGB_red_flash(); // BK: flash RED LED if door is open
+    	bit_true(sys_rt_exec_state, EXEC_SAFETY_DOOR);
+    } else { // BK: stop RED LED if door is closed
+    	asmcnc_RGB_off();
+    }
   }
 }
 
@@ -78,6 +81,9 @@ ISR(CONTROL_INT_vect)
 // Returns if safety door is ajar(T) or closed(F), based on pin state.
 uint8_t system_check_safety_door_ajar()
 {
+//ASM Mod to turn on door red LED on door open & flash RGB red
+	if(system_control_get_state() & CONTROL_PIN_INDEX_SAFETY_DOOR){ PORTL &=~(1<<AC_DOOR_RED); }
+	else { PORTL |=(1<<AC_DOOR_RED);}
     return(system_control_get_state() & CONTROL_PIN_INDEX_SAFETY_DOOR);
 }
 

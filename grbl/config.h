@@ -34,7 +34,8 @@
 // NOTE: OEMs can avoid the need to maintain/update the defaults.h and cpu_map.h files and use only
 // one configuration file by placing their specific defaults and pin map at the bottom of this file.
 // If doing so, simply comment out these two defines and see instructions below.
-#define DEFAULTS_GENERIC
+//#define DEFAULTS_GENERIC
+#define DEFAULTS_ASMCNC
 #define CPU_MAP_2560_INITIAL
 
 // To use with RAMPS 1.4 Board, comment out the above defines and uncomment the next two defines
@@ -56,6 +57,7 @@
 #define CMD_STATUS_REPORT '?'
 #define CMD_CYCLE_START '~'
 #define CMD_FEED_HOLD '!'
+#define CMD_RGB_WHITE '&' //ASM Mod allow control of the RGB LED while in alarm state
 
 // NOTE: All override realtime commands must be in the extended ASCII character set, starting
 // at character value 128 (0x80) and up to 255 (0xFF). If the normal set of realtime commands,
@@ -173,7 +175,7 @@
 // immediately forces a feed hold and then safely de-energizes the machine. Resuming is blocked until
 // the safety door is re-engaged. When it is, Grbl will re-energize the machine and then resume on the
 // previous tool path, as if nothing happened.
-// #define ENABLE_SAFETY_DOOR_INPUT_PIN // Default disabled. Uncomment to enable.
+#define ENABLE_SAFETY_DOOR_INPUT_PIN // Default disabled. Uncomment to enable.
 
 // After the safety door switch has been toggled and restored, this setting sets the power-up delay
 // between restoring the spindle and coolant and resuming the cycle.
@@ -194,7 +196,7 @@
 // NOTE: The top option will mask and invert all control pins. The bottom option is an example of
 // inverting only two control pins, the safety door and reset. See cpu_map.h for other bit definitions.
 // #define INVERT_CONTROL_PIN_MASK CONTROL_MASK // Default disabled. Uncomment to disable.
-// #define INVERT_CONTROL_PIN_MASK ((1<<CONTROL_SAFETY_DOOR_BIT)|(CONTROL_RESET_BIT)) // Default disabled.
+#define INVERT_CONTROL_PIN_MASK (1<<CONTROL_SAFETY_DOOR_BIT) // Default disabled.
 
 // Inverts select limit pin states based on the following mask. This effects all limit pin functions,
 // such as hard limits and homing. However, this is different from overall invert limits setting.
@@ -469,7 +471,7 @@
 // electrical interference on the signal cables from external sources. It's recommended to first
 // use shielded signal cables with their shielding connected to ground (old USB/computer cables 
 // work well and are cheap to find) and wire in a low-pass circuit into each limit pin.
-// #define ENABLE_SOFTWARE_DEBOUNCE // Default disabled. Uncomment to enable.
+ #define ENABLE_SOFTWARE_DEBOUNCE // Default disabled. Uncomment to enable.
 
 // Configures the position after a probing cycle during Grbl's check mode. Disabled sets
 // the position to the probe target, when enabled sets the position to the start position.
@@ -492,8 +494,8 @@
 // uses the homing pull-off distance setting times the LOCATE_SCALAR to pull-off and re-engage
 // the limit switch.
 // NOTE: Both of these values must be greater than 1.0 to ensure proper function.
-// #define HOMING_AXIS_SEARCH_SCALAR  1.5 // Uncomment to override defaults in limits.c.
-// #define HOMING_AXIS_LOCATE_SCALAR  10.0 // Uncomment to override defaults in limits.c.
+// #define HOMING_AXIS_SEARCH_SCALAR  10.5 // Uncomment to override defaults in limits.c.
+// #define HOMING_AXIS_LOCATE_SCALAR  100.0 // Uncomment to override defaults in limits.c.
 
 // Enable the '$RST=*', '$RST=$', and '$RST=#' eeprom restore commands. There are cases where
 // these commands may be undesirable. Simply comment the desired macro to disable it.

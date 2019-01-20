@@ -96,7 +96,13 @@ void protocol_main_loop()
         } else if (line[0] == '$') {
           // Grbl '$' system command
           report_status_message(system_execute_line(line));
-        } else if (sys.state & (STATE_ALARM | STATE_JOG)) {
+        }
+//ASM Mod to read 'A' commands from serial string
+        else if (line[0] == 'A') {
+          // ASMCNC 'A' Commands see AMSCNC for full list
+          report_status_message(asmcnc_execute_line(line));
+        }
+        else if (sys.state & (STATE_ALARM | STATE_JOG)) {
           // Everything else is gcode. Block if in alarm or jog mode.
           report_status_message(STATUS_SYSTEM_GC_LOCK);
         } else {
@@ -275,7 +281,7 @@ void protocol_exec_rt_system()
           }
         }
         // If IDLE, Grbl is not in motion. Simply indicate suspend state and hold is complete.
-        if (sys.state == STATE_IDLE) { sys.suspend = SUSPEND_HOLD_COMPLETE; }
+        if (sys.state == STATE_IDLE) {sys.suspend = SUSPEND_HOLD_COMPLETE; }
 
         // Execute and flag a motion cancel with deceleration and return to idle. Used primarily by probing cycle
         // to halt and cancel the remainder of the motion.
