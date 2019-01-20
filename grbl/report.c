@@ -170,7 +170,7 @@ void report_feedback_message(uint8_t message_code)
 void report_init_message()
 {
 //ASM Mod to add ASM mesage to start
-  printPgmString(PSTR("\r\nASM CNC Skava CNC Router [Ver " ASMCNC_VERSION "]"));
+  printPgmString(PSTR("\r\nSmartBench [Ver " ASMCNC_VERSION "]"));
   printPgmString(PSTR("\r\nGrbl " GRBL_VERSION " ['$' for help]\r\n"));
 }
 
