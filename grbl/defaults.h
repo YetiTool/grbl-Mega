@@ -29,8 +29,8 @@
 
 #ifdef DEFAULTS_ASMCNC
   // Grbl generic default settings. Should work across different machines.
-  #define DEFAULT_X_STEPS_PER_MM 62.954
-  #define DEFAULT_Y_STEPS_PER_MM 68.075
+  #define DEFAULT_X_STEPS_PER_MM 56.680
+  #define DEFAULT_Y_STEPS_PER_MM 56.680
   #define DEFAULT_Z_STEPS_PER_MM 1066.667
   #define DEFAULT_X_MAX_RATE 15000.0 // mm/min
   #define DEFAULT_Y_MAX_RATE 15000.0 // mm/min
@@ -38,13 +38,13 @@
   #define DEFAULT_X_ACCELERATION (200.0*60*60) // 10*60*60 mm/min^2 = 10 mm/sec^2
   #define DEFAULT_Y_ACCELERATION (200.0*60*60) // 10*60*60 mm/min^2 = 10 mm/sec^2
   #define DEFAULT_Z_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 = 10 mm/sec^2
-  #define DEFAULT_X_MAX_TRAVEL 1240.0 // mm NOTE: Must be a positive value.
-  #define DEFAULT_Y_MAX_TRAVEL 2450.0 // mm NOTE: Must be a positive value.
-  #define DEFAULT_Z_MAX_TRAVEL 115.0 // mm NOTE: Must be a positive value.
+  #define DEFAULT_X_MAX_TRAVEL 1250.0 // mm NOTE: Must be a positive value.
+  #define DEFAULT_Y_MAX_TRAVEL 2490.0 // mm NOTE: Must be a positive value.
+  #define DEFAULT_Z_MAX_TRAVEL 150.0 // mm NOTE: Must be a positive value.
   #define DEFAULT_SPINDLE_RPM_MAX 25000.0 // rpm
   #define DEFAULT_SPINDLE_RPM_MIN 0.0 // rpm
   #define DEFAULT_STEP_PULSE_MICROSECONDS 10
-  #define DEFAULT_STEPPING_INVERT_MASK 0
+  #define DEFAULT_STEPPING_INVERT_MASK 4
   #define DEFAULT_DIRECTION_INVERT_MASK 1
   #define DEFAULT_STEPPER_IDLE_LOCK_TIME 255 // msec (0-254, 255 keeps steppers enabled)
   #define DEFAULT_STATUS_REPORT_MASK 3 // MPos enabled
