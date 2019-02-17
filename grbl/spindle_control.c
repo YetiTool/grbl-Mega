@@ -59,9 +59,9 @@ uint8_t spindle_get_state()
 // Called by spindle_init(), spindle_set_speed(), spindle_set_state(), and mc_reset().
 void spindle_stop()
 {
-  //SPINDLE_TCCRA_REGISTER &= ~(1<<SPINDLE_COMB_BIT); // Disable PWM. Output voltage is zero.
-	SPINDLE_OCR_REGISTER = SPINDLE_PWM_MAX_VALUE;		//ASMCNC set PWM to max as output is inverted
-	SPINDLE_TCCRA_REGISTER |= (1<<SPINDLE_COMB_BIT); 	//ASMCNC Ensure PWM output is enabled.
+    SPINDLE_TCCRA_REGISTER &= ~(1<<SPINDLE_COMB_BIT); // Disable PWM. Output voltage is zero.
+	//SPINDLE_OCR_REGISTER = SPINDLE_PWM_MAX_VALUE;		//ASMCNC set PWM to max as output is inverted
+	//SPINDLE_TCCRA_REGISTER |= (1<<SPINDLE_COMB_BIT); 	//ASMCNC Ensure PWM output is enabled.
 
   #ifdef INVERT_SPINDLE_ENABLE_PIN
     SPINDLE_ENABLE_PORT |= (1<<SPINDLE_ENABLE_BIT);  // Set pin to high
@@ -167,8 +167,8 @@ void spindle_set_speed(uint16_t pwm_value)
 	  // Compute intermediate PWM value with linear spindle speed model.
 	  // NOTE: A nonlinear model could be installed here, if required, but keep it VERY light-weight.
 	  sys.spindle_speed = rpm;
-	  // pwm_value = floor((rpm-settings.rpm_min)*pwm_gradient) + SPINDLE_PWM_MIN_VALUE;  (Original code)
-	  pwm_value = SPINDLE_PWM_MAX_VALUE-floor((rpm-settings.rpm_min)*pwm_gradient); //ASMCNC New code to effectively invert the PWM output
+	  pwm_value = floor((rpm-settings.rpm_min)*pwm_gradient) + SPINDLE_PWM_MIN_VALUE; // (Original code)
+	  //pwm_value = SPINDLE_PWM_MAX_VALUE-floor((rpm-settings.rpm_min)*pwm_gradient); //ASMCNC New code to effectively invert the PWM output
 	}
 	return(pwm_value);
   }

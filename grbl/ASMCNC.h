@@ -8,8 +8,8 @@
 #ifndef ASMCNC_h
 #define ASMCNC_h
 
-#define ASMCNC_VERSION			"0.4.0"
-#define ASMCNC_VERSION_BUILD	"20180310"
+#define ASMCNC_VERSION			"0.4.1"
+#define ASMCNC_VERSION_BUILD	"20190217"
 
 #define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
 
@@ -21,11 +21,11 @@
 #define AC_DOOR_DDR			DDRL
 // Port bits
 #define AC_YLIM_MIN_RED		5
-#define AC_YLIM_MAX_RED		6
+#define AC_YLIM_MAX_RED		1
 #define AC_XLIM_MAX_RED		2
 #define AC_XLIM_MIN_RED		4
 #define AC_ZLIM_MAX_RED		0
-#define AC_DOOR_RED			1
+#define AC_DOOR_RED			6
 // Used to add to AXIS number for reporting the correct limit switch
 #define X_AXIS_MAX		4
 #define Y_AXIS_MAX		5

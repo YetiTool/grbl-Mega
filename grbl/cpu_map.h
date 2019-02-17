@@ -58,14 +58,14 @@
 
   // Define homing/hard limit switch input pins and limit interrupt vectors. 
   // NOTE: All limit bit pins must be on the same port
-  #define LIMIT_DDR       DDRB
-  #define LIMIT_PORT      PORTB
-  #define LIMIT_PIN       PINB
-  #define X_LIM_MAX_BIT   7 // POC1 use 3 ASMCNC MEGA2560 Digital Pin 50
-  #define Y_LIM_MAX_BIT   0 // POC1 use 2 ASMCNC MEGA2560 Digital Pin 51
-  #define X_LIMIT_BIT     4 // MEGA2560 Digital Pin 10
-  #define Y_LIMIT_BIT     5 // MEGA2560 Digital Pin 11
-  #define Z_LIMIT_BIT     6 // MEGA2560 Digital Pin 12
+  #define LIMIT_DDR       DDRJ // EMC1 DDRB
+  #define LIMIT_PORT      PORTJ // EMC1 PORTB
+  #define LIMIT_PIN       PINJ // EMC1 PINB
+  #define X_LIM_MAX_BIT   2 // EMC1 PORTB 7 // POC1 use 3 ASMCNC MEGA2560 Digital Pin 50
+  #define Y_LIM_MAX_BIT   4 // EMC1 PORTB 0 // POC1 use 2 ASMCNC MEGA2560 Digital Pin 51
+  #define X_LIMIT_BIT     1 // EMC1 PORTB 4 // MEGA2560 Digital Pin 10
+  #define Y_LIMIT_BIT     3 // EMC1 PORTB 5 // MEGA2560 Digital Pin 11
+  #define Z_LIMIT_BIT     0 // EMC1 PORTB 6 // MEGA2560 Digital Pin 12
   #define LIMIT_INT       PCIE0  // Pin change interrupt enable pin
   #define LIMIT_INT_vect  PCINT0_vect 
   #define LIMIT_PCMSK     PCMSK0 // Pin change interrupt register
