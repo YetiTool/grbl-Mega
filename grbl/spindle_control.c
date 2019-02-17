@@ -76,7 +76,7 @@ void spindle_stop()
 void spindle_set_speed(uint16_t pwm_value)
 {
   SPINDLE_OCR_REGISTER = pwm_value; // Set PWM output level.
-  SPINDLE_TCCRA_REGISTER |= (1<<SPINDLE_COMB_BIT); //ASMCNC ensure PWM output is enabled
+  //SPINDLE_TCCRA_REGISTER |= (1<<SPINDLE_COMB_BIT); //ASMCNC ensure PWM output is enabled
   #ifdef SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED
     if (pwm_value == SPINDLE_PWM_OFF_VALUE) {
       spindle_stop();
@@ -89,11 +89,11 @@ void spindle_set_speed(uint16_t pwm_value)
       #endif
     }
   #else
-/*    if (pwm_value == SPINDLE_PWM_OFF_VALUE) {			//ASMCNC section not required as PWM always enabled
+    if (pwm_value == SPINDLE_PWM_OFF_VALUE) {			//ASMCNC section not required as PWM always enabled
       SPINDLE_TCCRA_REGISTER &= ~(1<<SPINDLE_COMB_BIT); // Disable PWM. Output voltage is zero.
     } else {
       SPINDLE_TCCRA_REGISTER |= (1<<SPINDLE_COMB_BIT); // Ensure PWM output is enabled.
-    }*/
+    }
   #endif
 }
 
@@ -152,16 +152,16 @@ void spindle_set_speed(uint16_t pwm_value)
 	if ((settings.rpm_min >= settings.rpm_max) || (rpm >= settings.rpm_max)) {
 	  // No PWM range possible. Set simple on/off spindle control pin state.
 	  sys.spindle_speed = settings.rpm_max;
-	  //pwm_value = SPINDLE_PWM_MAX_VALUE;
-	  pwm_value = SPINDLE_PWM_MIN_VALUE-1;
+	  pwm_value = SPINDLE_PWM_MAX_VALUE;
+	  //pwm_value = SPINDLE_PWM_MIN_VALUE-1;
 	} else if (rpm <= settings.rpm_min) {
 	  if (rpm == 0.0) { // S0 disables spindle
 		sys.spindle_speed = 0.0;
 		pwm_value = SPINDLE_PWM_OFF_VALUE;
 	  } else { // Set minimum PWM output
 		sys.spindle_speed = settings.rpm_min;
-		//pwm_value = SPINDLE_PWM_MIN_VALUE;
-		pwm_value = SPINDLE_PWM_MAX_VALUE;
+		pwm_value = SPINDLE_PWM_MIN_VALUE;
+		//pwm_value = SPINDLE_PWM_MAX_VALUE;
 	  }
 	} else { 
 	  // Compute intermediate PWM value with linear spindle speed model.
