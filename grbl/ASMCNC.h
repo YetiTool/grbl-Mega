@@ -8,11 +8,16 @@
 #ifndef ASMCNC_h
 #define ASMCNC_h
 
-#define ASMCNC_VERSION			"0.4.1"
-#define ASMCNC_VERSION_BUILD	"20190217"
+#define ASMCNC_VERSION			"0.4.2"
+#define ASMCNC_VERSION_BUILD	"20190317"
 
 #define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
 
+// Z-head PCB has two options for spindle control:
+// 1) FET and resistive divider based filter (non-linear and power hungry)
+// 2) OpAmp based filter (linear)
+// Default assembly version is option 2 (OpAmp based) uncomment INVERT_SPINDLE_PWM if option 1 is used
+//#define INVERT_SPINDLE_PWM
 
 // LIMITS defines
 // Port direction pins

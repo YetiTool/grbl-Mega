@@ -114,7 +114,7 @@
   #ifndef SPINDLE_PWM_MIN_VALUE
     #define SPINDLE_PWM_MIN_VALUE   1   // Must be greater than zero.
   #endif
-  #define SPINDLE_PWM_OFF_VALUE     1024  //ASMCNC Mod was 0 changed due to inverted PWM pin
+  #define SPINDLE_PWM_OFF_VALUE     0
   #define SPINDLE_PWM_RANGE         (SPINDLE_PWM_MAX_VALUE-SPINDLE_PWM_MIN_VALUE)
   #define SPINDLE_TCCRA_REGISTER		TCCR4A
   #define SPINDLE_TCCRB_REGISTER		TCCR4B
