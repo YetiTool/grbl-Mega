@@ -66,9 +66,9 @@
   #define X_LIMIT_BIT     1 // EMC1 PORTB 4 // MEGA2560 Digital Pin 10
   #define Y_LIMIT_BIT     3 // EMC1 PORTB 5 // MEGA2560 Digital Pin 11
   #define Z_LIMIT_BIT     0 // EMC1 PORTB 6 // MEGA2560 Digital Pin 12
-  #define LIMIT_INT       PCIE0  // Pin change interrupt enable pin
-  #define LIMIT_INT_vect  PCINT0_vect 
-  #define LIMIT_PCMSK     PCMSK0 // Pin change interrupt register
+  #define LIMIT_INT       PCIE1  // Pin change interrupt enable pin
+  #define LIMIT_INT_vect  PCINT1_vect
+  #define LIMIT_PCMSK     PCMSK1 // Pin change interrupt register
   #define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<X_LIM_MAX_BIT)|(1<<Y_LIM_MAX_BIT)) // All limit bits
 
   // Define spindle enable and spindle direction output pins.
