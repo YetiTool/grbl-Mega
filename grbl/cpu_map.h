@@ -94,8 +94,10 @@
   #define CONTROL_PORT      PORTK
   #define CONTROL_RESET_BIT         0  // MEGA2560 Analog Pin 8
   #define CONTROL_FEED_HOLD_BIT     1  // MEGA2560 Analog Pin 9
-  #define CONTROL_CYCLE_START_BIT   2  // MEGA2560 Analog Pin 10
+  #define CONTROL_CYCLE_START_BIT   5  // MEGA2560 Analog Pin 13
   #define CONTROL_SAFETY_DOOR_BIT   3  // MEGA2560 Analog Pin 11
+  #define CONTROL_ENCLOSURE_BIT     2  // MEGA2560 Analog Pin 10
+  #define CONTROL_SPARE1_BIT     	4  // MEGA2560 Analog Pin 12
   #define CONTROL_INT       PCIE2  // Pin change interrupt enable pin
   #define CONTROL_INT_vect  PCINT2_vect
   #define CONTROL_PCMSK     PCMSK2 // Pin change interrupt register

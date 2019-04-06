@@ -8,8 +8,8 @@
 #ifndef ASMCNC_h
 #define ASMCNC_h
 
-#define ASMCNC_VERSION			"0.4.2"
-#define ASMCNC_VERSION_BUILD	"20190317"
+#define ASMCNC_VERSION			"0.4.3"
+#define ASMCNC_VERSION_BUILD	"20190406"
 
 #define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
 
@@ -61,6 +61,14 @@
 #define AC_PROBE_HOLDER_DDR	DDRL
 #define AC_PROBE_HOLDER	3
 #define AC_PROBE_HOLDER_MASK	(1<<AC_PROBE_HOLDER)
+//Enclosure (dust shoe cover)
+#define AC_PROBE_ENCLOSURE_DDR	DDRK
+#define AC_PROBE_ENCLOSURE	2
+#define AC_PROBE_ENCLOSURE_MASK	(1<<AC_PROBE_ENCLOSURE)
+//spare control pin
+#define AC_PROBE_SPARE1_DDR	DDRK
+#define AC_PROBE_SPARE1 4
+#define AC_PROBE_SPARE1_MASK	(1<<AC_PROBE_SPARE1)
 
 void asmcnc_init();
 //void asmcnc_TMR3_init();
