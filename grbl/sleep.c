@@ -30,13 +30,13 @@ volatile uint8_t sleep_counter;
 // Initialize sleep counters and enable timer.
 static void sleep_enable() { 
   sleep_counter = 0; // Reset sleep counter
-  TCNT3 = 0;  // Reset timer3 counter register
-  TIMSK3 |= (1<<TOIE3); // Enable timer3 overflow interrupt
+  TCNT5 = 0;  // Reset timer5 counter register
+  TIMSK5 |= (1<<TOIE5); // Enable timer5 overflow interrupt
 } 
 
 
 // Disable sleep timer.
-static void sleep_disable() {  TIMSK3 &= ~(1<<TOIE3); } // Disable timer overflow interrupt
+static void sleep_disable() {  TIMSK5 &= ~(1<<TOIE5); } // Disable timer overflow interrupt
 
 
 // Initialization routine for sleep timer.
@@ -44,20 +44,22 @@ void sleep_init()
 {
   // Configure Timer 3: Sleep Counter Overflow Interrupt
   // NOTE: By using an overflow interrupt, the timer is automatically reloaded upon overflow.
-  TCCR3B = 0; // Normal operation. Overflow.
-  TCCR3A = 0;
-  TCCR3B = (TCCR3B & ~((1<<CS32) | (1<<CS31))) | (1<<CS30); // Stop timer
-  // TCCR3B |= (1<<CS32); // Enable timer with 1/256 prescaler. ~4.4min max with uint8 and 1.05sec/tick
-  // TCCR3B |= (1<<CS31); // Enable timer with 1/8 prescaler. ~8.3sec max with uint8 and 32.7msec/tick
-  TCCR3B |= (1<<CS31)|(1<<CS30); // Enable timer with 1/64 prescaler. ~66.8sec max with uint8 and 0.262sec/tick
-  // TCCR3B |= (1<<CS32)|(1<<CS30); // Enable timer with 1/1024 prescaler. ~17.8min max with uint8 and 4.19sec/tick
+  TCCR5B = 0; // Normal operation. Overflow.
+  TCCR5A = 0;
+  TCCR5B = (TCCR5B & ~((1<<CS52) | (1<<CS51))) | (1<<CS50); // Stop timer
+  // TCCR5B |= (1<<CS52); // Enable timer with 1/256 prescaler. ~4.4min max with uint8 and 1.05sec/tick
+  // TCCR5B |= (1<<CS51); // Enable timer with 1/8 prescaler. ~8.3sec max with uint8 and 32.7msec/tick
+  TCCR5B |= (1<<CS51)|(1<<CS50); // Enable timer with 1/64 prescaler. ~66.8sec max with uint8 and 0.262sec/tick
+  // TCCR5B |= (1<<CS52)|(1<<CS50); // Enable timer with 1/1024 prescaler. ~17.8min max with uint8 and 4.19sec/tick
   sleep_disable();
 }
 
 
 // Increment sleep counter with each timer overflow.
-ISR(TIMER3_OVF_vect) { sleep_counter++; }
+ISR(TIMER5_OVF_vect) { sleep_counter++; }
 
+//    /* BK debug sleep feature */
+//uint8_t temp = 0;
 
 // Starts sleep timer if running conditions are satified. When elaped, sleep mode is executed.
 static void sleep_execute()
@@ -75,6 +77,11 @@ static void sleep_execute()
       sleep_disable();  
       return;
     }
+//    /* BK debug sleep feature */
+//    if (temp!=sleep_counter){
+//    	temp=sleep_counter;
+//    	printInteger(sleep_counter);
+//    }
   } while(sleep_counter <= SLEEP_COUNT_MAX);
   
   // If reached, sleep counter has expired. Execute sleep procedures.

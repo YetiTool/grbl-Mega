@@ -563,7 +563,7 @@
 // NOTE: Still a work-in-progress. Machine coordinates must be in all negative space and
 // does not work with HOMING_FORCE_SET_ORIGIN enabled. Parking motion also moves only in
 // positive direction.
-// #define PARKING_ENABLE  // Default disabled. Uncomment to enable
+#define PARKING_ENABLE  // Default disabled. Uncomment to enable
 
 // Configure options for the parking motion, if enabled.
 #define PARKING_AXIS Z_AXIS // Define which axis that performs the parking motion
@@ -591,7 +591,7 @@
 // well. While in sleep mode, only a hard/soft reset will exit it and the job will be unrecoverable.
 // NOTE: Sleep mode is a safety feature, primarily to address communication disconnect problems. To 
 // keep Grbl from sleeping, employ a stream of '?' status report commands as a connection "heartbeat".
-// #define SLEEP_ENABLE  // Default disabled. Uncomment to enable.
+#define SLEEP_ENABLE  // Default disabled. Uncomment to enable.
 #define SLEEP_DURATION 5.0 // Float (0.25 - 61.0) seconds before sleep mode is executed.
 
 // This option will automatically disable the laser during a feed hold by invoking a spindle stop
