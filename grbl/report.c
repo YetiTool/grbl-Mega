@@ -551,8 +551,8 @@ void report_realtime_status()
       printPgmString(PSTR("|Pn:"));
       if (prb_pin_state) { serial_write('P'); }
       if (prb_hold_state) { serial_write('p'); }
-      if (enclosure_state) { serial_write('W'); }
-      if (spare1_state) { serial_write('w'); }
+      if (enclosure_state) { serial_write('G'); }
+      if (spare1_state) { serial_write('g'); }
       if (lim_pin_state) {
         if (bit_istrue(lim_pin_state,bit(X_AXIS))) { serial_write('x'); }
         if (bit_istrue(lim_pin_state,bit(X_AXIS_MAX))) { serial_write('X'); }
