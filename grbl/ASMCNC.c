@@ -26,82 +26,138 @@ void asmcnc_init()
 	TCCR3A =0;	//Clear timer3 registers
 	TCCR3B =0;
 	TCCR3C =0;
-	TCCR3A |=((1<<COM3C1)|(1<<COM3B1)|(1<<COM3A1)|(1<<WGM30)|(1<<WGM31)); //Setup PWM
-	TCCR3B |=(1<<CS30);
-
-		TCCR3B &=~(1<<CS32);
-		TCCR3B &=~(1<<WGM33);
-		TCCR3A &=~(1<<WGM31);
-
-
-
+	TCCR3A |=((1<<COM3C1)|(1<<COM3B1)|(1<<COM3A1)|(1<<WGM30)); 	/* Setup PWM, Phase Correct, 8-bit, non-inverted output for channels A, B and C */
+	TCCR3B |=(1<<CS31); 										/* prescaling = 8 to ensure 256 shades of grey */
 
 	TCNT3=0; //Zero timer 3
 	OCR3A = 0; OCR3B = 0; OCR3C = 0;	//Turn off all LED's
 
-
 }
 
+/* convert hex char to int */
+uint8_t char2int(char input)
+{
+  if(input >= '0' && input <= '9')
+    return input - '0';
+  if(input >= 'A' && input <= 'F')
+    return input - 'A' + 10;
+  if(input >= 'a' && input <= 'f')
+    return input - 'a' + 10;
+  return 0;
+}
+
+/* This function assumes src to be a zero terminated sanitized string with
+* an even number of [0-9a-f] characters, and target to be sufficiently large */
+void hex2bin(const char* src, uint8_t* target)
+{
+	uint32_t byte_count;
+	for (byte_count = 0; byte_count<3; byte_count++){
+		if (!(*src && src[1])) return; /* null terminated will make this false as left side will be 0 and function will return*/
+		*(target++) = char2int(*src)*16 + char2int(src[1]);
+		src += 2;
+	}
+}
 
 
 uint8_t asmcnc_execute_line(char *line)
 {
-  switch( line[1] ) {
-    case 'L': {			//RGD LED PWM values 1=off 255=full on
-    	if (line[2] == '0') {asmcnc_RGB_off(); break;} //"0" = all off
-    	if ((line[2] != 'R') && (line[2] != 'G') && (line[2] != 'B')) { return(ASMCNC_STATUS_INVALID_STATEMENT); }
-    	if ((line[3]<0x30)|(line[3]>0x39)){ return(ASMCNC_STATUS_INVALID_STATEMENT); }
-    	switch( line[2] ) {
-    	case 'R': {
-    		switch(line[3]){
-    			case '0' :OCR3A=0x00; break;
-    			case '1' :OCR3A=0x0F; break;
-    			case '2' :OCR3A=0x1F; break;
-    			case '3' :OCR3A=0x2F; break;
-    			case '4' :OCR3A=0x3F; break;
-    			case '5' :OCR3A=0x4F; break;
-    			case '6' :OCR3A=0x5F; break;
-    			case '7' :OCR3A=0x6F; break;
-    			case '8' :OCR3A=0x7F; break;
-    			case '9' :OCR3A=0xFF; break;
-    			} break;
-    		}
-    	case 'G': {
-    		switch(line[3]){
-				case '0' :OCR3B=0x00; break;
-				case '1' :OCR3B=0x0F; break;
-				case '2' :OCR3B=0x1F; break;
-				case '3' :OCR3B=0x2F; break;
-				case '4' :OCR3B=0x3F; break;
-				case '5' :OCR3B=0x4F; break;
-				case '6' :OCR3B=0x5F; break;
-				case '7' :OCR3B=0x6F; break;
-				case '8' :OCR3B=0x7F; break;
-				case '9' :OCR3B=0xFF; break;
-				} break;
-    		}
-    	case 'B': {
-    		switch(line[3]){
-				case '0' :OCR3C=0x00; break;
-				case '1' :OCR3C=0x0F; break;
-				case '2' :OCR3C=0x1F; break;
-				case '3' :OCR3C=0x2F; break;
-				case '4' :OCR3C=0x3F; break;
-				case '5' :OCR3C=0x4F; break;
-				case '6' :OCR3C=0x5F; break;
-				case '7' :OCR3C=0x6F; break;
-				case '8' :OCR3C=0x7F; break;
-				case '9' :OCR3C=0xFF; break;
-				} break;
-    		}
-    	}break;
-    case 'E': PORTG |=(1<<AC_EXTRACTOR); break; //Extraction on
-    case 'F': PORTG &=~(1<<AC_EXTRACTOR); break; //Extraction off
-    case 'W': PORTG |=(1<<AC_LIGHT); break; //Light on
-    case 'X': PORTG &=~(1<<AC_LIGHT); break; //Light off
-    }
-    default: return(ASMCNC_STATUS_INVALID_STATEMENT); break;
-  }
+  switch( line[0] ) {
+	case '*': {     /* YETI custom realtime commands that does not generate "ok" response */
+	  switch( line[1] ) {
+		case 'L': {			//RGB HEX Codes, see https://htmlcolorcodes.com/
+			uint8_t buffer[3] = {0}; /* buffer to hold output int values */
+			hex2bin(&line[2], buffer); /* convert hex string to numbers , for example: HEX #FFC133 -> RGB 255, 193, 51  */
+			/* decoded RGB values:
+			 * R = buffer [0]
+			 * G = buffer [1]
+			 * B = buffer [2]
+			 * */
+			OCR3A=buffer[0]; /* R */
+			OCR3B=buffer[1]; /* G */
+			OCR3C=buffer[2]; /* B */
+			/* debug prints */
+//			printPgmString(PSTR("R:"));
+//			printInteger(buffer[0]);
+//			printPgmString(PSTR("G:"));
+//			printInteger(buffer[1]);
+//			printPgmString(PSTR("B:"));
+//			printInteger(buffer[2]);
+
+		} break; //case 'L': {			//RGB HEX Codes, see https://htmlcolorcodes.com/
+
+		default:
+			return(ASMCNC_STATUS_INVALID_STATEMENT);
+		break;
+	  }
+	} break; //case '*':
+
+    case 'A': {     /* YETI custom non-realtime commands, they do generate "ok" response */
+	  switch( line[1] ) {
+		case 'L': {			//RGD LED PWM values 1=off 255=full on
+			if (line[2] == '0') {asmcnc_RGB_off(); break;} //"0" = all off
+			if ((line[2] != 'R') && (line[2] != 'G') && (line[2] != 'B')) { return(ASMCNC_STATUS_INVALID_STATEMENT); }
+			if ((line[3]<0x30)|(line[3]>0x39)){ return(ASMCNC_STATUS_INVALID_STATEMENT); }
+			switch( line[2] ) {
+			case 'R': {
+				switch(line[3]){
+					case '0' :OCR3A=0x00; break;
+					case '1' :OCR3A=0x0F; break;
+					case '2' :OCR3A=0x1F; break;
+					case '3' :OCR3A=0x2F; break;
+					case '4' :OCR3A=0x3F; break;
+					case '5' :OCR3A=0x4F; break;
+					case '6' :OCR3A=0x5F; break;
+					case '7' :OCR3A=0x6F; break;
+					case '8' :OCR3A=0x7F; break;
+					case '9' :OCR3A=0xFF; break;
+					} break;
+				}
+			case 'G': {
+				switch(line[3]){
+					case '0' :OCR3B=0x00; break;
+					case '1' :OCR3B=0x0F; break;
+					case '2' :OCR3B=0x1F; break;
+					case '3' :OCR3B=0x2F; break;
+					case '4' :OCR3B=0x3F; break;
+					case '5' :OCR3B=0x4F; break;
+					case '6' :OCR3B=0x5F; break;
+					case '7' :OCR3B=0x6F; break;
+					case '8' :OCR3B=0x7F; break;
+					case '9' :OCR3B=0xFF; break;
+					} break;
+				}
+			case 'B': {
+				switch(line[3]){
+					case '0' :OCR3C=0x00; break;
+					case '1' :OCR3C=0x0F; break;
+					case '2' :OCR3C=0x1F; break;
+					case '3' :OCR3C=0x2F; break;
+					case '4' :OCR3C=0x3F; break;
+					case '5' :OCR3C=0x4F; break;
+					case '6' :OCR3C=0x5F; break;
+					case '7' :OCR3C=0x6F; break;
+					case '8' :OCR3C=0x7F; break;
+					case '9' :OCR3C=0xFF; break;
+					} break;
+				}
+			}break;
+		case 'E': PORTG |=(1<<AC_EXTRACTOR); break; //Extraction on
+		case 'F': PORTG &=~(1<<AC_EXTRACTOR); break; //Extraction off
+		case 'W': PORTG |=(1<<AC_LIGHT); break; //Light on
+		case 'X': PORTG &=~(1<<AC_LIGHT); break; //Light off
+		}
+		default:
+			return(ASMCNC_STATUS_INVALID_STATEMENT);
+		break;
+	  }
+    }break; //case 'A'
+
+    default:
+    	return(ASMCNC_STATUS_INVALID_STATEMENT);
+	break;
+
+  } //switch( line[0] )
+
   return(STATUS_OK); // If 'A' command makes it to here, then everything's ok.
 }
 

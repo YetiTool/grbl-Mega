@@ -97,10 +97,13 @@ void protocol_main_loop()
           // Grbl '$' system command
           report_status_message(system_execute_line(line));
         }
-//ASM Mod to read 'A' commands from serial string
         else if (line[0] == 'A') {
-          // ASMCNC 'A' Commands see AMSCNC for full list
+          /* YETI custom non-realtime commands, they do generate "ok" response */
           report_status_message(asmcnc_execute_line(line));
+        }
+        else if (line[0] == '*') {
+          /* YETI custom realtime commands that does not generate "ok" response */
+          asmcnc_execute_line(line);
         }
         else if (sys.state & (STATE_ALARM | STATE_JOG)) {
           // Everything else is gcode. Block if in alarm or jog mode.
