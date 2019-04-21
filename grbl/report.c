@@ -170,7 +170,11 @@ void report_feedback_message(uint8_t message_code)
 void report_init_message()
 {
 //ASM Mod to add ASM mesage to start
-  printPgmString(PSTR("\r\nSmartBench [Ver " ASMCNC_VERSION "]"));
+  DDRD  = 0x00; /* All pins in PORTD are inputs */
+  PORTD = 0x00; /* tristate for all pins at PORTD is fine as all pins are tied to GND or VDD */
+  printPgmString(PSTR("\r\nSmartBench [SW Ver:" ASMCNC_VERSION "] [HW Ver:" ));
+  printInteger(PIND); /* read all 8 pins of port D and translate as bits <0-7> to integer value as HW version */
+  printPgmString(PSTR("]" ));
   printPgmString(PSTR("\r\nGrbl " GRBL_VERSION " ['$' for help]\r\n"));
 }
 
@@ -363,7 +367,8 @@ void report_build_info(char *line)
   printPgmString(PSTR("[VER:" GRBL_VERSION "." GRBL_VERSION_BUILD ":"));
   printString(line);
   report_util_feedback_line_feed();
-  printPgmString(PSTR("[ASM CNC VER:" ASMCNC_VERSION "." ASMCNC_VERSION_BUILD ":"));
+  printPgmString(PSTR("[ASM CNC; SW Ver:" ASMCNC_VERSION "." ASMCNC_VERSION_BUILD "; HW Ver:"));
+  printInteger(PIND); /* read all 8 pins of port D and translate as bits <0-7> to integer value as HW version */
   report_util_feedback_line_feed();
   printPgmString(PSTR("[OPT:")); // Generate compile-time build option list
   serial_write('V');
