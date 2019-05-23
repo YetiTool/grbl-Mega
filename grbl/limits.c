@@ -58,7 +58,7 @@ void limits_init()
     #endif
     #ifndef DISABLE_HW_LIMITS
       if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) {
-        LIMIT_PCMSK |= LIMIT_MASK; // Enable specific pins of the Pin Change Interrupt
+        LIMIT_PCMSK |= LIMIT_ISR_MASK; // Enable specific pins of the Pin Change Interrupt
         PCICR |= (1 << LIMIT_INT); // Enable Pin Change Interrupt
       } else {
         limits_disable();
@@ -80,7 +80,7 @@ void limits_init()
     #endif
 //ASM Modification to allow limit red LED's to function HARD LIMIT ENABLED check moved to interrupt
 //    if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) {
-      LIMIT_PCMSK |= LIMIT_MASK; // Enable specific pins of the Pin Change Interrupt
+      LIMIT_PCMSK |= LIMIT_ISR_MASK; // Enable specific pins of the Pin Change Interrupt
       PCICR |= (1 << LIMIT_INT); // Enable Pin Change Interrupt
 //    } else {
 //     limits_disable();
@@ -100,11 +100,11 @@ void limits_disable()
 {
   #ifdef DEFAULTS_RAMPS_BOARD
     #ifndef DISABLE_HW_LIMITS
-     LIMIT_PCMSK &= ~LIMIT_MASK;  // Disable specific pins of the Pin Change Interrupt
+     LIMIT_PCMSK &= ~LIMIT_ISR_MASK;  // Disable specific pins of the Pin Change Interrupt
      PCICR &= ~(1 << LIMIT_INT);  // Disable Pin Change Interrupt
     #endif
   #else
-    LIMIT_PCMSK &= ~LIMIT_MASK;  // Disable specific pins of the Pin Change Interrupt
+    LIMIT_PCMSK &= ~LIMIT_ISR_MASK;  // Disable specific pins of the Pin Change Interrupt
     PCICR &= ~(1 << LIMIT_INT);  // Disable Pin Change Interrupt
   #endif // DEFAULTS_RAMPS_BOARD
 }

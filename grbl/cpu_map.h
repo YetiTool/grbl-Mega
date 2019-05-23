@@ -70,6 +70,7 @@
   #define LIMIT_INT_vect  PCINT1_vect
   #define LIMIT_PCMSK     PCMSK1 // Pin change interrupt register
   #define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<X_LIM_MAX_BIT)|(1<<Y_LIM_MAX_BIT)) // All limit bits
+  #define LIMIT_ISR_MASK (LIMIT_MASK<<1) // BK: All limit bits + 1 (<<2 vs <<1) as pin number for Port J is shifted by one interrupt register PCMSK1
 
   // Define spindle enable and spindle direction output pins.
   #define SPINDLE_ENABLE_DDR      DDRH
