@@ -100,6 +100,12 @@ uint8_t asmcnc_execute_line(char *line)
     case 'A':      /* YETI custom non-realtime commands, they do generate "ok" response */
 	  switch( line[1] ) {
 		case 'L': 			//RGD LED PWM values 1=off 255=full on
+			/* revert changes to timers made by asmcnc_RGB_red_flash() */
+			TCCR3B &=~((1<<CS32)|(1<<WGM33));
+			TCCR3B |=(1<<CS31);
+			TCCR3A &=~(1<<WGM31);
+			TCCR3A |= (1<<WGM30);
+
 			if (line[2] == '0') {asmcnc_RGB_off(); break;} //"0" = all off
 			if ((line[2] != 'R') && (line[2] != 'G') && (line[2] != 'B')) { return(ASMCNC_STATUS_INVALID_STATEMENT); }
 			if ((line[3]<0x30)|(line[3]>0x39)){ return(ASMCNC_STATUS_INVALID_STATEMENT); }
