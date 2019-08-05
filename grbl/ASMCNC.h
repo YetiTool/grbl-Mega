@@ -10,8 +10,8 @@
 
 
 
-#define ASMCNC_VERSION			"1.0.5"
-#define ASMCNC_VERSION_BUILD	"20190614"
+#define ASMCNC_VERSION			"1.0.6"
+#define ASMCNC_VERSION_BUILD	"20190805"
 
 #define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
 
@@ -71,6 +71,10 @@
 #define AC_PROBE_SPARE1_DDR	DDRK
 #define AC_PROBE_SPARE1 4
 #define AC_PROBE_SPARE1_MASK	(1<<AC_PROBE_SPARE1)
+//Live loss pin
+#define AC_LIVE_SENSE_DDR	DDRK
+#define AC_LIVE_SENSE 0           /* MEGA2560 Analog Pin 8, low when live is present, high when live is lost, only for Z-head HW >= Rev D */
+#define AC_LIVE_SENSE_MASK		(1<<AC_LIVE_SENSE)
 
 void asmcnc_init();
 //void asmcnc_TMR3_init();

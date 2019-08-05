@@ -550,14 +550,16 @@ void report_realtime_status()
     uint8_t prb_pin_state 	= probe_get_state();
 //ASM Mod to get probe holder state & max limit switch states
     uint8_t prb_hold_state 	= !(PINL & AC_PROBE_HOLDER_MASK);
-    uint8_t enclosure_state = !(PINK & AC_PROBE_ENCLOSURE_MASK);
+    uint8_t enclosure_state =  (PINK & AC_PROBE_ENCLOSURE_MASK); /* print status letter 'G' when cover is open  */
     uint8_t spare1_state 	= !(PINK & AC_PROBE_SPARE1_MASK);
-    if (lim_pin_state | ctrl_pin_state | prb_pin_state | prb_hold_state | enclosure_state| spare1_state) {
+    uint8_t ac_sense_state =  (PINK & AC_LIVE_SENSE_MASK) && (PIND > 1); /* low when live is present, high when live is lost, only for Z-head HW >= Rev D */
+    if (lim_pin_state | ctrl_pin_state | prb_pin_state | prb_hold_state | enclosure_state | spare1_state | ac_sense_state ) {
       printPgmString(PSTR("|Pn:"));
-      if (prb_pin_state) { serial_write('P'); }
-      if (prb_hold_state) { serial_write('p'); }
-      if (enclosure_state) { serial_write('G'); }
-      if (spare1_state) { serial_write('g'); }
+      if (prb_pin_state)    { serial_write('P'); }
+      if (prb_hold_state)   { serial_write('p'); }
+      if (enclosure_state)  { serial_write('G'); }
+      if (spare1_state)     { serial_write('g'); }
+      if (ac_sense_state)   { serial_write('r'); }
       if (lim_pin_state) {
         if (bit_istrue(lim_pin_state,bit(X_AXIS))) { serial_write('x'); }
         if (bit_istrue(lim_pin_state,bit(X_AXIS_MAX))) { serial_write('X'); }
