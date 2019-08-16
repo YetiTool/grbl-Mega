@@ -29,17 +29,17 @@
 
 #ifdef DEFAULTS_ASMCNC
   // Grbl generic default settings. Should work across different machines.
-  #define DEFAULT_X_STEPS_PER_MM 56.680
-  #define DEFAULT_Y_STEPS_PER_MM 56.680
+  #define DEFAULT_X_STEPS_PER_MM 56.649
+  #define DEFAULT_Y_STEPS_PER_MM 56.667
   #define DEFAULT_Z_STEPS_PER_MM 1066.667
-  #define DEFAULT_X_MAX_RATE 15000.0 // mm/min
-  #define DEFAULT_Y_MAX_RATE 15000.0 // mm/min
-  #define DEFAULT_Z_MAX_RATE 2000.0 // mm/min
-  #define DEFAULT_X_ACCELERATION (200.0*60*60) // 10*60*60 mm/min^2 = 10 mm/sec^2
-  #define DEFAULT_Y_ACCELERATION (200.0*60*60) // 10*60*60 mm/min^2 = 10 mm/sec^2
-  #define DEFAULT_Z_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 = 10 mm/sec^2
-  #define DEFAULT_X_MAX_TRAVEL 1250.0 // mm NOTE: Must be a positive value.
-  #define DEFAULT_Y_MAX_TRAVEL 2490.0 // mm NOTE: Must be a positive value.
+  #define DEFAULT_X_MAX_RATE 8000.0 // mm/min
+  #define DEFAULT_Y_MAX_RATE 6000.0 // mm/min
+  #define DEFAULT_Z_MAX_RATE 750.0 // mm/min
+  #define DEFAULT_X_ACCELERATION 500.0 // mm/sec^2
+  #define DEFAULT_Y_ACCELERATION 200.0 // mm/sec^2
+  #define DEFAULT_Z_ACCELERATION 200.0 // mm/sec^2
+  #define DEFAULT_X_MAX_TRAVEL 1300.0 // mm NOTE: Must be a positive value.
+  #define DEFAULT_Y_MAX_TRAVEL 2502.0 // mm NOTE: Must be a positive value.
   #define DEFAULT_Z_MAX_TRAVEL 150.0 // mm NOTE: Must be a positive value.
   #define DEFAULT_SPINDLE_RPM_MAX 25000.0 // rpm
   #define DEFAULT_SPINDLE_RPM_MIN 0.0 // rpm
@@ -59,10 +59,10 @@
   #define DEFAULT_LASER_MODE 0 // false
   #define DEFAULT_HOMING_ENABLE 1  // true
   #define DEFAULT_HOMING_DIR_MASK 3 // move positive dir
-  #define DEFAULT_HOMING_FEED_RATE 500.0 // mm/min
-  #define DEFAULT_HOMING_SEEK_RATE 10000.0 // mm/min
+  #define DEFAULT_HOMING_FEED_RATE 600.0 // mm/min
+  #define DEFAULT_HOMING_SEEK_RATE 3000.0 // mm/min
   #define DEFAULT_HOMING_DEBOUNCE_DELAY 250 // msec (0-65k)
-  #define DEFAULT_HOMING_PULLOFF 2.0 // mm
+  #define DEFAULT_HOMING_PULLOFF 15.0 // mm
 #endif
 
 #ifdef DEFAULTS_GENERIC
