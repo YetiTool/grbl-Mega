@@ -28,6 +28,7 @@
 #ifndef defaults_h
 
 #ifdef DEFAULTS_ASMCNC
+
   // Grbl generic default settings. Should work across different machines.
   #define DEFAULT_X_STEPS_PER_MM 56.649
   #define DEFAULT_Y_STEPS_PER_MM 56.667

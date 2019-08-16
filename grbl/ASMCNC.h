@@ -9,7 +9,6 @@
 #define ASMCNC_h
 
 
-
 #define ASMCNC_VERSION			"1.0.7"
 #define ASMCNC_VERSION_BUILD	"20190805"
 
