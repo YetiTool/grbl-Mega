@@ -9,8 +9,8 @@
 #define ASMCNC_h
 
 
-#define ASMCNC_VERSION			"1.0.7"
-#define ASMCNC_VERSION_BUILD	"20190816"
+#define ASMCNC_VERSION			"1.0.8"
+#define ASMCNC_VERSION_BUILD	"20200509"
 
 #define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
 
@@ -71,9 +71,15 @@
 #define AC_PROBE_SPARE1 4
 #define AC_PROBE_SPARE1_MASK	(1<<AC_PROBE_SPARE1)
 //Live loss pin
-#define AC_LIVE_SENSE_DDR	DDRK
-#define AC_LIVE_SENSE 0           /* MEGA2560 Analog Pin 8, low when live is present, high when live is lost, only for Z-head HW >= Rev D */
+#define AC_LIVE_SENSE 1           /* MEGA2560 Analog Pin 1 on port F, low when live is present, high when live is lost, only for Z-head HW >= Rev H */
 #define AC_LIVE_SENSE_MASK		(1<<AC_LIVE_SENSE)
+//Spindle load monitor pin
+#define SPINDLE_LOAD_MONITOR 3    /* MEGA2560 Analog Pin PF3, spindle load 0-5V signal monitor*/
+//Spindle spare pin
+#define SPINDLE_SPARE 5           /* MEGA2560 Analog Pin PF5, for future use, for example low when brushes are ok, high when brushes are worn */
+#define SPINDLE_SPARE_MASK		(1<<SPINDLE_SPARE)
+
+#define ENABLE_SPINDLE_LOAD_MONITOR // enable spindle load monitoring, apply to Mafell spindles
 
 void asmcnc_init();
 //void asmcnc_TMR3_init();
@@ -82,4 +88,5 @@ void asmcnc_RGB_white();
 void asmcnc_RGB_red();
 void asmcnc_RGB_red_flash();
 uint8_t asmcnc_execute_line(char *line);
+void asmcnc_init_ADC(void); /* initialise ADC for spindle load monitoring */
 #endif /* ASMCNC_h */

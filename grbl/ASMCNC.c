@@ -32,6 +32,10 @@ void asmcnc_init()
 	TCNT3=0; //Zero timer 3
 	OCR3A = 0; OCR3B = 0; OCR3C = 0;	//Turn off all LED's
 
+#ifdef ENABLE_SPINDLE_LOAD_MONITOR
+	asmcnc_init_ADC();
+#endif
+
 }
 
 /* convert hex char to int */
@@ -198,3 +202,62 @@ void asmcnc_RGB_red_flash(){		 //Configure PWM for long run time to give visable
 	ICR3 = 0x8000;					//Timer max count, 1sec period
 	OCR3A= 0x4000; OCR3B=0; OCR3C=0; //0.5sec on / off
 }
+
+/* Mafell spindles provide very nice feature: it will stop if load on the spindle is too high.
+ * But how do we know that it has stopped !? Well there is another nice feature - overload signal (coming
+ * through control cable) that informs the state of internal spindle circuitry by the voltage level (from
+ * 0V being no-load to 5V being load is critically high). Below code is setting up the Atmega ADC to run
+ * continuous measurement of that signal so it could be reported any time in "report_realtime_status" function.
+ * Two options depend on hardware version:
+ * 1) quick and dirty. For 130 boards that are in production and need to be modded manually.
+ *   To minimise components and simplify work this option will use ADC with dirty VCC 5V reference,
+ *   direct connection of the pin to the source with only one decoupling capacitor.
+ *   Option will use the unpopulated "Power Loss detection" circuitry on board and will be connected to
+ *   port K on the micro (same as used for stop bar, door and probe signals). FW will auto-detect the HW by
+ *   reading the HW key and configure ADC according to option 1 if HW version is 4 or 5.
+ * 2) Nice and Clean. For the next batch of boards more robust scheme will be implemented.
+ *   It will divide the input signal with resistive divider, filter it and feed the ADC with clean onboard band-gap reference of 1.1V.
+ *   This will provide much cleaner and more repeatable way to measure the voltage and it will be independent of onboard 5V supply level and quality.
+ *   Option will use the new PCB tracks that will come from HW ver 6 and will be connected to port F on the micro (now empty).
+ *   FW will auto-detect the HW by reading the HW key and configure ADC according to option 2 if HW version is higher than 5.
+*/
+void asmcnc_init_ADC()
+{
+
+	/* there are 2 ports on mega2560, port F (channels 0-7) and power K (channels 8-15).
+	 * On Z-head HW ver < 5 pin 89 (channel 8) is used. For this channel MSB of the MUX (MUX5) need to be used
+	 * it is located in register B: ADCSRB. Therefore if channel Number is higher than 7 then ADCSRB need to be written */
+
+	uint8_t ADCchannel = 0;// pin ADC8, channel 8 on HW versions 5 and lower. pin ADC0 on HW ver > 5
+
+	if (PIND <= 5){ /* if HW version is 5 and lower*/
+		ADCchannel = 8;
+		// Select Vref=AVCC with external capacitor at AREF pin
+	    ADMUX |= (1<<REFS0);
+	}
+	else{
+		/* for newer than 5 HW Vref is 1V1 bandgap and ADC channel is 3*/
+		ADCchannel = SPINDLE_LOAD_MONITOR;
+		// Select Internal 1.1V Voltage Reference with external capacitor at AREF pin
+	    ADMUX |= (1<<REFS1);
+	    //ADMUX |= (1<<REFS0); //both REFS0 a REFS1 pins means 2.56V Voltage Reference
+	}
+
+    //set prescaller to 128 and enable ADC. Pre-scaler 128 with 16M clock corresponds to ~100us long conversion.
+    ADCSRA |= (1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)|(1<<ADEN);
+
+    //enable Auto Triggering of the ADC. Free Running mode is default mode of the ADC
+    ADCSRA |= (1<<ADATE);
+
+    //select ADC channel with safety mask. First check whether the channel is in port K
+	if (ADCchannel > 7){
+		ADCchannel -= 8;
+	    ADCSRB |= (1<<MUX5);
+	}
+    ADMUX = (ADMUX & 0xF0) | (ADCchannel & 0x0F);
+
+    //start conversion in Free Running mode
+    ADCSRA |= (1<<ADSC);
+
+}
+
