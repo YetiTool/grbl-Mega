@@ -9,8 +9,8 @@
 #define ASMCNC_h
 
 
-#define ASMCNC_VERSION			"1.0.8"
-#define ASMCNC_VERSION_BUILD	"20200509"
+#define ASMCNC_VERSION			"1.0.9"
+#define ASMCNC_VERSION_BUILD	"20200511"
 
 #define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
 
@@ -47,6 +47,7 @@
 #define AC_RGB_R		3 //Red LED
 #define AC_RGB_G		4 //Green LED
 #define AC_RGB_B		5 //Blue LED
+#define LASER_PIN		6 //Laser cross on/off control, pin 8, PE6, line 6 on port E
 
 #define AC_RGB_MASK		((1<<AC_RGB_R)|(1<<AC_RGB_G)|(1<<AC_RGB_B))
 
@@ -80,13 +81,14 @@
 #define SPINDLE_SPARE_MASK		(1<<SPINDLE_SPARE)
 
 #define ENABLE_SPINDLE_LOAD_MONITOR // enable spindle load monitoring, apply to Mafell spindles
+#define ENABLE_LASER_POINTER_CONTROL // Laser cross unit control
 
-void asmcnc_init();
+void asmcnc_init(void);
 //void asmcnc_TMR3_init();
-void asmcnc_RGB_off();
-void asmcnc_RGB_white();
-void asmcnc_RGB_red();
-void asmcnc_RGB_red_flash();
+void asmcnc_RGB_off(void);
+void asmcnc_RGB_white(void);
+void asmcnc_RGB_red_flash(void);
+void asmcnc_RGB_setup(void);
 uint8_t asmcnc_execute_line(char *line);
 void asmcnc_init_ADC(void); /* initialise ADC for spindle load monitoring */
 #endif /* ASMCNC_h */

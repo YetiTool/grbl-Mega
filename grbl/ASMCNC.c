@@ -7,7 +7,7 @@
 #include "grbl.h"
 
 
-void asmcnc_init()
+void asmcnc_init(void)
 {
 //	AC_YLIM_XLIM_DDRB 	|=AC_LIM_RED_MASK_Y;
 	AC_YLIM_XLIM_DDRL 	|=AC_LIM_RED_MASK_XZ;
@@ -23,14 +23,15 @@ void asmcnc_init()
 	PORTG &=~(1<<AC_LIGHT);
 //	PORTL &=~(1<<AC_DOOR_RED);
 
-	TCCR3A =0;	//Clear timer3 registers
-	TCCR3B =0;
-	TCCR3C =0;
-	TCCR3A |=((1<<COM3C1)|(1<<COM3B1)|(1<<COM3A1)|(1<<WGM30)); 	/* Setup PWM, Phase Correct, 8-bit, non-inverted output for channels A, B and C */
-	TCCR3B |=(1<<CS31); 										/* prescaling = 8 to ensure 256 shades of grey */
 
-	TCNT3=0; //Zero timer 3
-	OCR3A = 0; OCR3B = 0; OCR3C = 0;	//Turn off all LED's
+	/* setup timer 3 for RGB lights */
+	TCCR3A = 0;	//Clear timer3 registers
+	TCCR3B = 0;
+	TCCR3C = 0;
+	TCCR3A |= ((1<<COM3C1)|(1<<COM3B1)|(1<<COM3A1)); 	/* Setup non-inverted output for channels A, B and C */
+	asmcnc_RGB_setup(); 							/* Setup pre-scaling = 8 and Waveform Generation Mode: PWM, Phase Correct, 8-bit */
+	TCNT3=0; 											/* Zero timer 3 */
+	OCR3A = 0; OCR3B = 0; OCR3C = 0;					/* Turn off all LED's */
 
 #ifdef ENABLE_SPINDLE_LOAD_MONITOR
 	asmcnc_init_ADC();
@@ -69,14 +70,9 @@ uint8_t asmcnc_execute_line(char *line)
 	case '*':      /* YETI custom realtime commands that does not generate "ok" response */
 	  switch( line[1] ) {
 		case 'L': {			//RGB HEX Codes, see https://htmlcolorcodes.com/
-			/* revert changes to timers made by asmcnc_RGB_red_flash() */
-			TCCR3B &=~((1<<CS32)|(1<<WGM33));
-			TCCR3B |=(1<<CS31);
-			TCCR3A &=~(1<<WGM31);
-			TCCR3A |= (1<<WGM30);
-
-			uint8_t buffer[3] = {0}; /* buffer to hold output int values */
-			hex2bin(&line[2], buffer); /* convert hex string to numbers , for example: HEX #FFC133 -> RGB 255, 193, 51  */
+			uint8_t buffer[3] = {0}; 	/* buffer to hold output int values */
+			hex2bin(&line[2], buffer); 	/* convert hex string to numbers , for example: HEX #FFC133 -> RGB 255, 193, 51  */
+			asmcnc_RGB_setup(); 		/* Setup pre-scaling = 8 and Waveform Generation Mode: PWM, Phase Correct, 8-bit */
 			/* decoded RGB values:
 			 * R = buffer [0]
 			 * G = buffer [1]
@@ -104,12 +100,7 @@ uint8_t asmcnc_execute_line(char *line)
     case 'A':      /* YETI custom non-realtime commands, they do generate "ok" response */
 	  switch( line[1] ) {
 		case 'L': 			//RGD LED PWM values 1=off 255=full on
-			/* revert changes to timers made by asmcnc_RGB_red_flash() */
-			TCCR3B &=~((1<<CS32)|(1<<WGM33));
-			TCCR3B |=(1<<CS31);
-			TCCR3A &=~(1<<WGM31);
-			TCCR3A |= (1<<WGM30);
-
+			asmcnc_RGB_setup(); /* Setup pre-scaling = 8 and Waveform Generation Mode: PWM, Phase Correct, 8-bit */
 			if (line[2] == '0') {asmcnc_RGB_off(); break;} //"0" = all off
 			if ((line[2] != 'R') && (line[2] != 'G') && (line[2] != 'B')) { return(ASMCNC_STATUS_INVALID_STATEMENT); }
 			if ((line[3]<0x30)|(line[3]>0x39)){ return(ASMCNC_STATUS_INVALID_STATEMENT); }
@@ -160,8 +151,12 @@ uint8_t asmcnc_execute_line(char *line)
 		break; //case 'L':
 		case 'E': PORTG |=(1<<AC_EXTRACTOR); break; //Extraction on
 		case 'F': PORTG &=~(1<<AC_EXTRACTOR); break; //Extraction off
-		case 'W': PORTG |=(1<<AC_LIGHT); break; //Light on
-		case 'X': PORTG &=~(1<<AC_LIGHT); break; //Light off
+		//case 'W': PORTG |=(1<<AC_LIGHT); break; //Light on
+		//case 'X': PORTG &=~(1<<AC_LIGHT); break; //Light off
+#ifdef ENABLE_LASER_POINTER_CONTROL
+		case 'Z': PORTE |=(1<<LASER_PIN); break;  //Laser on
+		case 'X': PORTE &=~(1<<LASER_PIN); break; //Laser off
+#endif
 		default:
 			return(ASMCNC_STATUS_INVALID_STATEMENT);
 		break;
@@ -177,30 +172,51 @@ uint8_t asmcnc_execute_line(char *line)
   return(STATUS_OK); // If 'A' command makes it to here, then everything's ok.
 }
 
-void asmcnc_RGB_off(){
-	TCCR3B &=~(1<<CS32);
-	TCCR3B &=~(1<<WGM33);
-	TCCR3A &=~(1<<WGM31);
-	TCCR3A |= (1<<WGM30);
-	OCR3B=0; OCR3C=0; OCR3A=0;}
+void asmcnc_RGB_off(void){
 
-void asmcnc_RGB_white(){
-	TCCR3B &=~(1<<CS32);
-	TCCR3B &=~(1<<WGM33);
-	TCCR3A &=~(1<<WGM31);
-	TCCR3A |= (1<<WGM30);
-	OCR3B=0xFF; OCR3C=0xFF; OCR3A=0xFF;}
+	/* Setup pre-scaling = 8 and Waveform Generation Mode: PWM, Phase Correct, 8-bit */
+	asmcnc_RGB_setup();
+
+	/* set min brightness */
+	OCR3B=0; OCR3C=0; OCR3A=0;
+}
+
+void asmcnc_RGB_white(void){
+
+	/* Setup pre-scaling = 8 and Waveform Generation Mode: PWM, Phase Correct, 8-bit */
+	asmcnc_RGB_setup();
+
+	/* set max white brightness */
+	OCR3B=0xFF; OCR3C=0xFF; OCR3A=0xFF;
+}
 
 
-void asmcnc_RGB_red(){OCR3A=0xFF; OCR3B=0; OCR3C=0;}
+void asmcnc_RGB_red_flash(void){		 //Configure PWM for long run time to give visible flash
 
-void asmcnc_RGB_red_flash(){		 //Configure PWM for long run time to give visable flash
-	TCCR3B |=((1<<CS32)|(1<<WGM33)); //Set timer to 1024 pre-scaler
-	TCCR3B &=~(1<<CS31); /* unset bit CSn1 set in init function */
+	/* setup pre-scaler to 256 (ticking @ 8M/256=32768Hz) */
+	TCCR3B |=(1<<CS32);
+	TCCR3B &=~(1<<CS31); /* unset bit CSn1 (pre-scale 8) set in init function */
+
+	/* setup Waveform Generation Mode: PWM, Phase Correct, based on interrupt ICR3 */
+	TCCR3B |=(1<<WGM33);
 	TCCR3A |=(1<<WGM31);
-	TCCR3A &=~(1<<WGM30);
+	TCCR3A &=~(1<<WGM30);/* unset bit set in init function */
+
+	/* setup interrupt to trigger flash every second */
 	ICR3 = 0x8000;					//Timer max count, 1sec period
 	OCR3A= 0x4000; OCR3B=0; OCR3C=0; //0.5sec on / off
+
+}
+
+void asmcnc_RGB_setup(void){
+	/* Setup pre-scaling = 8 to ensure 256 shades of grey */
+	TCCR3B &=~(1<<CS32); /* unset bit CSn2 set in RGB_red_flash function */
+	TCCR3B |=(1<<CS31);
+
+	/* Setup Waveform Generation Mode: PWM, Phase Correct, 8-bit */
+	TCCR3B &=~(1<<WGM33); /* unset bit set in RGB_red_flash function */
+	TCCR3A &=~(1<<WGM31); /* unset bit set in RGB_red_flash function */
+	TCCR3A |= (1<<WGM30);
 }
 
 /* Mafell spindles provide very nice feature: it will stop if load on the spindle is too high.
@@ -221,7 +237,7 @@ void asmcnc_RGB_red_flash(){		 //Configure PWM for long run time to give visable
  *   Option will use the new PCB tracks that will come from HW ver 6 and will be connected to port F on the micro (now empty).
  *   FW will auto-detect the HW by reading the HW key and configure ADC according to option 2 if HW version is higher than 5.
 */
-void asmcnc_init_ADC()
+void asmcnc_init_ADC(void)
 {
 
 	/* there are 2 ports on mega2560, port F (channels 0-7) and power K (channels 8-15).
