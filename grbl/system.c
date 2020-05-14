@@ -73,8 +73,6 @@ ISR(CONTROL_INT_vect)
     } else if (bit_istrue(pin,CONTROL_PIN_INDEX_SAFETY_DOOR)){
     	asmcnc_RGB_red_flash(); // BK: flash RED LED if door is open
     	bit_true(sys_rt_exec_state, EXEC_SAFETY_DOOR);
-    } else { // BK: stop RED LED if door is closed
-    	asmcnc_RGB_off();
     }
   }
 }
