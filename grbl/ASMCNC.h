@@ -9,8 +9,8 @@
 #define ASMCNC_h
 
 
-#define ASMCNC_VERSION			"1.0.10"
-#define ASMCNC_VERSION_BUILD	"20200512"
+#define ASMCNC_VERSION			"1.0.11"
+#define ASMCNC_VERSION_BUILD	"20200514"
 
 #define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
 
@@ -83,6 +83,14 @@
 #define ENABLE_SPINDLE_LOAD_MONITOR // enable spindle load monitoring, apply to Mafell spindles
 #define ENABLE_LASER_POINTER_CONTROL // Laser cross unit control
 
+/* RGB HEX Rx state machine state */
+enum rgbHexStates{
+	RGB_HEX_RTL_IDLE, // normal state, usual operation
+	RGB_HEX_RTL_RX,   // hex code reception ongoing
+	RGB_HEX_RTL_ERR   // FAULT - other than "0123456789ABCDEF" char received
+};
+
+
 void asmcnc_init(void);
 //void asmcnc_TMR3_init();
 void asmcnc_RGB_off(void);
@@ -91,4 +99,6 @@ void asmcnc_RGB_red_flash(void);
 void asmcnc_RGB_setup(void);
 uint8_t asmcnc_execute_line(char *line);
 void asmcnc_init_ADC(void); /* initialise ADC for spindle load monitoring */
+uint8_t char2intValidate(char); /* convert hex char to int and validate result (return 0xFF if character is not hex byte code */
+
 #endif /* ASMCNC_h */

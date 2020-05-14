@@ -51,6 +51,18 @@ uint8_t char2int(char input)
   return 0;
 }
 
+/* convert hex char to int and validate result (return 0xFF if character is not hex byte code */
+uint8_t char2intValidate(char input)
+{
+  if(input >= '0' && input <= '9')
+    return input - '0';
+  if(input >= 'A' && input <= 'F')
+    return input - 'A' + 10;
+  if(input >= 'a' && input <= 'f')
+    return input - 'a' + 10;
+  return 17; /* returns error 17 if char is outside of "0123456789ABCDEFabcdef"  */
+}
+
 /* This function assumes src to be a zero terminated sanitized string with
 * an even number of [0-9a-f] characters, and target to be sufficiently large */
 void hex2bin(const char* src, uint8_t* target)
