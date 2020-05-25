@@ -582,18 +582,12 @@ void report_realtime_status()
   #ifdef ENABLE_SPINDLE_LOAD_MONITOR
   printPgmString(PSTR("|Ld:"));
   long ADC_reading = ADC; /* must be long otherwise mV calculation overflows int16*/
-	  // Mafel load output range is 0-5V, convert 10bits ADC output into mV:
-	  if (PIND > 5){ /* on latest HW load sense is connected to the ADC pin through resistive divider of 10/2.4 kOhm,
-	  therefore for 5V input the output is 0.968mV. With 1.1V bandgap reference 5 V will be corresponded to ADC code 900
-	  to convert the ADC code to voltage: V_out_mV = ADC_code * 1.1*5*(10+2.4)/(5*1023*2.4)*1000 =
-		  = ADC*1100*(10+2.4)/(1023*2.4) = ADC * 136400 / 24552 */
-		ADC_reading = ( ADC_reading * 136400 ) / 24552;
-	  }
-	  else{ /* on older (modded) HW load sense is connected to the ADC pin directly,
-	  therefore for 5V input with VDD reference 5 V will be corresponded to ADC code 1023
-	  to convert the ADC code to voltage: V_out_mV = ADC_code * 5000 / 1023 */
-		ADC_reading = ( ADC_reading * 5000 ) / 1023;
-	  }
+  /* Mafel load output range is 0-5V, convert 10bits ADC output into mV: */
+  /* on latest HW load sense is connected to the ADC pin through resistive divider of 10/2.4 kOhm,
+   * therefore for 5V input the output is 0.968mV. With 1.1V bandgap reference 5 V will be corresponded to ADC code 900
+   * to convert the ADC code to voltage: V_out_mV = ADC_code * 1.1*5*(10+2.4)/(5*1023*2.4)*1000 =
+   * = ADC*1100*(10+2.4)/(1023*2.4) = ADC * 136400 / 24552 */
+  ADC_reading = ( ADC_reading * 136400 ) / 24552;
   printInteger( ADC_reading );
   #endif //#ifdef ENABLE_SPINDLE_LOAD_MONITOR
 

@@ -260,16 +260,16 @@ void asmcnc_init_ADC(void)
 
 	if (PIND <= 5){ /* if HW version is 5 and lower*/
 		ADCchannel = 8;
-		// Select Vref=AVCC with external capacitor at AREF pin
-	    ADMUX |= (1<<REFS0);
 	}
 	else{
 		/* for newer than 5 HW Vref is 1V1 bandgap and ADC channel is 3*/
 		ADCchannel = SPINDLE_LOAD_MONITOR;
-		// Select Internal 1.1V Voltage Reference with external capacitor at AREF pin
-	    ADMUX |= (1<<REFS1);
-	    //ADMUX |= (1<<REFS0); //both REFS0 a REFS1 pins means 2.56V Voltage Reference
 	}
+
+	// reference voltage selection
+    ADMUX |= (1<<REFS1); // Select Internal 1.1V Voltage Reference with external capacitor at AREF pin
+    //ADMUX |= (1<<REFS0); //both REFS0 a REFS1 pins means 2.56V Voltage Reference
+    //ADMUX |= (1<<REFS0);// Select Vref=AVCC with external capacitor at AREF pin
 
     //set prescaller to 128 and enable ADC. Pre-scaler 128 with 16M clock corresponds to ~100us long conversion.
     ADCSRA |= (1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)|(1<<ADEN);
