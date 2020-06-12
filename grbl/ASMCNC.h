@@ -8,8 +8,8 @@
 #ifndef ASMCNC_h
 #define ASMCNC_h
 
-#define ASMCNC_VERSION			"1.2.0"
-#define ASMCNC_VERSION_BUILD	"20200609"
+#define ASMCNC_VERSION			"2.0.0"
+#define ASMCNC_VERSION_BUILD	"20200901"
 
 #define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
 
@@ -89,6 +89,12 @@ enum rgbHexStates{
 	RGB_HEX_RTL_ERR   // FAULT - other than "0123456789ABCDEF" char received
 };
 
+/* setup TMC port */
+#define TMC_DDR			DDRB
+// Port bits
+#define TMC_PWM_PIN		4 //OC2A
+#define TMC_PWM_MASK	(1<<TMC_PWM_PIN);
+
 
 void asmcnc_init(void);
 //void asmcnc_TMR3_init();
@@ -96,6 +102,7 @@ void asmcnc_RGB_off(void);
 void asmcnc_RGB_white(void);
 void asmcnc_RGB_red_flash(void);
 void asmcnc_RGB_setup(void);
+void asmcnc_TMC_Timer2_setup(void);
 uint8_t asmcnc_execute_line(char *line);
 void asmcnc_init_ADC(void); /* initialise ADC for spindle load monitoring */
 uint8_t char2intValidate(char); /* convert hex char to int and validate result (return 0xFF if character is not hex byte code */

@@ -6,6 +6,8 @@
  */
 #include "grbl.h"
 
+// Used to avoid ISR nesting of the "TMC SPI interrupt". Should never occur though.
+static volatile uint8_t tmc_busy;
 
 void asmcnc_init(void)
 {
@@ -36,6 +38,8 @@ void asmcnc_init(void)
 #ifdef ENABLE_SPINDLE_LOAD_MONITOR
 	asmcnc_init_ADC();
 #endif
+
+	asmcnc_TMC_Timer2_setup(); /* initialise timer to periodically poll TMC motor controllers */
 
 }
 
@@ -271,7 +275,7 @@ void asmcnc_init_ADC(void)
     //ADMUX |= (1<<REFS0); //both REFS0 a REFS1 pins means 2.56V Voltage Reference
     //ADMUX |= (1<<REFS0);// Select Vref=AVCC with external capacitor at AREF pin
 
-    //set prescaller to 128 and enable ADC. Pre-scaler 128 with 16M clock corresponds to ~100us long conversion.
+    //set prescaler to 128 and enable ADC. Pre-scaler 128 with 16M clock corresponds to ~100us long conversion.
     ADCSRA |= (1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)|(1<<ADEN);
 
     //enable Auto Triggering of the ADC. Free Running mode is default mode of the ADC
@@ -289,3 +293,57 @@ void asmcnc_init_ADC(void)
 
 }
 
+/* the only remaining unused timer is 8bit timer 2*/
+/* initialise timer to periodically poll TMC motor controllers */
+void asmcnc_TMC_Timer2_setup(void){
+
+	TCCR2A = 0;	//Clear timer3 registers
+	TCCR2B = 0;
+
+	// Compare Output Mode, non-PWM Mode
+	TCCR2A |= (1<<COM2A0); 	//Toggle OC2A on Compare Match
+
+	/* Setup Waveform Generation Mode: CTC */
+	TCCR2B |= (1<<WGM22); /* set bit */
+	TCCR2A |= (1<<WGM21); /* set bit */
+	TCCR2A |= (1<<WGM20); /* set bit */
+
+	/* Setup pre-scaling = 1024 to ensure slowest rate of 30.5Hz ticks */
+	TCCR2B |=(1<<CS20); /* set bit */
+	TCCR2B |=(1<<CS21); /* set bit */
+	TCCR2B |=(1<<CS22); /* set bit */
+
+	/* setup compare register to achieve wanted SPI polling frequency. Some example values:
+	 * 0xFF:
+	 * value	F, Hz	T, ms
+	 * 0xFF		30.51	32.768
+	 * 0xC3		39.85	25.088
+	 * 0x9C		49.76	20.096
+	 * 0x75		66.20	15.104
+	 * 0x4E		98.89	10.112
+	 * */
+	OCR2A = 0xFF; /* 32.768ms */
+
+	/* Zero timer 2 */
+	TCNT2=0;
+
+	/* setup port B to see pin OC2A toggling */
+	TMC_DDR	|=TMC_PWM_MASK;
+
+	/* Enable TMC SPI Interrupt */
+	TIMSK2 |= (1<<OCIE2A); //Timer/Counter2 Output Compare Match A Interrupt Enable
+
+}
+
+//"TMC SPI interrupt"
+ISR(TIMER2_COMPA_vect)
+{
+	printPgmString(PSTR("."));
+
+	tmc_busy = true;
+	sei(); 	// Re-enable interrupts to allow Stepper Port Reset Interrupt to fire on-time.
+			// NOTE: The remaining code in this ISR will finish before returning to main program.
+
+
+	tmc_busy = false;
+}
