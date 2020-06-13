@@ -316,12 +316,14 @@ void asmcnc_TMC_Timer2_setup(void){
 	/* setup compare register to achieve wanted SPI polling frequency. Some example values:
 	 * 0xFF:
 	 * value	F, Hz	T, ms
-	 * 0xFF		30.51	32.768
-	 * 0xC3		39.85	25.088
-	 * 0x9C		49.76	20.096
-	 * 0x75		66.20	15.104
-	 * 0x4E		98.89	10.112
+	 * 0xFF		61.03	16.3
+	 * 0xC3		79.71	12.5
+	 * 0x9C		99.52	10.0
+	 * 0x75		132.4	7.55
+	 * 0x4E		197.7	5.05
 	 * */
+
+
 	OCR2A = 0xFF; /* 32.768ms */
 
 	/* Zero timer 2 */
@@ -338,8 +340,13 @@ void asmcnc_TMC_Timer2_setup(void){
 //"TMC SPI interrupt"
 ISR(TIMER2_COMPA_vect)
 {
-	printPgmString(PSTR("."));
+	static volatile uint8_t skip_count = 0;
 
+	if (skip_count >= 62){
+		printPgmString(PSTR("."));
+		skip_count=0;
+	}
+	skip_count++;
 	tmc_busy = true;
 	sei(); 	// Re-enable interrupts to allow Stepper Port Reset Interrupt to fire on-time.
 			// NOTE: The remaining code in this ISR will finish before returning to main program.
