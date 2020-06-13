@@ -107,4 +107,5 @@ uint8_t asmcnc_execute_line(char *line);
 void asmcnc_init_ADC(void); /* initialise ADC for spindle load monitoring */
 uint8_t char2intValidate(char); /* convert hex char to int and validate result (return 0xFF if character is not hex byte code */
 
+
 #endif /* ASMCNC_h */
