@@ -46,5 +46,6 @@ void spi_schedule_single_tx(TMC2590TypeDef *tmc2590_1, uint8_t *data, uint8_t si
 void spi_schedule_dual_tx(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t *data, uint8_t size, uint8_t addressIsDrvConf, uint8_t rdsel);
 
 void tmc_pin_write(uint32_t level, uint32_t pin);
+void debug_pin_write(uint32_t level, uint32_t pin);
 
 #endif // SPI_TO_WIFI_H__

@@ -101,6 +101,16 @@ enum rgbHexStates{
 #define SPI_CS_Z_PIN		6 //PB6
 #define TMC_PORT_MASK	( (1<<SPI_SCK_PIN) | (1<<SPI_MOSI_PIN) | (1<<SPI_CS_X_PIN) | (1<<SPI_CS_Y_PIN) | (1<<SPI_CS_Z_PIN) |(SPI_SS_PIN));
 
+/* setup debug port */
+#define DEBUG_DDR			DDRH
+#define DEBUG_PORT			PORTH
+// Port bits
+#define DEBUG_0_PIN			0 //PH0 / RXD2
+#define DEBUG_1_PIN			1 //PH1
+#define DEBUG_2_PIN			2 //PH2
+#define DEBUG_PORT_MASK	( (1<<DEBUG_0_PIN) | (1<<DEBUG_1_PIN) | (1<<DEBUG_2_PIN) );
+
+
 void asmcnc_init(void);
 //void asmcnc_TMR3_init();
 void asmcnc_RGB_off(void);

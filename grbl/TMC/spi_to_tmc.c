@@ -15,12 +15,13 @@ static uint8_t toggle;
 /********************************************** below are Atmega2560 specific - timers, SPI, pins etc **********************************************/
 
 void tmc_pin_write(uint32_t level, uint32_t pin){
-	if (level==0)	{
-		TMC_PORT &=~(1<<pin); /* clear pin */
-	}
-	else 			{
-		TMC_PORT |= (1<<pin); /* set pin */
-	}
+	if (level==0) TMC_PORT &=~(1<<pin); /* clear pin */
+	else          TMC_PORT |= (1<<pin); /* set pin */
+}
+
+void debug_pin_write(uint32_t level, uint32_t pin){
+	if (level==0) DEBUG_PORT &=~(1<<pin); /* clear pin */
+	else          DEBUG_PORT |= (1<<pin); /* set pin */
 }
 
 
@@ -346,10 +347,11 @@ ISR(TIMER2_COMPA_vect)
     
     //spi_process_tx_queue();
 
-    printPgmString(PSTR("."));
-    tmc_pin_write(toggle%2, SPI_CS_X_PIN);
-    tmc_pin_write(toggle%2, SPI_CS_Y_PIN);
-    tmc_pin_write(toggle%2, SPI_CS_Z_PIN);
+    //printPgmString(PSTR("."));
+    //tmc_pin_write(toggle%2, SPI_CS_X_PIN);
+    //tmc_pin_write(toggle%2, SPI_CS_Y_PIN);
+    //tmc_pin_write(toggle%2, SPI_CS_Z_PIN);
+    debug_pin_write(toggle%2, DEBUG_0_PIN);
     toggle++;
 
     SPDR = 0x05;

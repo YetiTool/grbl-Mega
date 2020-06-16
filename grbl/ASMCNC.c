@@ -13,6 +13,7 @@ void asmcnc_init(void)
 	AC_ACCS_DDR			|=AC_ACCS_MASK;
 	AC_DOOR_DDR			|=AC_DOOR_RED_MASK;
 	AC_RGB_DDR 			|=AC_RGB_MASK;
+	DEBUG_DDR  			|=DEBUG_PORT_MASK;
 	AC_PROBE_HOLDER_DDR	&=~AC_PROBE_HOLDER_MASK; //Set as input
 
 	PORTL |= AC_LIM_RED_MASK_XZ;
@@ -34,8 +35,9 @@ void asmcnc_init(void)
 	asmcnc_init_ADC();
 #endif
 
-
 	init_TMC(); /* initialise TMC motor controllers */
+
+
 
 }
 
