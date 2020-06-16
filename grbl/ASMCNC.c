@@ -7,13 +7,8 @@
 #include "grbl.h"
 #include "TMC2590.h"
 
-// Used to avoid ISR nesting of the "TMC SPI interrupt". Should never occur though.
-static volatile uint8_t tmc_busy;
-static volatile uint8_t spi_busy;
-
 void asmcnc_init(void)
 {
-//	AC_YLIM_XLIM_DDRB 	|=AC_LIM_RED_MASK_Y;
 	AC_YLIM_XLIM_DDRL 	|=AC_LIM_RED_MASK_XZ;
 	AC_ACCS_DDR			|=AC_ACCS_MASK;
 	AC_DOOR_DDR			|=AC_DOOR_RED_MASK;
@@ -22,10 +17,8 @@ void asmcnc_init(void)
 
 	PORTL |= AC_LIM_RED_MASK_XZ;
 	PORTL |= AC_DOOR_RED_MASK;
-//	PORTB |= AC_LIM_RED_MASK_Y;
 	PORTG &=~(1<<AC_EXTRACTOR);
 	PORTG &=~(1<<AC_LIGHT);
-//	PORTL &=~(1<<AC_DOOR_RED);
 
 
 	/* setup timer 3 for RGB lights */
@@ -41,7 +34,6 @@ void asmcnc_init(void)
 	asmcnc_init_ADC();
 #endif
 
-	asmcnc_TMC_Timer2_setup(); /* initialise timer to periodically poll TMC motor controllers */
 
 	init_TMC(); /* initialise TMC motor controllers */
 
@@ -294,129 +286,5 @@ void asmcnc_init_ADC(void)
 
     //start conversion in Free Running mode
     ADCSRA |= (1<<ADSC);
-
-}
-
-/* the only remaining unused timer is 8bit timer 2*/
-/* initialise timer to periodically poll TMC motor controllers */
-void asmcnc_TMC_Timer2_setup(void){
-
-	TCCR2A = 0;	//Clear timer3 registers
-	TCCR2B = 0;
-
-	// Compare Output Mode, non-PWM Mode
-	TCCR2A |= (1<<COM2A0); 	//Toggle OC2A on Compare Match
-
-	/* Setup Waveform Generation Mode: CTC */
-	TCCR2B |= (1<<WGM22); /* set bit */
-	TCCR2A |= (1<<WGM21); /* set bit */
-	TCCR2A |= (1<<WGM20); /* set bit */
-
-	/* Setup pre-scaling = 1024 to ensure slowest rate of 30.5Hz ticks */
-	TCCR2B |=(1<<CS20); /* set bit */
-	TCCR2B |=(1<<CS21); /* set bit */
-	TCCR2B |=(1<<CS22); /* set bit */
-
-	/* setup compare register to achieve wanted SPI polling frequency. Some example values:
-	 * 0xFF:
-	 * value	F, Hz	T, ms
-	 * 0xFF		61.03	16.3
-	 * 0xC3		79.71	12.5
-	 * 0x9C		99.52	10.0
-	 * 0x75		132.4	7.55
-	 * 0x4E		197.7	5.05
-	 * */
-
-
-	OCR2A = 0xFF; /* 32.768ms */
-
-	/* Zero timer 2 */
-	TCNT2=0;
-
-	/* setup port B to see pin OC2A toggling */
-	TMC_DDR	|=TMC_PWM_MASK;
-
-	/* Enable TMC SPI Interrupt */
-	TIMSK2 |= (1<<OCIE2A); //Timer/Counter2 Output Compare Match A Interrupt Enable
-
-}
-
-//"TMC SPI interrupt"
-ISR(TIMER2_COMPA_vect)
-{
-	static volatile uint8_t skip_count = 0;
-
-	if (skip_count >= 62){
-		printPgmString(PSTR("."));
-		skip_count=0;
-	}
-	skip_count++;
-	tmc_busy = true;
-	sei(); 	// Re-enable interrupts to allow Stepper Port Reset Interrupt to fire on-time.
-			// NOTE: The remaining code in this ISR will finish before returning to main program.
-
-
-	tmc_busy = false;
-}
-
-ISR(SPI_STC_vect)
-{
-	spi_busy = true;
-	spi_busy = false;
-}
-
-
-void tmc2590_readWriteArray(uint8_t channel, uint8_t *data, size_t m_length_tmc){
-
-    uint8_t       m_tx_buf_tmc[5];    /**< TX buffer. */
-    uint8_t       m_rx_buf_tmc[5];    /**< RX buffer. */
-
-    memcpy(m_tx_buf_tmc, data, m_length_tmc);
-
-    /* TMC API expected write response in the same location where send data was */
-    //APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf_tmc, m_length_tmc, m_rx_buf_tmc, m_length_tmc));
-
-    memcpy(data, m_rx_buf_tmc, m_length_tmc);
-
-}
-
-
-
-TMC2590TypeDef tmc2590_X1, tmc2590_X2, tmc2590_Y1, tmc2590_Y2, tmc2590_Z;
-
-void init_TMC(void){
-
-	/* init TMC */
-	uint8_t channel_X = 1;
-	ConfigurationTypeDef tmc2590_config_X1, tmc2590_config_X2;
-	uint8_t motorsConfig = 1; /* 1: single motor, 2: dual motors */
-
-	tmc2590_X1.interpolationEn      = 1;
-	tmc2590_X1.microSteps           = 4; /* 4 : set MRES  = 16*/
-	tmc2590_X1.currentScale         = 8; /* 0 - 31 where 31 is max */
-	tmc2590_X1.stallGuardFilter     = 1; // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
-	tmc2590_X1.stallGuardThreshold  = 5;
-	tmc2590_X1.vSense               = 0; /* 0: Full-scale sense resistor voltage is 325mV. */
-	tmc2590_X1.currentStandStill    = 1; // 1: set 1/4 of full scale
-	tmc2590_X1.coolStepMin          = 7; // set to trigger if SG below 7x32 = 224
-	tmc2590_X1.coolStepMax          = 1; // set to trigger if SG above (7+1)8x32 = 256
-
-	memcpy(&tmc2590_X2, &tmc2590_X1, sizeof(tmc2590_X1));
-	memcpy(&tmc2590_Y1, &tmc2590_X1, sizeof(tmc2590_X1));
-	memcpy(&tmc2590_Y2, &tmc2590_X1, sizeof(tmc2590_X1));
-	memcpy(&tmc2590_Z,  &tmc2590_X1, sizeof(tmc2590_X1));
-
-	/* initialise wanted variables */
-	tmc2590_init(&tmc2590_X1, channel_X, &tmc2590_config_X1, tmc2590_defaultRegisterResetState);
-	tmc2590_init(&tmc2590_X2, channel_X, &tmc2590_config_X2, tmc2590_defaultRegisterResetState);
-
-	/* initialise motors with wanted parameters */
-	if ( motorsConfig == 2 ){
-		tmc2590_dual_restore(&tmc2590_X1, &tmc2590_X1);
-		tmc2590_dual_restore(&tmc2590_X1, &tmc2590_X1);
-	}
-	else {
-		tmc2590_single_restore(&tmc2590_X1);
-	}
 
 }

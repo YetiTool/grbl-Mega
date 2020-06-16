@@ -48,18 +48,20 @@ typedef struct {
     
 
 	uint8_t interpolationEn;
-    uint8_t microSteps; /* 4 : set MRES  = 16*/
-	uint8_t currentScale; /* 0 - 31 where 31 is max */
-	uint8_t stallGuardFilter; // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
+    uint8_t microSteps;         /* 4 : set MRES  = 16*/
+	uint8_t currentScale;       /* 0 - 31 where 31 is max */
+	uint8_t stallGuardFilter;   // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
 	uint8_t stallGuardThreshold;
-	uint8_t vSense; /* 0: Full-scale sense resistor voltage is 325mV. */   
-	uint8_t currentStandStill; //set 1/4 of full scale
-	uint8_t coolStepMin; // set to trigger if SG below 7x32 = 224
-	uint8_t coolStepMax; // set to trigger if SG below 7x32 = 224
+	uint8_t vSense;             /* 0: Full-scale sense resistor voltage is 325mV. */   
+	uint8_t currentStandStill;  //set 1/4 of full scale
+	uint8_t coolStepMin;        // set to trigger if SG below 7x32 = 224
+	uint8_t coolStepMax;        // set to trigger if SG below 7x32 = 224
+    
+    uint8_t respIdx;            /* current rdsel to know which response is coming next */
     
     TMC2590Response resp;
 
-	uint8_t registerAccess[TMC2590_REGISTER_COUNT];
+	//uint8_t registerAccess[TMC2590_REGISTER_COUNT];
 	int32_t registerResetState[TMC2590_REGISTER_COUNT];
     
 } TMC2590TypeDef;
@@ -117,6 +119,19 @@ static const int32_t tmc2590_defaultRegisterResetState[TMC2590_REGISTER_COUNT] =
 */
 
 
+/* Controller types. */
+typedef enum
+{
+	TMC_X1,
+	TMC_X2,
+	TMC_Y1,
+	TMC_Y2,
+	TMC_Z,
+	TOTAL_TMCS
+} tmc_controller_enum_type_t;
+
+
+
 /*single motor*/
 
 void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef *tmc2590_config, const int32_t *registerResetState);
@@ -129,16 +144,19 @@ uint8_t tmc2590_set_init_drvctrl(TMC2590TypeDef *tmc2590);
 uint8_t tmc2590_set_init_SGCSCONF(TMC2590TypeDef *tmc2590);
 uint8_t tmc2590_set_init_DRVCONF(TMC2590TypeDef *tmc2590);
 uint8_t tmc2590_set_init_SMARTEN(TMC2590TypeDef *tmc2590);
-void tmc2590_read_all(TMC2590TypeDef *tmc2590);
+void tmc2590_single_read_all(TMC2590TypeDef *tmc2590);
 
 /*single motor*/
 uint8_t tmc2590_single_restore(TMC2590TypeDef *tmc2590_1);
 
 /*dual motors*/
-void tmc2590_dual_writeInt(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t address, uint8_t rdsel, int32_t value_1, int32_t value_2);
+void tmc2590_dual_writeInt(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t address, int32_t value_1, int32_t value_2);
 uint8_t tmc2590_dual_restore(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2);
 void tmc2590_dual_read_all(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2);
 
+/* all motors*/
 void init_TMC(void);
-
+void tmc2590_schedule_read_all(void); /* schedule periodic read of all values */
+void process_status_of_all_controllers(void);
+TMC2590TypeDef * get_TMC_controller(uint8_t controller); /* get pointer to required contoller */
 #endif /* TMC_IC_TMC2590_H_ */

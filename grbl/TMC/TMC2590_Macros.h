@@ -50,7 +50,7 @@
 // TMC2590_SGCSCONF
 #define TMC2590_SET_CS(X)        (((X) & 0x1F) << 0)
 #define TMC2590_SET_SGT(X)       (((X) & 0x7F) << 8)
-#define TMC2590_SET_SFILT(X)     (((X) & 0x01) << 16)
+#define TMC2590_SET_SFILT(X)     (((uint32_t)(X) & 0x01UL) << 16) // BK to prevent warning "left shift count >= width of type"
 
 // TMC2590_DRVCONF
 #define TMC2590_SET_RDSEL(X)     (((X) & 0x03) << 4)

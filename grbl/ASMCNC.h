@@ -21,7 +21,6 @@
 
 // LIMITS defines
 // Port direction pins
-#define AC_YLIM_XLIM_DDRB	DDRB
 #define AC_YLIM_XLIM_DDRL 	DDRL
 #define AC_DOOR_DDR			DDRL
 // Port bits
@@ -91,10 +90,15 @@ enum rgbHexStates{
 
 /* setup TMC port */
 #define TMC_DDR			DDRB
+#define TMC_PORT		PORTB
 // Port bits
-#define TMC_PWM_PIN		4 //OC2A
-#define TMC_PWM_MASK	(1<<TMC_PWM_PIN);
-
+#define SPI_SCK_PIN			1 //PB1
+#define SPI_MOSI_PIN		2 //PB2
+#define SPI_MISO_PIN		3 //PB3 //this need to be input pin
+#define SPI_CS_X_PIN		4 //PB4
+#define SPI_CS_Y_PIN		5 //PB5
+#define SPI_CS_Z_PIN		6 //PB6
+#define TMC_PORT_MASK	( (1<<SPI_SCK_PIN) | (1<<SPI_MOSI_PIN) | (1<<SPI_CS_X_PIN) | (1<<SPI_CS_Y_PIN) | (1<<SPI_CS_Z_PIN));
 
 void asmcnc_init(void);
 //void asmcnc_TMR3_init();

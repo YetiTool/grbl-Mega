@@ -163,7 +163,7 @@ uint8_t limits_get_state()
 		  else {PORTL |=(1<<AC_YLIM_MAX_RED);}
 		  if (pin & (1<<Z_LIMIT_BIT)){ limit_state |= (1<<Z_AXIS); PORTL &=~(1<<AC_ZLIM_MAX_RED);}
 		  else {PORTL |=(1<<AC_ZLIM_MAX_RED);}
-    } else {PORTL |=AC_LIM_RED_MASK_XZ;} //PORTB |=AC_LIM_RED_MASK_Y;}
+    } else {PORTL |=AC_LIM_RED_MASK_XZ;}
     return(limit_state);
   #endif //DEFAULTS_RAMPS_BOARD
 }

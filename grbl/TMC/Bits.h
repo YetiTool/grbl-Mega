@@ -73,7 +73,7 @@
 
 #define _8_16(__1, __0)                                (((__1) << BYTE1_SHIFT) | ((__0) << BYTE0_SHIFT))
 
-#define _8_32(__3, __2, __1, __0)                      (((__3) << BYTE3_SHIFT) | ((__2) << BYTE2_SHIFT) | ((__1) << BYTE1_SHIFT) | ((__0) << BYTE0_SHIFT))
+#define _8_32(__3, __2, __1, __0)                      (((uint32_t)(__3) << BYTE3_SHIFT) | ((uint32_t)(__2) << BYTE2_SHIFT) | ((uint32_t)(__1) << BYTE1_SHIFT) | ((uint32_t)(__0) << BYTE0_SHIFT))
 #define _16_32(__1, __0)                               (((__1) << SHORT1_SHIFT) | ((__0) << SHORT0_SHIFT))
 
 #define _8_64(__7, __6, __5, __4, __3, __2, __1, __0)  (((__7) << BYTE7_SHIFT) | ((__6) << BYTE6_SHIFT) | ((__5) << BYTE5_SHIFT) | ((__4) << BYTE4_SHIFT) | ((__3) << BYTE3_SHIFT) | ((__2) << BYTE2_SHIFT) | ((__1) << BYTE1_SHIFT) | ((__0) << BYTE0_SHIFT))

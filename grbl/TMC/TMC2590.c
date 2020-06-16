@@ -1,20 +1,20 @@
 /*
  * TMC2590.c
- *
- *  Created on: 09.01.2019
- *      Author: LK
+ 
  */
 
+#include "grbl.h"
 #include "TMC2590.h"
-//#include "nrf_delay.h"
-
-// => SPI wrapper
-extern void tmc2590_readWriteArray(uint8_t channel, uint8_t *data, size_t length);
-// <= SPI wrapper
+#include "spi_to_tmc.h"
+#include <string.h>
 
 static void continousSync(TMC2590TypeDef *tmc2590);
 static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value);
 static void readImmediately(TMC2590TypeDef *tmc2590, uint8_t rdsel);
+
+/* declare sctructures for all 5 motors */
+TMC2590TypeDef tmc2590_X1, tmc2590_X2, tmc2590_Y1, tmc2590_Y2, tmc2590_Z;
+ConfigurationTypeDef tmc2590_config_X1, tmc2590_config_X2, tmc2590_config_Y1, tmc2590_config_Y2, tmc2590_config_Z;
 
 
 static void standStillCurrentLimitation(TMC2590TypeDef *tmc2590, uint32_t tick)
@@ -85,7 +85,7 @@ static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value)
 
 	uint8_t data[] = { BYTE(value, 2), BYTE(value, 1), BYTE(value, 0) };
 
-	tmc2590_readWriteArray(tmc2590->config->channel, &data[0], 3);
+	//tmc2590_readWriteArray(tmc2590->config->channel, &data[0], 3);
 
 	tmc2590->config->shadowRegister[rdsel] = _8_32(data[0], data[1], data[2], 0) >> 12;
 	tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] = tmc2590->config->shadowRegister[rdsel];
@@ -133,10 +133,10 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
   	uint32_t value;    
 
 	tmc2590->config               = tmc2590_config;
-	tmc2590->config->callback     = NULL;
+	//tmc2590->config->callback     = NULL;
 	tmc2590->config->channel      = channel;
-	tmc2590->config->configIndex  = 0;
-	tmc2590->config->state        = CONFIG_READY;
+	//tmc2590->config->configIndex  = 0;
+	//tmc2590->config->state        = CONFIG_READY;
 
 	tmc2590->continuousModeEnable      = 0;
 
@@ -255,38 +255,48 @@ uint8_t tmc2590_restore(TMC2590TypeDef *tmc2590)
 
 /************************************************ single motor ***********************************************/
 
-void tmc2590_single_writeInt(TMC2590TypeDef *tmc2590_1, uint8_t address, uint8_t respIdx, int32_t value_1)
+void tmc2590_single_writeInt(TMC2590TypeDef *tmc2590_1, uint8_t address, int32_t value_1)
 {
 	value_1 = TMC2590_VALUE(value_1);
 	tmc2590_1->config->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT] = value_1;
 
-    uint8_t data[3]; 
+    uint8_t addressIsDrvConf = 0;
+    uint8_t rdsel = 0;
+    
+    uint8_t data[5]; 
+    memset(data,0,5);    
 
     /* construct 5 bytes out of 2x20bit values */
     data[0] =                           NIBBLE(value_1, 4); //BYTE(value_1, 2);
     data[1] = (NIBBLE(value_1, 3)<<4) | NIBBLE(value_1, 2); //BYTE(value_1, 1);
     data[2] = (NIBBLE(value_1, 1)<<4) | NIBBLE(value_1, 0); //BYTE(value_1, 0); 
-
-    /* can write to the same channel as both motors are on the same line */
-	tmc2590_readWriteArray(tmc2590_1->config->channel, &data[0], 3);     
+    
+    // set virtual read address for next reply given by RDSEL, can only change by setting RDSEL in DRVCONF
+    if(TMC2590_GET_ADDRESS(value_1) == TMC2590_DRVCONF){
+        addressIsDrvConf = 1;
+        rdsel = TMC2590_GET_RDSEL(value_1);
+    }
+    
+    /* schedule write to motor controller */
+    spi_schedule_single_tx(tmc2590_1, data, TX_BUF_SIZE_SINGLE, addressIsDrvConf, rdsel);
 
     /* deconstruct response */
-    tmc2590_1->config->shadowRegister[respIdx] = TMC2590_VALUE(_8_32(data[0], data[1], data[2], 0) >> 12) ;    
+    //tmc2590_1->config->shadowRegister[respIdx] = TMC2590_VALUE(_8_32(data[0], data[1], data[2], 0) >> 12) ;    
 }
 
 uint8_t tmc2590_single_restore(TMC2590TypeDef *tmc2590_1)
 {
 
-	tmc2590_single_writeInt(tmc2590_1, TMC2590_DRVCONF,  0, tmc2590_1->config->shadowRegister[TMC2590_DRVCONF  | TMC2590_WRITE_BIT]);
-	tmc2590_single_writeInt(tmc2590_1, TMC2590_DRVCTRL,  0, tmc2590_1->config->shadowRegister[TMC2590_DRVCTRL  | TMC2590_WRITE_BIT]);
-	tmc2590_single_writeInt(tmc2590_1, TMC2590_CHOPCONF, 0, tmc2590_1->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT]);
-	tmc2590_single_writeInt(tmc2590_1, TMC2590_SMARTEN,  0, tmc2590_1->config->shadowRegister[TMC2590_SMARTEN  | TMC2590_WRITE_BIT]);
-	tmc2590_single_writeInt(tmc2590_1, TMC2590_SGCSCONF, 0, tmc2590_1->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT]);
+	tmc2590_single_writeInt(tmc2590_1, TMC2590_DRVCONF,  tmc2590_1->config->shadowRegister[TMC2590_DRVCONF  | TMC2590_WRITE_BIT]);
+	tmc2590_single_writeInt(tmc2590_1, TMC2590_DRVCTRL,  tmc2590_1->config->shadowRegister[TMC2590_DRVCTRL  | TMC2590_WRITE_BIT]);
+	tmc2590_single_writeInt(tmc2590_1, TMC2590_CHOPCONF, tmc2590_1->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT]);
+	tmc2590_single_writeInt(tmc2590_1, TMC2590_SMARTEN,  tmc2590_1->config->shadowRegister[TMC2590_SMARTEN  | TMC2590_WRITE_BIT]);
+	tmc2590_single_writeInt(tmc2590_1, TMC2590_SGCSCONF, tmc2590_1->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT]);
     
 	return 1;
 }
 
-void tmc2590_read_single(TMC2590TypeDef *tmc2590_1, uint8_t respIdx, uint8_t rdsel){
+void tmc2590_read_single(TMC2590TypeDef *tmc2590_1, uint8_t rdsel){
     
     //uint32_t delay_us = 50;
     
@@ -298,42 +308,31 @@ void tmc2590_read_single(TMC2590TypeDef *tmc2590_1, uint8_t respIdx, uint8_t rds
 	value_1 |= TMC2590_SET_RDSEL(rdsel);    // set rdsel
     //nrf_delay_us(delay_us);
     
-    tmc2590_single_writeInt(tmc2590_1, TMC2590_DRVCONF, respIdx, value_1); 
+    tmc2590_single_writeInt(tmc2590_1, TMC2590_DRVCONF, value_1); 
     
 }
 
-void tmc2590_read_all(TMC2590TypeDef *tmc2590)
+void tmc2590_single_read_all(TMC2590TypeDef *tmc2590)
 {    
     /*read all 4 report values */   
-    tmc2590_read_single(tmc2590, TMC2590_RESPONSE0,       0); /* ignore this response*/
-    tmc2590_read_single(tmc2590, TMC2590_RESPONSE0,       1); /* response 0 */
-    tmc2590_read_single(tmc2590, TMC2590_RESPONSE1,       2); /* response 1 */
-    tmc2590_read_single(tmc2590, TMC2590_RESPONSE2,       3); /* response 2 */
-    tmc2590_read_single(tmc2590, TMC2590_RESPONSE_LATEST, 0); /* response 3 */    
-    
-    /* TMC2590_RESPONSE0 #define TMC2590_GET_MSTEP(X)  (0x3FF & ((X) >> 10)) */     
-    tmc2590->resp.mStepCurrenValue = TMC2590_GET_MSTEP(tmc2590->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
-    
-    /* TMC2590_RESPONSE1 #define TMC2590_GET_SG(X)     (0x3FF & ((X) >> 10)) */
-    tmc2590->resp.stallGuardCurrenValue = TMC2590_GET_SG(tmc2590->config->shadowRegister[TMC2590_RESPONSE1]);  
-
-    /* TMC2590_RESPONSE2 #define TMC2590_GET_SGU(X)    (0x1F & ((X) >> 15)) #define TMC2590_GET_SE(X)     (0x1F & ((X) >> 10))    */
-    tmc2590->resp.stallGuardShortValue= TMC2590_GET_SGU(tmc2590->config->shadowRegister[TMC2590_RESPONSE2]);  
-    tmc2590->resp.coolStepCurrenValue= TMC2590_GET_SE(tmc2590->config->shadowRegister[TMC2590_RESPONSE2]);      
-
-    /* TMC2590_RESPONSE3 status and diagnostic */
-    tmc2590->resp.StatusBits = tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFF;   
-    tmc2590->resp.DiagnosticBits = (tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFFC00) >> 10 ;  
+    tmc2590_read_single(tmc2590, 0); /* ignore this response*/
+    tmc2590_read_single(tmc2590, 1); /* response 0 */
+    tmc2590_read_single(tmc2590, 2); /* response 1 */
+    tmc2590_read_single(tmc2590, 3); /* response 2 */
+    tmc2590_read_single(tmc2590, 0); /* response 3 */    
 }
 
 /************************************************ dual motors ***********************************************/
 
-void tmc2590_dual_writeInt(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t address, uint8_t respIdx, int32_t value_1, int32_t value_2)
+void tmc2590_dual_writeInt(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t address, int32_t value_1, int32_t value_2)
 {
 	value_1 = TMC2590_VALUE(value_1);
 	value_2 = TMC2590_VALUE(value_2);
 	tmc2590_1->config->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT] = value_1;
 	tmc2590_2->config->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT] = value_2;
+    
+    uint8_t addressIsDrvConf = 0;
+    uint8_t rdsel = 0;
 
     uint8_t data[5]; 
 
@@ -343,32 +342,39 @@ void tmc2590_dual_writeInt(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2,
     data[2] = (NIBBLE(value_2, 0)<<4) | NIBBLE(value_1, 4); //BYTE(value_1, 2);
     data[3] = (NIBBLE(value_1, 3)<<4) | NIBBLE(value_1, 2); //BYTE(value_1, 1);
     data[4] = (NIBBLE(value_1, 1)<<4) | NIBBLE(value_1, 0); //BYTE(value_1, 0); 
-
+    
+    // set virtual read address for next reply given by RDSEL, can only change by setting RDSEL in DRVCONF
+    if(TMC2590_GET_ADDRESS(value_1) == TMC2590_DRVCONF){
+        addressIsDrvConf = 1;
+        rdsel = TMC2590_GET_RDSEL(value_1);
+    }
+    
     /* can write to the same channel as both motors are on the same line */
-	tmc2590_readWriteArray(tmc2590_1->config->channel, &data[0], 5);     
+    spi_schedule_dual_tx(tmc2590_1, tmc2590_2, data, TX_BUF_SIZE_DUAL, addressIsDrvConf, rdsel);    
+
 
     /* deconstruct response */
-    tmc2590_2->config->shadowRegister[respIdx] =               _8_32(data[0], data[1], data[2], 0) >> 12;    
-    tmc2590_1->config->shadowRegister[respIdx] = TMC2590_VALUE(_8_32(data[2], data[3], data[4], 0) >> 8) ;    
+    //tmc2590_2->config->shadowRegister[respIdx] =               _8_32(data[0], data[1], data[2], 0) >> 12;    
+    //tmc2590_1->config->shadowRegister[respIdx] = TMC2590_VALUE(_8_32(data[2], data[3], data[4], 0) >> 8) ;    
 }
 
 
 uint8_t tmc2590_dual_restore(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
 {
 
-	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCONF, 0,  
+	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCONF,   
                             tmc2590_1->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] , 
                             tmc2590_2->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] );
-	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCTRL, 0,  
+	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCTRL,   
                             tmc2590_1->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT] , 
                             tmc2590_2->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT] );
-	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_CHOPCONF, 0, 
+	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_CHOPCONF, 
                             tmc2590_1->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT], 
                             tmc2590_2->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT]);
-	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_SMARTEN, 0,  
+	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_SMARTEN,   
                             tmc2590_1->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] , 
                             tmc2590_2->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] );
-	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_SGCSCONF, 0, 
+	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_SGCSCONF, 
                             tmc2590_1->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT], 
                             tmc2590_2->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT]);
     
@@ -376,7 +382,7 @@ uint8_t tmc2590_dual_restore(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_
 }
 
 
-void tmc2590_dual_read_single(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t respIdx, uint8_t rdsel){
+void tmc2590_dual_read_single(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t rdsel){
     
     //uint32_t delay_us = 50;
     
@@ -391,7 +397,7 @@ void tmc2590_dual_read_single(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590
 	value_2 |= TMC2590_SET_RDSEL(rdsel);    // set rdsel
     //nrf_delay_us(delay_us);
     
-    tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCONF, respIdx, value_1, value_2); 
+    tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCONF, value_1, value_2); 
     
 }
 
@@ -399,12 +405,41 @@ void tmc2590_dual_read_all(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
 {
 	
     /*read all 4 report values */   
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, TMC2590_RESPONSE0,       0); /* ignore this response*/
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, TMC2590_RESPONSE0,       1); /* response 0 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, TMC2590_RESPONSE1,       2); /* response 1 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, TMC2590_RESPONSE2,       3); /* response 2 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, TMC2590_RESPONSE_LATEST, 0); /* response 3 */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, 0); /* ignore this response*/
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, 1); /* response 0 */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, 2); /* response 1 */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, 3); /* response 2 */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, 0); /* response 3 */
+
+}
+
+
+/************************************************ all motors ***********************************************/
+
+/* schedule periodic read of all values */
+void tmc2590_schedule_read_all(void){
+    tmc2590_dual_read_all(&tmc2590_X1, &tmc2590_X2);
+    //tmc2590_dual_read_all(&tmc2590_Y1, &tmc2590_Y2);
+    //tmc2590_single_read_all(&tmc2590_Z);
+}
+
+void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
+    /* TMC2590_RESPONSE0 #define TMC2590_GET_MSTEP(X)  (0x3FF & ((X) >> 10)) */     
+    tmc2590->resp.mStepCurrenValue = TMC2590_GET_MSTEP(tmc2590->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
     
+    /* TMC2590_RESPONSE1 #define TMC2590_GET_SG(X)     (0x3FF & ((X) >> 10)) */
+    tmc2590->resp.stallGuardCurrenValue = TMC2590_GET_SG(tmc2590->config->shadowRegister[TMC2590_RESPONSE1]);  
+
+    /* TMC2590_RESPONSE2 #define TMC2590_GET_SGU(X)    (0x1F & ((X) >> 15)) #define TMC2590_GET_SE(X)     (0x1F & ((X) >> 10))    */
+    tmc2590->resp.stallGuardShortValue= TMC2590_GET_SGU(tmc2590->config->shadowRegister[TMC2590_RESPONSE2]);  
+    tmc2590->resp.coolStepCurrenValue= TMC2590_GET_SE(tmc2590->config->shadowRegister[TMC2590_RESPONSE2]);      
+
+    /* TMC2590_RESPONSE3 status and diagnostic */
+    tmc2590->resp.StatusBits = tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFF;   
+    tmc2590->resp.DiagnosticBits = (tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFFC00) >> 10 ;      
+}
+
+void process_status_of_dual_controller(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2){
     /* TMC2590_RESPONSE0 #define TMC2590_GET_MSTEP(X)  (0x3FF & ((X) >> 10)) */     
     tmc2590_1->resp.mStepCurrenValue = TMC2590_GET_MSTEP(tmc2590_1->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
     tmc2590_2->resp.mStepCurrenValue = TMC2590_GET_MSTEP(tmc2590_2->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
@@ -423,8 +458,74 @@ void tmc2590_dual_read_all(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
     tmc2590_1->resp.StatusBits = tmc2590_1->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFF;   
     tmc2590_1->resp.DiagnosticBits = (tmc2590_1->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFFC00) >> 10 ;  
     tmc2590_2->resp.StatusBits = tmc2590_2->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFF;   
-    tmc2590_2->resp.DiagnosticBits = (tmc2590_2->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFFC00) >> 10 ;  
-    
+    tmc2590_2->resp.DiagnosticBits = (tmc2590_2->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFFC00) >> 10 ;
 }
 
-      
+
+void process_status_of_all_controllers(void){
+    /* process all responses and update the current status of controller's parameters */
+    process_status_of_dual_controller(&tmc2590_X1, &tmc2590_X2);
+    process_status_of_dual_controller(&tmc2590_Y1, &tmc2590_Y2);
+    process_status_of_single_controller(&tmc2590_Z);    
+}
+
+
+/* get pointer to required contoller */
+TMC2590TypeDef * get_TMC_controller(uint8_t controller){
+    switch (controller){
+        
+        case TMC_X1:
+            return &tmc2590_X1;            
+        case TMC_X2:
+            return &tmc2590_X2;            
+        case TMC_Y1:
+            return &tmc2590_Y1;            
+        case TMC_Y2:
+            return &tmc2590_Y2;            
+        case TMC_Z:
+            return &tmc2590_Z;
+        
+        default:
+            break;                             
+    } //switch (controller){
+    return &tmc2590_X1;
+}
+
+
+void init_TMC(void){
+
+	/* init TMC */
+    uint8_t channel_X = SPI_CS_X_PIN;
+    uint8_t channel_Y = SPI_CS_Y_PIN;
+    uint8_t channel_Z = SPI_CS_Z_PIN;
+
+	tmc2590_X1.interpolationEn      = 1;
+	tmc2590_X1.microSteps           = 4; /* 4 : set MRES  = 16*/
+	tmc2590_X1.currentScale         = 8; /* 0 - 31 where 31 is max */
+	tmc2590_X1.stallGuardFilter     = 1; // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
+	tmc2590_X1.stallGuardThreshold  = 5;
+	tmc2590_X1.vSense               = 0; /* 0: Full-scale sense resistor voltage is 325mV. */
+	tmc2590_X1.currentStandStill    = 1; // 1: set 1/4 of full scale
+	tmc2590_X1.coolStepMin          = 7; // set to trigger if SG below 7x32 = 224
+	tmc2590_X1.coolStepMax          = 1; // set to trigger if SG above (7+1)8x32 = 256
+    tmc2590_X1.respIdx              = 0; // very first resp index would be 0
+	memcpy(&tmc2590_X2, &tmc2590_X1, sizeof(tmc2590_X1));
+	memcpy(&tmc2590_Y1, &tmc2590_X1, sizeof(tmc2590_X1));
+	memcpy(&tmc2590_Y2, &tmc2590_X1, sizeof(tmc2590_X1));
+	memcpy(&tmc2590_Z,  &tmc2590_X1, sizeof(tmc2590_X1));
+    
+    spi_hw_init();
+
+	/* initialise wanted variables */
+	tmc2590_init(&tmc2590_X1, channel_X, &tmc2590_config_X1, tmc2590_defaultRegisterResetState);
+	tmc2590_init(&tmc2590_X2, channel_X, &tmc2590_config_X2, tmc2590_defaultRegisterResetState);
+	tmc2590_init(&tmc2590_Y1, channel_Y, &tmc2590_config_Y1, tmc2590_defaultRegisterResetState);
+	tmc2590_init(&tmc2590_Y2, channel_Y, &tmc2590_config_Y2, tmc2590_defaultRegisterResetState);
+	tmc2590_init(&tmc2590_Z,  channel_Z, &tmc2590_config_Z, tmc2590_defaultRegisterResetState);
+
+	/* initialise motors with wanted parameters */
+    tmc2590_dual_restore(&tmc2590_X1, &tmc2590_X2);
+    tmc2590_dual_restore(&tmc2590_Y1, &tmc2590_Y2);
+	tmc2590_single_restore(&tmc2590_Z);
+
+}

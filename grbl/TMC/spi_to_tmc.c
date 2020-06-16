@@ -1,0 +1,362 @@
+/*
+reduce TMC_REGISTER_COUNT to 16
+add handling of incoming messages and parameter change requests
+add handling of status and diag flags - 
+    - idle detect -> reduce power
+    - no idle detect -> increase power.
+*/
+
+#include "grbl.h"
+#include "spi_to_tmc.h"
+#include "TMC2590.h"
+static uint8_t toggle;
+
+
+/********************************************** below are Atmega2560 specific - timers, SPI, pins etc **********************************************/
+
+void tmc_pin_write(uint32_t level, uint32_t pin){
+	if (level==0)	{
+		TMC_PORT &=~(1<<pin); /* clear pin */
+	}
+	else 			{
+		TMC_PORT |= (1<<pin); /* set pin */
+	}
+}
+
+
+/* the only remaining unused timer is 8bit timer 2*/
+/* initialise timer to periodically poll TMC motor controllers */
+void asmcnc_TMC_Timer2_setup(void){
+
+	TCCR2A = 0;	//Clear timer3 registers
+	TCCR2B = 0;
+
+
+	/* Setup Waveform Generation Mode: CTC */
+	TCCR2B |= (1<<WGM22); /* set bit */
+	TCCR2A |= (1<<WGM21); /* set bit */
+	TCCR2A |= (1<<WGM20); /* set bit */
+
+	/* Setup pre-scaling = 1024 to ensure slowest rate of 30.5Hz ticks */
+	TCCR2B |=(1<<CS20); /* set bit */
+	TCCR2B |=(1<<CS21); /* set bit */
+	TCCR2B |=(1<<CS22); /* set bit */
+
+	/* setup compare register to achieve wanted SPI polling frequency. Some example values:
+	 * 0xFF:
+	 * value	F, Hz	T, ms
+	 * 0xFF		61.03	16.3
+	 * 0xC3		79.71	12.5
+	 * 0x9C		99.52	10.0
+	 * 0x75		132.4	7.55
+	 * 0x4E		197.7	5.05
+	 * */
+
+	OCR2A = 0xFF; /* 32.768ms */
+
+	/* Zero timer 2 */
+	TCNT2=0;
+
+	/* setup port B to see pin OC2A toggling */
+	TMC_DDR	|= TMC_PORT_MASK;
+	// Compare Output Mode, non-PWM Mode
+	//TCCR2A |= (1<<COM2A0); 	//Toggle OC2A on Compare Match
+
+	/* Enable timer2 Interrupt */
+	TIMSK2 |= (1<<OCIE2A); //Timer/Counter2 Output Compare Match A Interrupt Enable
+
+}
+
+
+void SPI_MasterInit(void)
+{
+	/* Set MOSI and SCK output, all others input */
+	TMC_DDR			|= TMC_PORT_MASK;
+
+	/* Enable SPI, Master */
+	SPCR |= ( (1<<SPE)|(1<<MSTR) );
+
+	/* set clock rate fck/16 = 1MHz*/
+	SPCR |= (1<<SPR0);
+
+	/* Set phase and polarity to mode3 */
+	SPCR |= ( (1<<CPOL)|(1<<CPHA) );
+
+	/* enable SPI interrupts  */
+	SPCR |= (1<<SPIE);
+
+}
+
+void SPI_MasterTransmit(char cData)
+{
+	/* Start transmission */
+	SPDR = cData;
+	/* Wait for transmission complete */
+	while(!(SPSR & (1<<SPIF)))
+	;
+}
+
+
+void spi_hw_init(void){
+
+	//SPI_MasterInit();
+    
+	asmcnc_TMC_Timer2_setup(); /* initialise timer to periodically poll TMC motor controllers */
+
+	/* configure CS pins and pull them high */
+    //spi_pin_write(1, SPI_CS_X_PIN);
+    //spi_pin_write(1, SPI_CS_Y_PIN);
+    //spi_pin_write(1, SPI_CS_Z_PIN);
+
+    
+}
+
+
+
+/********************************************** below is common between platforms (nRF / Atmega) **********************************************/
+
+
+/* buffer to queue incoming from BLE packets and post them through SPI */
+static tx_spi_msg_t	m_spi_tx_buffer[SPI_TX_BUFFER_SIZE];  				/* Transmit buffer for the messages that will be transmitted to the central. */
+static uint32_t    	m_spi_tx_insert_index		= 0;        			/* Current index in the transmit buffer where the next message should be inserted. */
+static uint32_t    	m_spi_tx_index        		= 0;        			/* Current index in the transmit buffer containing the next message to be transmitted. */
+static uint8_t      current_transfer_type       = 0;                    /* 3 for single or 5 for dual */
+uint8_t m_spi_rx_data[TX_BUF_SIZE_DUAL]; 						        /* buffer storage for Rx data */
+
+
+// Used to avoid ISR nesting of the "TMC SPI interrupt". Should never occur though.
+static uint8_t tmc_busy = false;
+static uint8_t spi_busy = false;
+static uint8_t busy_reset_count = 0;
+
+static spi_state_type_t SPI_current_state 		= SPI_STATE_IDLE; 		/* flag to distinguish SPI state */
+
+
+/* below function is to schedule event in the spi send queue */
+void spi_schedule_single_tx(TMC2590TypeDef *tmc2590_1, uint8_t *data, uint8_t size, uint8_t addressIsDrvConf, uint8_t rdsel)
+{
+    m_spi_tx_buffer[m_spi_tx_insert_index].buf_size = size;
+    m_spi_tx_buffer[m_spi_tx_insert_index].tmc2590_1 = tmc2590_1;
+	memset(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, 0, size);
+  	memcpy(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, data, size);		
+    m_spi_tx_buffer[m_spi_tx_insert_index].addressIsDrvConf = addressIsDrvConf;
+    m_spi_tx_buffer[m_spi_tx_insert_index].rdsel = rdsel;
+	m_spi_tx_insert_index++;
+    m_spi_tx_insert_index &= SPI_TX_BUFFER_MASK;    
+}
+
+void spi_schedule_dual_tx(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t *data, uint8_t size, uint8_t addressIsDrvConf, uint8_t rdsel)
+{
+    m_spi_tx_buffer[m_spi_tx_insert_index].buf_size = size;
+    m_spi_tx_buffer[m_spi_tx_insert_index].tmc2590_1 = tmc2590_1;
+    m_spi_tx_buffer[m_spi_tx_insert_index].tmc2590_2 = tmc2590_2;
+	memset(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, 0, size);
+  	memcpy(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, data, size);		
+    m_spi_tx_buffer[m_spi_tx_insert_index].addressIsDrvConf = addressIsDrvConf;
+    m_spi_tx_buffer[m_spi_tx_insert_index].rdsel = rdsel;
+	m_spi_tx_insert_index++;
+    m_spi_tx_insert_index &= SPI_TX_BUFFER_MASK;    
+}
+
+void spi_process_tx_queue(void){
+    /* if something is waiting then send it */
+    if (m_spi_tx_index != m_spi_tx_insert_index){
+        spi_busy = true;
+        
+        /* keep log of next element - is it 3 or 5 bytes (single or dual motors) */
+        current_transfer_type = m_spi_tx_buffer[m_spi_tx_index].buf_size; //TX_BUF_SIZE_DUAL) { //or TX_BUF_SIZE_SINGLE
+        
+        /* start state 1 of the transfer: pull SSx low	write byte_x1 to the SPDR */        
+        SPI_current_state = SPI_STATE_1;
+        
+        /* pull CS pin down */
+        tmc_pin_write(0, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->channel);
+
+        /* initiate transfer by writing first byte to the data register */
+        SPDR = m_spi_tx_buffer[m_spi_tx_index].m_spi_tx_buf[0];
+         
+        /* next step will be handled by interrupt handler ISR_SPI_STC_vect */
+        
+    } //if (m_spi_tx_index != m_spi_tx_insert_index){
+    else{
+        /*nothing else left in a queue, release tmc_busy flag */
+        tmc_busy = false;
+        spi_busy = true;
+        SPI_current_state = SPI_STATE_IDLE;
+        
+        /* process all responses and update the current status of controller's parameters */
+        process_status_of_all_controllers();
+        
+    }
+}
+
+
+
+    
+    
+
+
+ISR(SPI_STC_vect)
+{
+    /* start relevant FSM depend on the single or dual motors */
+    
+    /* single buffer
+    State 1: pull SSz low, write byte_z1 to the SPDR
+    state 2: read the RX byte_z1 from SPDR, write byte_z2 to the SPDR
+    state 3: read the RX byte_z2 from SPDR, write byte_z3 to the SPDR
+    state 4: read the RX byte_z3 from SPDR, pull SSz high
+    
+    or dual buffer:
+    state 1	pull SSx low	write byte_x1 to the SPDR
+    state 2	read the RX byte_x1 from SPDR	write byte_x2 to the SPDR
+    state 3	read the RX byte_x2 from SPDR	write byte_x3 to the SPDR
+    state 4	read the RX byte_x3 from SPDR	write byte_x4 to the SPDR
+    state 5	read the RX byte_x4 from SPDR	write byte_x5 to the SPDR
+    state 6	read the RX byte_x5 from SPDR	pull SSx high        
+    */    
+
+    
+    switch (SPI_current_state)
+    {	
+        
+        case SPI_STATE_1:   /* SPI received byte 1 */				
+            SPI_current_state = SPI_STATE_2;						
+            //state 2: read the RX byte_z1 from SPDR, write byte_z2 to the SPDR               
+            /* copy first received byte to the buffer */
+            m_spi_rx_data[0] = SPDR;
+            /* initiate transfer by writing next byte to the data register */
+            SPDR = m_spi_tx_buffer[m_spi_tx_index].m_spi_tx_buf[1];
+        break;
+        
+        case SPI_STATE_2:   /* SPI received byte 2 */				
+            SPI_current_state = SPI_STATE_3;						
+            // state 3: read the RX byte_z2 from SPDR, write byte_z3 to the SPDR
+            /* copy next received byte to the buffer */
+            m_spi_rx_data[1] = SPDR;
+            /* initiate transfer by writing next byte to the data register */
+            SPDR = m_spi_tx_buffer[m_spi_tx_index].m_spi_tx_buf[2];
+        break;
+        
+        case SPI_STATE_3:   /* SPI received byte 3 */				
+            SPI_current_state = SPI_STATE_4;						                
+            /* copy next received byte to the buffer */
+            m_spi_rx_data[2] = SPDR;
+        
+            if ( current_transfer_type == TX_BUF_SIZE_DUAL) {
+                /* state 4	read the RX byte_x3 from SPDR	write byte_x4 to the SPDR */
+                /* initiate transfer by writing next byte to the data register */
+                SPDR = m_spi_tx_buffer[m_spi_tx_index].m_spi_tx_buf[3];
+            }
+            else{
+                /* single transfer complete, store result and advance to next queue element */
+                // state 4: read the RX byte_z3 from SPDR, pull SSz high                    
+                /* deconstruct response */
+                m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] = 
+                            TMC2590_VALUE(_8_32(m_spi_rx_data[0], m_spi_rx_data[1], m_spi_rx_data[2], 0) >> 12) ;    
+                
+                // set virtual read address for next reply given by RDSEL on given motor, can only change by setting RDSEL in DRVCONF
+                if(m_spi_tx_buffer[m_spi_tx_index].addressIsDrvConf == 1)
+                    m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx = m_spi_tx_buffer[m_spi_tx_index].rdsel;
+                
+                /* pull CS pin up */
+                tmc_pin_write(1, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->channel);
+
+                /* Write SPI returns Success. Increment buffer index and process again in case something is in a queue*/
+                m_spi_tx_index++;
+                m_spi_tx_index &= SPI_TX_BUFFER_MASK;
+                
+                spi_busy = false;
+                SPI_current_state 		= SPI_STATE_IDLE;                    
+                
+                /* continue draining the queue: start next SPI transfers*/                    
+                spi_process_tx_queue();                                          
+            }
+            
+        break;
+        
+        case SPI_STATE_4:   /* SPI received byte 4 */				
+            SPI_current_state = SPI_STATE_5;						
+            // state 5	read the RX byte_x4 from SPDR	write byte_x5 to the SPDR
+            /* copy next received byte to the buffer */
+            m_spi_rx_data[3] = SPDR;
+            /* initiate transfer by writing next byte to the data register */
+            SPDR = m_spi_tx_buffer[m_spi_tx_index].m_spi_tx_buf[4];
+        break;
+        
+        case SPI_STATE_5:   /* SPI received byte 5 */				
+            SPI_current_state = SPI_STATE_6;						
+            // state 6	read the RX byte_x5 from SPDR	pull SSx high        
+            /* dual transfer complete, store result and advance to next queue element */
+            m_spi_rx_data[4] = SPDR;
+        
+            /* deconstruct response */
+            m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] = 
+                        _8_32(m_spi_rx_data[2], m_spi_rx_data[3], m_spi_rx_data[4], 0) >> 8 ;
+            m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->config->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->respIdx] = 
+                        TMC2590_VALUE(_8_32(m_spi_rx_data[0], m_spi_rx_data[1], m_spi_rx_data[2], 0) >> 12) ;    
+            
+            // set virtual read address for next reply given by RDSEL on given motor, can only change by setting RDSEL in DRVCONF
+            if(m_spi_tx_buffer[m_spi_tx_index].addressIsDrvConf == 1){
+                m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx = m_spi_tx_buffer[m_spi_tx_index].rdsel;
+                m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->respIdx = m_spi_tx_buffer[m_spi_tx_index].rdsel;
+            }
+            
+            /* pull CS pin up */
+            tmc_pin_write(1, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->channel);
+
+            /* Write SPI returns Success. Increment buffer index and process again in case something is in a queue*/
+            m_spi_tx_index++;
+            m_spi_tx_index &= SPI_TX_BUFFER_MASK;
+            
+            spi_busy = false;
+            SPI_current_state 		= SPI_STATE_IDLE;                    
+            
+            /* continue draining the queue: start next SPI transfers*/                    
+            spi_process_tx_queue();
+
+        break;
+        
+        default:
+            break;
+
+    } // switch (SPI_current_state)
+
+}
+
+
+/*  Function for passing any pending request from the buffer to the SPI hardware.*/
+ISR(TIMER2_COMPA_vect)
+{
+    
+    /* if for some reason the SPI was not released (HW glitch or comms loss) wait for 10 timer cycles and reset the busy flag */
+    if ( (spi_busy) && (tmc_busy) && ( busy_reset_count <10 ) ){
+        busy_reset_count++;
+        return;
+    }
+
+    spi_busy = false;
+    SPI_current_state 		= SPI_STATE_IDLE;        
+    
+    tmc_busy = true;
+    busy_reset_count = 0;
+    
+    /* check for pending tx buffers and flush them 
+     * otherwise collect data from all 5 motors
+     * best way to do it is to add 3 write requests to the end of the queue
+    */
+    
+    //tmc2590_schedule_read_all();
+    
+    /* start SPI transfers flushing the queue */
+    
+    //spi_process_tx_queue();
+
+    printPgmString(PSTR("."));
+    tmc_pin_write(toggle%2, SPI_CS_X_PIN);
+    tmc_pin_write(toggle%2, SPI_CS_Y_PIN);
+    tmc_pin_write(toggle%2, SPI_CS_Z_PIN);
+    toggle++;
+}
+
+
+
