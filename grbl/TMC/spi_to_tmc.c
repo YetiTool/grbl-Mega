@@ -70,6 +70,12 @@ void asmcnc_TMC_Timer2_setup(void){
 
 void SPI_MasterInit(void)
 {
+
+    /* Warning: if the SS pin ever becomes a LOW INPUT then SPI automatically switches to Slave, so the data direction of the SS pin MUST be kept as OUTPUT.
+     * if the SS pin is not already configured as an output then set it high (to enable the internal pull-up resistor)
+     * When the SS pin is set as OUTPUT, it can be used as a general purpose output port (it doesn't influence SPI operations). */
+    tmc_pin_write(1, SPI_SS_PIN);
+
 	/* Set MOSI and SCK output, all others input */
 	TMC_DDR			|= TMC_PORT_MASK;
 
@@ -90,17 +96,10 @@ void SPI_MasterInit(void)
 void spi_hw_init(void){
 
 	SPI_MasterInit();
-
-	//TMC_DDR			|= TMC_PORT_MASK;
-
-	/* Enable SPI, Master */
-	//SPCR |= ( (1<<SPE)|(1<<MSTR)|(1<<SPR0)|(1<<CPOL)|(1<<CPHA) );
-
-
     
 	asmcnc_TMC_Timer2_setup(); /* initialise timer to periodically poll TMC motor controllers */
 
-	/* configure CS pins and pull them high */
+    /* configure CS pins and pull them high */
     tmc_pin_write(1, SPI_CS_X_PIN);
     tmc_pin_write(1, SPI_CS_Y_PIN);
     tmc_pin_write(1, SPI_CS_Z_PIN);
@@ -353,18 +352,7 @@ ISR(TIMER2_COMPA_vect)
     tmc_pin_write(toggle%2, SPI_CS_Z_PIN);
     toggle++;
 
-//	SPCR |= ( (1<<SPE)|(1<<MSTR)|(1<<SPR0)|(1<<CPOL)|(1<<CPHA) );
     SPDR = 0x05;
-//	while(!(SPSR & (1<<SPIF))); /* Wait for transmission complete */
-//	SPCR |= ( (1<<SPE)|(1<<MSTR)|(1<<SPR0)|(1<<CPOL)|(1<<CPHA) );
-//    SPDR = 0x00;
-//	while(!(SPSR & (1<<SPIF))); /* Wait for transmission complete */
-//	SPCR |= ( (1<<SPE)|(1<<MSTR)|(1<<SPR0)|(1<<CPOL)|(1<<CPHA) );
-//    SPDR = 0x55;
-//	while(!(SPSR & (1<<SPIF))); /* Wait for transmission complete */
-//	SPCR |= ( (1<<SPE)|(1<<MSTR)|(1<<SPR0)|(1<<CPOL)|(1<<CPHA) );
-//    SPDR = 0xAA;
-//	while(!(SPSR & (1<<SPIF))); /* Wait for transmission complete */
 
 }
 
