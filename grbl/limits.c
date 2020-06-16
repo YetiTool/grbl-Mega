@@ -70,7 +70,7 @@ void limits_init()
       #endif
     #endif // DISABLE_HW_LIMITS
   #else
-        SPCR = 0;
+        //SPCR = 0;
     LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins
 
     #ifdef DISABLE_LIMIT_PIN_PULL_UP

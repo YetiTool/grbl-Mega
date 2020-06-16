@@ -58,7 +58,7 @@ void asmcnc_TMC_Timer2_setup(void){
 	TCNT2=0;
 
 	/* setup port B to see pin OC2A toggling */
-	TMC_DDR	|= TMC_PORT_MASK;
+	//TMC_DDR	|= TMC_PORT_MASK;
 	// Compare Output Mode, non-PWM Mode
 	//TCCR2A |= (1<<COM2A0); 	//Toggle OC2A on Compare Match
 
@@ -83,31 +83,27 @@ void SPI_MasterInit(void)
 	SPCR |= ( (1<<CPOL)|(1<<CPHA) );
 
 	/* enable SPI interrupts  */
-	SPCR |= (1<<SPIE);
+	//SPCR |= (1<<SPIE);
 
 }
-
-void SPI_MasterTransmit(char cData)
-{
-	/* Start transmission */
-	SPDR = cData;
-	/* Wait for transmission complete */
-	while(!(SPSR & (1<<SPIF)))
-	;
-}
-
 
 void spi_hw_init(void){
 
-	//SPI_MasterInit();
+	SPI_MasterInit();
+
+	//TMC_DDR			|= TMC_PORT_MASK;
+
+	/* Enable SPI, Master */
+	//SPCR |= ( (1<<SPE)|(1<<MSTR)|(1<<SPR0)|(1<<CPOL)|(1<<CPHA) );
+
+
     
 	asmcnc_TMC_Timer2_setup(); /* initialise timer to periodically poll TMC motor controllers */
 
 	/* configure CS pins and pull them high */
-    //spi_pin_write(1, SPI_CS_X_PIN);
-    //spi_pin_write(1, SPI_CS_Y_PIN);
-    //spi_pin_write(1, SPI_CS_Z_PIN);
-
+    tmc_pin_write(1, SPI_CS_X_PIN);
+    tmc_pin_write(1, SPI_CS_Y_PIN);
+    tmc_pin_write(1, SPI_CS_Z_PIN);
     
 }
 
@@ -335,8 +331,8 @@ ISR(TIMER2_COMPA_vect)
     }
 
     spi_busy = false;
-    SPI_current_state 		= SPI_STATE_IDLE;        
-    
+    SPI_current_state 		= SPI_STATE_IDLE;
+
     tmc_busy = true;
     busy_reset_count = 0;
     
@@ -356,6 +352,20 @@ ISR(TIMER2_COMPA_vect)
     tmc_pin_write(toggle%2, SPI_CS_Y_PIN);
     tmc_pin_write(toggle%2, SPI_CS_Z_PIN);
     toggle++;
+
+//	SPCR |= ( (1<<SPE)|(1<<MSTR)|(1<<SPR0)|(1<<CPOL)|(1<<CPHA) );
+    SPDR = 0x05;
+//	while(!(SPSR & (1<<SPIF))); /* Wait for transmission complete */
+//	SPCR |= ( (1<<SPE)|(1<<MSTR)|(1<<SPR0)|(1<<CPOL)|(1<<CPHA) );
+//    SPDR = 0x00;
+//	while(!(SPSR & (1<<SPIF))); /* Wait for transmission complete */
+//	SPCR |= ( (1<<SPE)|(1<<MSTR)|(1<<SPR0)|(1<<CPOL)|(1<<CPHA) );
+//    SPDR = 0x55;
+//	while(!(SPSR & (1<<SPIF))); /* Wait for transmission complete */
+//	SPCR |= ( (1<<SPE)|(1<<MSTR)|(1<<SPR0)|(1<<CPOL)|(1<<CPHA) );
+//    SPDR = 0xAA;
+//	while(!(SPSR & (1<<SPIF))); /* Wait for transmission complete */
+
 }
 
 
