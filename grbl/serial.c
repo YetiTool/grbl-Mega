@@ -25,12 +25,12 @@
 #define TX_RING_BUFFER (TX_BUFFER_SIZE+1)
 
 uint8_t serial_rx_buffer[RX_RING_BUFFER];
-uint8_t serial_rx_buffer_head = 0;
-volatile uint8_t serial_rx_buffer_tail = 0;
+uint16_t serial_rx_buffer_head = 0;
+volatile uint16_t serial_rx_buffer_tail = 0;
 
 uint8_t serial_tx_buffer[TX_RING_BUFFER];
-uint8_t serial_tx_buffer_head = 0;
-volatile uint8_t serial_tx_buffer_tail = 0;
+uint16_t serial_tx_buffer_head = 0;
+volatile uint16_t serial_tx_buffer_tail = 0;
 
 uint8_t serial_rx_rgb_state = 0; 			/* RGB HEX Rx state machine state */
 uint8_t serial_rx_rgb_count = 0; 			/* number of currently received hex characters */
@@ -90,7 +90,7 @@ void serial_init()
 // Writes one byte to the TX serial buffer. Called by main program.
 void serial_write(uint8_t data) {
   // Calculate next head
-  uint8_t next_head = serial_tx_buffer_head + 1;
+  uint16_t next_head = serial_tx_buffer_head + 1;
   if (next_head == TX_RING_BUFFER) { next_head = 0; }
 
   // Wait until there is space in the buffer
@@ -111,7 +111,7 @@ void serial_write(uint8_t data) {
 // Data Register Empty Interrupt handler
 ISR(SERIAL_UDRE)
 {
-  uint8_t tail = serial_tx_buffer_tail; // Temporary serial_tx_buffer_tail (to optimize for volatile)
+  uint16_t tail = serial_tx_buffer_tail; // Temporary serial_tx_buffer_tail (to optimize for volatile)
 
   // Send a byte from the buffer
   UDR0 = serial_tx_buffer[tail];
@@ -130,7 +130,7 @@ ISR(SERIAL_UDRE)
 // Fetches the first byte in the serial read buffer. Called by main program.
 uint8_t serial_read()
 {
-  uint8_t tail = serial_rx_buffer_tail; // Temporary serial_rx_buffer_tail (to optimize for volatile)
+  uint16_t tail = serial_rx_buffer_tail; // Temporary serial_rx_buffer_tail (to optimize for volatile)
   if (serial_rx_buffer_head == tail) {
     return SERIAL_NO_DATA;
   } else {
@@ -148,7 +148,7 @@ uint8_t serial_read()
 ISR(SERIAL_RX)
 {
   uint8_t data = UDR0;
-  uint8_t next_head;
+  uint16_t next_head;
 
   /* BK: hack into the ISR routine to intercept RGB hex command and bypass serial_rx_buffer
    * code in below switch statement is optimised for minimum number of CPU cycles, could be optimised further if field tests shows issues*/
