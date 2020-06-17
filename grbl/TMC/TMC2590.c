@@ -419,8 +419,8 @@ void tmc2590_dual_read_all(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
 /* schedule periodic read of all values */
 void tmc2590_schedule_read_all(void){
     tmc2590_dual_read_all(&tmc2590_X1, &tmc2590_X2);
-    //tmc2590_dual_read_all(&tmc2590_Y1, &tmc2590_Y2);
-    //tmc2590_single_read_all(&tmc2590_Z);
+    tmc2590_dual_read_all(&tmc2590_Y1, &tmc2590_Y2);
+    tmc2590_single_read_all(&tmc2590_Z);
 }
 
 void process_status_of_single_controller(TMC2590TypeDef *tmc2590){

@@ -9,7 +9,6 @@ add handling of status and diag flags -
 #include "grbl.h"
 #include "spi_to_tmc.h"
 #include "TMC2590.h"
-static uint8_t toggle;
 
 
 /********************************************** below are Atmega2560 specific - timers, SPI, pins etc **********************************************/
@@ -18,12 +17,6 @@ void tmc_pin_write(uint32_t level, uint32_t pin){
 	if (level==0) TMC_PORT &=~(1<<pin); /* clear pin */
 	else          TMC_PORT |= (1<<pin); /* set pin */
 }
-
-void debug_pin_write(uint32_t level, uint32_t pin){
-	if (level==0) DEBUG_PORT &=~(1<<pin); /* clear pin */
-	else          DEBUG_PORT |= (1<<pin); /* set pin */
-}
-
 
 /* the only remaining unused timer is 8bit timer 2*/
 /* initialise timer to periodically poll TMC motor controllers */
@@ -38,10 +31,16 @@ void asmcnc_TMC_Timer2_setup(void){
 	TCCR2A |= (1<<WGM21); /* set bit */
 	TCCR2A |= (1<<WGM20); /* set bit */
 
-	/* Setup pre-scaling = 1024 to ensure slowest rate of 30.5Hz ticks */
-	TCCR2B |=(1<<CS20); /* set bit */
+//	/* Setup pre-scaling = 1024 to ensure slowest rate of 60.5Hz / 15ms ticks */
+//	TCCR2B |=(1<<CS20); /* set bit */
+//	TCCR2B |=(1<<CS21); /* set bit */
+//	TCCR2B |=(1<<CS22); /* set bit */
+
+	/* Setup pre-scaling = 256 to ensure slowest rate of 240.5Hz / 3.5ms ticks */
+	//TCCR2B |=(1<<CS20); /* set bit */
 	TCCR2B |=(1<<CS21); /* set bit */
 	TCCR2B |=(1<<CS22); /* set bit */
+
 
 	/* setup compare register to achieve wanted SPI polling frequency. Some example values:
 	 * 0xFF:
@@ -83,14 +82,14 @@ void SPI_MasterInit(void)
 	/* Enable SPI, Master */
 	SPCR |= ( (1<<SPE)|(1<<MSTR) );
 
-	/* set clock rate fck/16 = 1MHz*/
-	SPCR |= (1<<SPR0);
+	/* set clock rate fck/4 = 4MHz*/
+	//SPCR |= (1<<SPR0);
 
 	/* Set phase and polarity to mode3 */
 	SPCR |= ( (1<<CPOL)|(1<<CPHA) );
 
 	/* enable SPI interrupts  */
-	//SPCR |= (1<<SPIE);
+	SPCR |= (1<<SPIE);
 
 }
 
@@ -133,7 +132,7 @@ void spi_schedule_single_tx(TMC2590TypeDef *tmc2590_1, uint8_t *data, uint8_t si
 {
     m_spi_tx_buffer[m_spi_tx_insert_index].buf_size = size;
     m_spi_tx_buffer[m_spi_tx_insert_index].tmc2590_1 = tmc2590_1;
-	memset(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, 0, size);
+	//memset(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, 0, size);
   	memcpy(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, data, size);		
     m_spi_tx_buffer[m_spi_tx_insert_index].addressIsDrvConf = addressIsDrvConf;
     m_spi_tx_buffer[m_spi_tx_insert_index].rdsel = rdsel;
@@ -146,7 +145,7 @@ void spi_schedule_dual_tx(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, 
     m_spi_tx_buffer[m_spi_tx_insert_index].buf_size = size;
     m_spi_tx_buffer[m_spi_tx_insert_index].tmc2590_1 = tmc2590_1;
     m_spi_tx_buffer[m_spi_tx_insert_index].tmc2590_2 = tmc2590_2;
-	memset(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, 0, size);
+	//memset(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, 0, size);
   	memcpy(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, data, size);		
     m_spi_tx_buffer[m_spi_tx_insert_index].addressIsDrvConf = addressIsDrvConf;
     m_spi_tx_buffer[m_spi_tx_insert_index].rdsel = rdsel;
@@ -177,7 +176,7 @@ void spi_process_tx_queue(void){
     else{
         /*nothing else left in a queue, release tmc_busy flag */
         tmc_busy = false;
-        spi_busy = true;
+        spi_busy = false;
         SPI_current_state = SPI_STATE_IDLE;
         
         /* process all responses and update the current status of controller's parameters */
@@ -185,11 +184,6 @@ void spi_process_tx_queue(void){
         
     }
 }
-
-
-
-    
-    
 
 
 ISR(SPI_STC_vect)
@@ -211,7 +205,11 @@ ISR(SPI_STC_vect)
     state 6	read the RX byte_x5 from SPDR	pull SSx high        
     */    
 
-    
+	sei(); // Re-enable interrupts to allow Stepper Interrupt to fire on-time.
+
+#ifdef DEBUG_PINS_ENABLED
+	debug_pin_write(1, DEBUG_1_PIN);
+#endif
     switch (SPI_current_state)
     {	
         
@@ -247,12 +245,35 @@ ISR(SPI_STC_vect)
                 /* single transfer complete, store result and advance to next queue element */
                 // state 4: read the RX byte_z3 from SPDR, pull SSz high                    
                 /* deconstruct response */
-                m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] = 
-                            TMC2590_VALUE(_8_32(m_spi_rx_data[0], m_spi_rx_data[1], m_spi_rx_data[2], 0) >> 12) ;    
-                
+            	int32_t a;
+#ifdef DEBUG_PINS_ENABLED
+    debug_pin_write(1, DEBUG_2_PIN);
+    debug_pin_write(0, DEBUG_2_PIN);
+#endif
+    			/* BK profiling: 9us */
+                //m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] =
+                //            TMC2590_VALUE(_8_32(m_spi_rx_data[0], m_spi_rx_data[1], m_spi_rx_data[2], 0) >> 12) ;
+
+    			/* BK profiling: 6.3us */
+    			a = TMC2590_VALUE(_8_32(m_spi_rx_data[0], m_spi_rx_data[1], m_spi_rx_data[2], 0) >> 12);
+#ifdef DEBUG_PINS_ENABLED
+    debug_pin_write(1, DEBUG_2_PIN);
+    debug_pin_write(0, DEBUG_2_PIN);
+#endif
+    			/* BK profiling: 2.7us */
+    			m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] = a;
+#ifdef DEBUG_PINS_ENABLED
+    debug_pin_write(1, DEBUG_2_PIN);
+    debug_pin_write(0, DEBUG_2_PIN);
+#endif
+    			/* BK profiling: 2us */
                 // set virtual read address for next reply given by RDSEL on given motor, can only change by setting RDSEL in DRVCONF
                 if(m_spi_tx_buffer[m_spi_tx_index].addressIsDrvConf == 1)
                     m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx = m_spi_tx_buffer[m_spi_tx_index].rdsel;
+#ifdef DEBUG_PINS_ENABLED
+    debug_pin_write(1, DEBUG_2_PIN);
+    debug_pin_write(0, DEBUG_2_PIN);
+#endif
                 
                 /* pull CS pin up */
                 tmc_pin_write(1, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->channel);
@@ -316,14 +337,26 @@ ISR(SPI_STC_vect)
             break;
 
     } // switch (SPI_current_state)
-
+#ifdef DEBUG_PINS_ENABLED
+    debug_pin_write(0, DEBUG_1_PIN);
+#endif
 }
 
 
 /*  Function for passing any pending request from the buffer to the SPI hardware.*/
 ISR(TIMER2_COMPA_vect)
 {
-    
+	sei(); // Re-enable interrupts to allow Stepper Interrupt to fire on-time.
+
+	/* slow down polling the drivers, 250 is around 1s */
+    static uint8_t skip_count;
+    if (++skip_count % 250 != 0)  	return;
+    skip_count = 0;
+
+#ifdef DEBUG_PINS_ENABLED
+	debug_pin_write(1, DEBUG_0_PIN);
+#endif
+
     /* if for some reason the SPI was not released (HW glitch or comms loss) wait for 10 timer cycles and reset the busy flag */
     if ( (spi_busy) && (tmc_busy) && ( busy_reset_count <10 ) ){
         busy_reset_count++;
@@ -341,21 +374,31 @@ ISR(TIMER2_COMPA_vect)
      * best way to do it is to add 3 write requests to the end of the queue
     */
     
-    //tmc2590_schedule_read_all();
+    /* BK profiling: 750us */
+    tmc2590_schedule_read_all();
+
+#ifdef DEBUG_PINS_ENABLED
+    debug_pin_write(0, DEBUG_0_PIN);
+    debug_pin_write(1, DEBUG_0_PIN);
+#endif
     
     /* start SPI transfers flushing the queue */
     
-    //spi_process_tx_queue();
+    spi_process_tx_queue();
 
     //printPgmString(PSTR("."));
+    //static uint8_t toggle;
     //tmc_pin_write(toggle%2, SPI_CS_X_PIN);
     //tmc_pin_write(toggle%2, SPI_CS_Y_PIN);
     //tmc_pin_write(toggle%2, SPI_CS_Z_PIN);
-    debug_pin_write(toggle%2, DEBUG_0_PIN);
-    toggle++;
+    //debug_pin_write(toggle%2, DEBUG_0_PIN);
+    //toggle++;
 
-    SPDR = 0x05;
+    //SPDR = 0x05;
 
+#ifdef DEBUG_PINS_ENABLED
+    debug_pin_write(0, DEBUG_0_PIN);
+#endif
 }
 
 

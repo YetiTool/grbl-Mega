@@ -101,7 +101,10 @@ enum rgbHexStates{
 #define SPI_CS_Z_PIN		6 //PB6
 #define TMC_PORT_MASK	( (1<<SPI_SCK_PIN) | (1<<SPI_MOSI_PIN) | (1<<SPI_CS_X_PIN) | (1<<SPI_CS_Y_PIN) | (1<<SPI_CS_Z_PIN) |(SPI_SS_PIN));
 
-/* setup debug port */
+/* setup debug port. Designed for monitoring real time performance of individual functions to identify potential weaknesses and clashes in the code*/
+//#define DEBUG_PINS_ENABLED // comment out to remove debug pins functionality - remove for production version
+
+#ifdef DEBUG_PINS_ENABLED
 #define DEBUG_DDR			DDRH
 #define DEBUG_PORT			PORTH
 // Port bits
@@ -109,7 +112,8 @@ enum rgbHexStates{
 #define DEBUG_1_PIN			1 //PH1
 #define DEBUG_2_PIN			2 //PH2
 #define DEBUG_PORT_MASK	( (1<<DEBUG_0_PIN) | (1<<DEBUG_1_PIN) | (1<<DEBUG_2_PIN) );
-
+void debug_pin_write(uint32_t level, uint32_t pin);
+#endif
 
 void asmcnc_init(void);
 //void asmcnc_TMR3_init();

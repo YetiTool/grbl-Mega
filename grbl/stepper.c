@@ -361,6 +361,10 @@ ISR(TIMER1_COMPA_vect)
 
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
 
+#ifdef DEBUG_PINS_ENABLED
+    debug_pin_write(1, DEBUG_0_PIN);
+#endif
+
   // Set the direction pins a couple of nanoseconds before we step the steppers
   #ifdef DEFAULTS_RAMPS_BOARD
     DIRECTION_PORT(0) = (DIRECTION_PORT(0) & ~(1 << DIRECTION_BIT(0))) | st.dir_outbits[0];
@@ -395,8 +399,12 @@ ISR(TIMER1_COMPA_vect)
   TCCR0B = (1<<CS01); // Begin Timer0. Full speed, 1/8 prescaler
 
   busy = true;
-  sei(); // Re-enable interrupts to allow Stepper Port Reset Interrupt to fire on-time.
+  //sei(); // Re-enable interrupts to allow Stepper Port Reset Interrupt to fire on-time.
          // NOTE: The remaining code in this ISR will finish before returning to main program.
+         // BK: disable sei here to raise the priority of this ISR to max and not get blocked by TMC/SPI ISRs.
+         //     Side effect is that pulse length uncertainty is increased (was 10us+/-1us, now 25us +/-10us)
+         //     Should not matter as TMC drivers use rising edge of the pulse.
+         //     This ISR execution time is ~15us, so pulse cannot be shorter than that.
 
   // If there is no step segment, attempt to pop one from the stepper buffer
   if (st.exec_segment == NULL) {
@@ -445,6 +453,10 @@ ISR(TIMER1_COMPA_vect)
       // Ensure pwm is set properly upon completion of rate-controlled motion.
       if (st.exec_block->is_pwm_rate_adjusted) { spindle_set_speed(SPINDLE_PWM_OFF_VALUE); }
       system_set_exec_state_flag(EXEC_CYCLE_STOP); // Flag main program for cycle end
+#ifdef DEBUG_PINS_ENABLED
+    debug_pin_write(0, DEBUG_0_PIN);
+#endif
+
       return; // Nothing to do but exit.
     }
   }
@@ -544,6 +556,11 @@ ISR(TIMER1_COMPA_vect)
     st.step_outbits ^= step_port_invert_mask;  // Apply step port invert mask
   #endif // Ramps Board
   busy = false;
+
+#ifdef DEBUG_PINS_ENABLED
+    debug_pin_write(0, DEBUG_0_PIN);
+#endif
+
 }
 
 

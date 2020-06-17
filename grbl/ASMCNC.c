@@ -13,7 +13,9 @@ void asmcnc_init(void)
 	AC_ACCS_DDR			|=AC_ACCS_MASK;
 	AC_DOOR_DDR			|=AC_DOOR_RED_MASK;
 	AC_RGB_DDR 			|=AC_RGB_MASK;
+#ifdef DEBUG_PINS_ENABLED
 	DEBUG_DDR  			|=DEBUG_PORT_MASK;
+#endif
 	AC_PROBE_HOLDER_DDR	&=~AC_PROBE_HOLDER_MASK; //Set as input
 
 	PORTL |= AC_LIM_RED_MASK_XZ;
@@ -290,3 +292,10 @@ void asmcnc_init_ADC(void)
     ADCSRA |= (1<<ADSC);
 
 }
+
+#ifdef DEBUG_PINS_ENABLED
+void debug_pin_write(uint32_t level, uint32_t pin){
+	if (level==0) DEBUG_PORT &=~(1<<pin); /* clear pin */
+	else          DEBUG_PORT |= (1<<pin); /* set pin */
+}
+#endif
