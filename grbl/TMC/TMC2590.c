@@ -501,7 +501,7 @@ void init_TMC(void){
 
 	tmc2590_X1.interpolationEn      = 1;
 	tmc2590_X1.microSteps           = 4; /* 4 : set MRES  = 16*/
-	tmc2590_X1.currentScale         = 8; /* 0 - 31 where 31 is max */
+	tmc2590_X1.currentScale         = 4; /* 0 - 31 where 31 is max */
 	tmc2590_X1.stallGuardFilter     = 1; // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
 	tmc2590_X1.stallGuardThreshold  = 5;
 	tmc2590_X1.vSense               = 0; /* 0: Full-scale sense resistor voltage is 325mV. */

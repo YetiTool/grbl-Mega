@@ -8,8 +8,6 @@ add handling of status and diag flags -
 
 #include "grbl.h"
 #include "spi_to_tmc.h"
-#include "TMC2590.h"
-
 
 /********************************************** below are Atmega2560 specific - timers, SPI, pins etc **********************************************/
 
@@ -350,7 +348,7 @@ ISR(TIMER2_COMPA_vect)
 
 	/* slow down polling the drivers, 250 is around 1s */
     static uint8_t skip_count;
-    if (++skip_count % 250 != 0)  	return;
+    if (++skip_count % 25 != 0)  	return;
     skip_count = 0;
 
 #ifdef DEBUG_PINS_ENABLED

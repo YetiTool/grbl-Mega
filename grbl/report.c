@@ -578,6 +578,7 @@ void report_realtime_status()
         if (bit_istrue(ctrl_pin_state,CONTROL_PIN_INDEX_CYCLE_START)) { serial_write('S'); }
       } //if (ctrl_pin_state) {
     } //if (lim_pin_state | ctrl_pin_state | prb_pin_state | prb_hold_state | enclosure_state | spare1_state | ac_sense_state ) {
+  #endif //#ifdef REPORT_FIELD_PIN_STATE
 
   #ifdef ENABLE_SPINDLE_LOAD_MONITOR
   printPgmString(PSTR("|Ld:"));
@@ -591,7 +592,45 @@ void report_realtime_status()
   printInteger( ADC_reading );
   #endif //#ifdef ENABLE_SPINDLE_LOAD_MONITOR
 
-  #endif //#ifdef REPORT_FIELD_PIN_STATE
+  #ifdef ENABLE_TMC_FEEDBACK_MONITOR
+  /* cycle through all motors */
+  uint8_t controller_id;
+  TMC2590TypeDef *tmc2590;
+  for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+	  tmc2590 = get_TMC_controller(controller_id);
+	    switch (controller_id){
+	        case TMC_X1:
+				  printPgmString(PSTR("|X1:"));
+				break;
+	        case TMC_X2:
+		      	  printPgmString(PSTR("|X2:"));
+		      	break;
+	        case TMC_Y1:
+		      	  printPgmString(PSTR("|Y1:"));
+		      	break;
+	        case TMC_Y2:
+		      	  printPgmString(PSTR("|Y2:"));
+		      	break;
+	        case TMC_Z:
+		      	  printPgmString(PSTR("|Z:"));
+		      	break;
+	        default:
+	            break;
+	    } //switch (controller){
+	  printInteger( tmc2590->resp.stallGuardCurrenValue );
+	  printPgmString(PSTR(","));
+	  printInteger( tmc2590->resp.stallGuardShortValue );
+	  printPgmString(PSTR(","));
+	  printInteger( tmc2590->resp.coolStepCurrenValue );
+	  printPgmString(PSTR(","));
+	  printInteger( tmc2590->resp.StatusBits );
+	  printPgmString(PSTR(","));
+	  printInteger( tmc2590->resp.DiagnosticBits );
+	  //printPgmString(PSTR(","));
+	  //printInteger( tmc2590->resp.mStepCurrenValue );
+  }
+
+  #endif //#ifdef ENABLE_SPINDLE_LOAD_MONITOR
 
   #ifdef REPORT_FIELD_WORK_COORD_OFFSET
     if (sys.report_wco_counter > 0) { sys.report_wco_counter--; }

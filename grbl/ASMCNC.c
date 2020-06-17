@@ -5,7 +5,6 @@
  *  Author: Ian Adkins
  */
 #include "grbl.h"
-#include "TMC2590.h"
 
 void asmcnc_init(void)
 {

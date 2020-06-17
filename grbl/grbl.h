@@ -62,6 +62,8 @@
 #include "jog.h"
 #include "sleep.h"
 #include "ASMCNC.h"
+#include "TMC2590.h"
+
 
 // ---------------------------------------------------------------------------------------
 // COMPILE-TIME ERROR CHECKING OF DEFINE VALUES:

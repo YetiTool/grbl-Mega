@@ -78,8 +78,9 @@
 #define SPINDLE_SPARE 5           /* MEGA2560 Analog Pin PF5, for future use, for example low when brushes are ok, high when brushes are worn */
 #define SPINDLE_SPARE_MASK		(1<<SPINDLE_SPARE)
 
-#define ENABLE_SPINDLE_LOAD_MONITOR // enable spindle load monitoring, apply to Mafell spindles
+#define ENABLE_SPINDLE_LOAD_MONITOR  // enable spindle load monitoring, apply to Mafell spindles
 #define ENABLE_LASER_POINTER_CONTROL // Laser cross unit control
+#define ENABLE_TMC_FEEDBACK_MONITOR  // print feedback from TMC motor controllers
 
 /* RGB HEX Rx state machine state */
 enum rgbHexStates{
