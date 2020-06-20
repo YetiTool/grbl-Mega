@@ -293,6 +293,7 @@ uint8_t settings_store_global_setting(uint8_t parameter, float value) {
         if (int_value) { settings.flags |= BITFLAG_LASER_MODE; }
         else { settings.flags &= ~BITFLAG_LASER_MODE; }
         break;
+      case 50: settings.product_code = value; break; /* BK mod for EL-92 add parameter "product code" in the Atmega flash */
       default:
         return(STATUS_INVALID_STATEMENT);
     }

@@ -210,6 +210,7 @@ void report_grbl_settings() {
   report_util_float_setting(30,settings.rpm_max,N_DECIMAL_RPMVALUE);
   report_util_float_setting(31,settings.rpm_min,N_DECIMAL_RPMVALUE);
   report_util_uint8_setting(32,bit_istrue(settings.flags,BITFLAG_LASER_MODE));
+  report_util_float_setting(50,settings.product_code,2); /* BK mod for EL-92 add parameter "product code" in the Atmega flash */
   // Print axis settings
   uint8_t idx, set_idx;
   uint8_t val = AXIS_SETTINGS_START_VAL;
