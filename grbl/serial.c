@@ -23,6 +23,8 @@
 
 #define RX_RING_BUFFER (RX_BUFFER_SIZE+1)
 #define TX_RING_BUFFER (TX_BUFFER_SIZE+1)
+#define RX_RTL_RING_BUFFER (RX_RTL_BUFFER_SIZE+1)
+
 
 uint8_t serial_rx_buffer[RX_RING_BUFFER];
 uint16_t serial_rx_buffer_head = 0;
@@ -32,10 +34,14 @@ uint8_t serial_tx_buffer[TX_RING_BUFFER];
 uint16_t serial_tx_buffer_head = 0;
 volatile uint16_t serial_tx_buffer_tail = 0;
 
-uint8_t serial_rx_rgb_state = 0; 			/* RGB HEX Rx state machine state */
-uint8_t serial_rx_rgb_count = 0; 			/* number of currently received hex characters */
-uint8_t serial_rx_rgb_byte_buffer[3] = {0}; /* buffer to hold output int values for RGB codes */
+uint8_t serial_rx_rtl_state = 0; 			/* RGB HEX Rx state machine state */
+uint8_t serial_rx_rtl_count = 0; 			/* number of currently received hex characters */
+uint8_t serial_rx_rtl_byte_buffer[3] = {0}; /* buffer to hold output int values for RGB codes */
 uint8_t serial_rx_rgb_nibble = 0;			/* declaring ISR variable here to minimise declarations in ISR */
+
+uint8_t serial_rx_rtl_buffer[RX_RING_BUFFER];
+uint16_t serial_rx_rtl_buffer_head = 0;
+uint16_t serial_rx_rtl_buffer_tail = 0;
 
 
 // Returns the number of bytes available in the RX serial buffer.
@@ -144,6 +150,18 @@ uint8_t serial_read()
   }
 }
 
+// Fetches the next byte in the RTL serial read buffer. Called by main program.
+uint8_t serial_read_rtl()
+{
+  if (serial_rx_rtl_buffer_head == serial_rx_rtl_buffer_tail) {
+    return SERIAL_NO_DATA;
+  } else {
+    uint8_t data = serial_rx_rtl_buffer[serial_rx_rtl_buffer_tail];
+    serial_rx_rtl_buffer_tail++;
+    serial_rx_rtl_buffer_tail &= RX_RTL_BUFFER_MASK;
+    return data;
+  }
+}
 
 ISR(SERIAL_RX)
 {
@@ -152,10 +170,10 @@ ISR(SERIAL_RX)
 
   /* BK: hack into the ISR routine to intercept RGB hex command and bypass serial_rx_buffer
    * code in below switch statement is optimised for minimum number of CPU cycles, could be optimised further if field tests shows issues*/
-  switch (serial_rx_rgb_state) {/* RGB HEX Rx state machine state */
-	case RGB_HEX_RTL_IDLE: /*  normal state, usual operation */
+  switch (serial_rx_rtl_state) {/* RGB HEX Rx state machine state */
+	case RTL_IDLE: /*  normal state, usual operation */
 		break;
-	case RGB_HEX_RTL_RX:   /*  real-time hex code reception ongoing */
+	case RTL_RGB_HEX_RX:   /*  real-time hex code reception ongoing */
 
 		/* Convert hex to byte for speed here, we only have ~80 instructions till next UART character. */
 		serial_rx_rgb_nibble = char2intValidate(data); /* returns error 17 if char is outside of "0123456789ABCDEFabcdef"  */
@@ -163,35 +181,50 @@ ISR(SERIAL_RX)
 		if ( serial_rx_rgb_nibble < 16 ){ /* correct char received, if char is within hex code then fill the buffer */
 
 			/* convert each pair of hex codes into byte, again for speed */
-			if (serial_rx_rgb_count%2 == 0){ /*even */
-				serial_rx_rgb_byte_buffer[(serial_rx_rgb_count/2)] = serial_rx_rgb_nibble*16;
+			if (serial_rx_rtl_count%2 == 0){ /*even */
+				serial_rx_rtl_byte_buffer[(serial_rx_rtl_count/2)] = serial_rx_rgb_nibble*16;
 			}
 			else{ /* odd */
-				serial_rx_rgb_byte_buffer[((serial_rx_rgb_count-1)/2)] += serial_rx_rgb_nibble;
+				serial_rx_rtl_byte_buffer[((serial_rx_rtl_count-1)/2)] += serial_rx_rgb_nibble;
 			}
-			serial_rx_rgb_count++;
+			serial_rx_rtl_count++;
 
-			if (serial_rx_rgb_count > 5){ /* hex code reception completed, set RGB and reset FSM and counter */
-				serial_rx_rgb_state = RGB_HEX_RTL_IDLE;
-				serial_rx_rgb_count = 0;
+			if (serial_rx_rtl_count >= RTL_RGB_COMMAND_SIZE){ /* hex code reception completed, set RGB and reset FSM and counter */
+				serial_rx_rtl_state = RTL_IDLE;
+				serial_rx_rtl_count = 0;
 				asmcnc_RGB_setup(); 		/* Setup pre-scaling = 8 and Waveform Generation Mode: PWM, Phase Correct, 8-bit */
 				/* decoded RGB values:
 				 * R = buffer [0]
 				 * G = buffer [1]
 				 * B = buffer [2]
 				 * */
-				OCR3A=serial_rx_rgb_byte_buffer[0]; /* R */
-				OCR3B=serial_rx_rgb_byte_buffer[1]; /* G */
-				OCR3C=serial_rx_rgb_byte_buffer[2]; /* B */
+				OCR3A=serial_rx_rtl_byte_buffer[0]; /* R */
+				OCR3B=serial_rx_rtl_byte_buffer[1]; /* G */
+				OCR3C=serial_rx_rtl_byte_buffer[2]; /* B */
 			}
 		}
 		else{
 			/* ERROR, abort hex code reception and continue with normal operation */
 			//serial_rx_rgb_state = RGB_HEX_RTL_ERR; /* if not hex code then exit with error */
-			serial_rx_rgb_state = RGB_HEX_RTL_IDLE;
-			serial_rx_rgb_count = 0;
+			serial_rx_rtl_state = RTL_IDLE;
+			serial_rx_rtl_count = 0;
 			report_status_message(ASMCNC_STATUS_INVALID_STATEMENT);
 			break; /* break the switch and proceed as normal */
+		}
+		return; /* exit the ISR - this line is where serial bypass actually happens */
+
+	case RTL_TMC_RX:   /*  real-time TMC code reception ongoing */
+
+        serial_rx_rtl_buffer[serial_rx_rtl_buffer_head] = data;
+        serial_rx_rtl_buffer_head++;
+        serial_rx_rtl_buffer_head &= RX_RTL_BUFFER_MASK;
+		//serial_rx_rtl_byte_buffer[serial_rx_rtl_count] = data;
+		serial_rx_rtl_count++;
+		if (serial_rx_rtl_count >= RTL_TMC_COMMAND_SIZE){ /* TMC code reception completed, pass to main loop */
+			serial_rx_rtl_state = RTL_IDLE;
+			serial_rx_rtl_count = 0;
+			/* indicate to main loop that there is a TMC command to process */
+			system_set_exec_rtl_override_flag(RTL_OVR_TMC_COMMAND);
 		}
 		return; /* exit the ISR - this line is where serial bypass actually happens */
 
@@ -212,12 +245,22 @@ ISR(SERIAL_RX)
 		/* this character defines the first char in the list of 7 chars that need to be
 		 * going pass serial_rx_buffer and executed immediately at the end of 7th char
 		 * State machine:
-		 * RGB_HEX_RTL_IDLE - normal state, usual operation
-		 * RGB_HEX_RTL_RX   - hex code reception ongoing
-		 * RGB_HEX_RTL_ERR  - FAULT - other than "0123456789ABCDEF" char received
+		 * RTL_IDLE - normal state, usual operation
+		 * RTL_RGB_HEX_RX   - hex code reception ongoing
+		 * RTL_RGB_HEX_ERR  - FAULT - other than "0123456789ABCDEF" char received
 		 *  */
-		serial_rx_rgb_state = RGB_HEX_RTL_RX; /* initialise state machine and start bypassing the buffer */
-		serial_rx_rgb_count = 0;
+		serial_rx_rtl_state = RTL_RGB_HEX_RX; /* initialise state machine and start bypassing the buffer */
+		serial_rx_rtl_count = 0;
+		break;
+    case CMD_TMC_HEX:
+		/* this character defines the first char in the list of 4 chars that need to be
+		 * going pass serial_rx_buffer and executed immediately at the end of 4th char
+		 * State machine:
+		 * RTL_IDLE 	- normal state, usual operation
+		 * RTL_TMC_RX   - TMC code reception ongoing
+		 *  */
+		serial_rx_rtl_state = RTL_TMC_RX; /* initialise state machine and start bypassing the buffer */
+		serial_rx_rtl_count = 0;
 		break;
     //ASM Mod to turn off door flashing red LED on sytem cycle start command
     case CMD_RGB_WHITE:	{asmcnc_RGB_off(); asmcnc_RGB_white();} break;

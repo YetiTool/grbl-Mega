@@ -132,7 +132,9 @@ typedef enum
 
 
 /* host commands definitions */
-#define MOTOR_OFFSET       32   /* Motor offset */
+#define TMC_COMMAND_BIT_SIZE 5
+#define MOTOR_OFFSET_MASK  0x1F   /* Motor offset mask must be a mask of contiguous zeroes, followed by contiguous sequence of ones: 000...111. */
+#define MOTOR_OFFSET (MOTOR_OFFSET_MASK+1)     /* Motor offset */
 #define SET_MRES    1   /* Microstep resolution for STEP/DIR mode. Microsteps per fullstep: %0000: 256; %0001: 128; %0010: 64; %0011: 32; %0100: 16; %0101: 8; %0110: 4; %0111: 2 (halfstep); %1000: 1 (fullstep) */
 #define SET_DEDGE       2   /*  */
 #define SET_INTERPOL    3   /* Enable STEP interpolation. 0: Disable STEP pulse interpolation. 1: Enable MicroPlyer STEP pulse multiplication by 16 */
@@ -179,9 +181,10 @@ void tmc2590_single_read_all(TMC2590TypeDef *tmc2590);
 
 /*single motor*/
 uint8_t tmc2590_single_restore(TMC2590TypeDef *tmc2590_1);
+void tmc2590_single_writeInt(TMC2590TypeDef *tmc2590_1, uint8_t address);
 
 /*dual motors*/
-void tmc2590_dual_writeInt(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t address, int32_t value_1, int32_t value_2);
+void tmc2590_dual_writeInt(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t address);
 uint8_t tmc2590_dual_restore(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2);
 void tmc2590_dual_read_all(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2);
 
@@ -190,4 +193,7 @@ void init_TMC(void);
 void tmc2590_schedule_read_all(void); /* schedule periodic read of all values */
 void process_status_of_all_controllers(void);
 TMC2590TypeDef * get_TMC_controller(uint8_t controller); /* get pointer to required contoller */
+
+void execute_TMC_command(void); /* fetch TMC command from rtl serial buffer and execute */
+
 #endif /* TMC_IC_TMC2590_H_ */

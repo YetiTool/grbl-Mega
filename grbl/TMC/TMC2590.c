@@ -164,7 +164,7 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
     value &= ~TMC2590_SET_VSENSE(-1);                       /* clear bit */           
     value |= TMC2590_SET_VSENSE(tmc2590->vSense);          /* clear bit, 0: Full-scale sense resistor voltage is 325mV. */           
     
-    tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = value;
+    tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
     
     
     /* TMC2590_DRVCTRL */
@@ -177,14 +177,14 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
 	value &= ~TMC2590_SET_MRES(-1);                             // clear MRES bits
 	value |= TMC2590_SET_MRES(tmc2590->microSteps);             // set MRES  = 16
     
-    tmc2590->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT] = value;
+    tmc2590->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
 
 
     /* TMC2590_CHOPCONF */
 	value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];    
     //default: 0x00091935,  
 
-    tmc2590->config->shadowRegister[TMC2590_CHOPCONF  | TMC2590_WRITE_BIT] = value;
+    tmc2590->config->shadowRegister[TMC2590_CHOPCONF  | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
     
 
     /* TMC2590_SMARTEN */
@@ -200,7 +200,7 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
     value &= ~TMC2590_SET_SEMAX(-1);                        // clear, 
   	value |= TMC2590_SET_SEMAX(tmc2590->coolStepMax);       // set to trigger if SG above 7x32 = 224
 
-    tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] = value;
+    tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
     
     
     /* TMC2590_SGCSCONF */
@@ -217,7 +217,8 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
     value &= ~TMC2590_SET_SGT(-1);                          // clear, 
   	value |= TMC2590_SET_SGT(tmc2590->stallGuardThreshold); // set threshold
 
-    tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = value;  
+
+    tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
 
 }
 
@@ -255,10 +256,11 @@ uint8_t tmc2590_restore(TMC2590TypeDef *tmc2590)
 
 /************************************************ single motor ***********************************************/
 
-void tmc2590_single_writeInt(TMC2590TypeDef *tmc2590_1, uint8_t address, int32_t value_1)
+void tmc2590_single_writeInt(TMC2590TypeDef *tmc2590_1, uint8_t address)
 {
-	value_1 = TMC2590_VALUE(value_1);
-	tmc2590_1->config->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT] = value_1;
+    int32_t value_1;
+
+    value_1 = tmc2590_1->config->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT];
 
     uint8_t addressIsDrvConf = 0;
     uint8_t rdsel = 0;
@@ -280,25 +282,21 @@ void tmc2590_single_writeInt(TMC2590TypeDef *tmc2590_1, uint8_t address, int32_t
     /* schedule write to motor controller */
     spi_schedule_single_tx(tmc2590_1, data, TX_BUF_SIZE_SINGLE, addressIsDrvConf, rdsel);
 
-    /* deconstruct response */
-    //tmc2590_1->config->shadowRegister[respIdx] = TMC2590_VALUE(_8_32(data[0], data[1], data[2], 0) >> 12) ;    
 }
 
 uint8_t tmc2590_single_restore(TMC2590TypeDef *tmc2590_1)
 {
 
-	tmc2590_single_writeInt(tmc2590_1, TMC2590_DRVCONF,  tmc2590_1->config->shadowRegister[TMC2590_DRVCONF  | TMC2590_WRITE_BIT]);
-	tmc2590_single_writeInt(tmc2590_1, TMC2590_DRVCTRL,  tmc2590_1->config->shadowRegister[TMC2590_DRVCTRL  | TMC2590_WRITE_BIT]);
-	tmc2590_single_writeInt(tmc2590_1, TMC2590_CHOPCONF, tmc2590_1->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT]);
-	tmc2590_single_writeInt(tmc2590_1, TMC2590_SMARTEN,  tmc2590_1->config->shadowRegister[TMC2590_SMARTEN  | TMC2590_WRITE_BIT]);
-	tmc2590_single_writeInt(tmc2590_1, TMC2590_SGCSCONF, tmc2590_1->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT]);
+	tmc2590_single_writeInt(tmc2590_1, TMC2590_DRVCONF);
+	tmc2590_single_writeInt(tmc2590_1, TMC2590_DRVCTRL);
+	tmc2590_single_writeInt(tmc2590_1, TMC2590_CHOPCONF);
+	tmc2590_single_writeInt(tmc2590_1, TMC2590_SMARTEN);
+	tmc2590_single_writeInt(tmc2590_1, TMC2590_SGCSCONF);
     
 	return 1;
 }
 
 void tmc2590_read_single(TMC2590TypeDef *tmc2590_1, uint8_t rdsel){
-    
-    //uint32_t delay_us = 50;
     
     uint32_t value_1;
     
@@ -308,7 +306,9 @@ void tmc2590_read_single(TMC2590TypeDef *tmc2590_1, uint8_t rdsel){
 	value_1 |= TMC2590_SET_RDSEL(rdsel);    // set rdsel
     //nrf_delay_us(delay_us);
     
-    tmc2590_single_writeInt(tmc2590_1, TMC2590_DRVCONF, value_1); 
+    tmc2590_1->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = value_1;
+
+    tmc2590_single_writeInt(tmc2590_1, TMC2590_DRVCONF);
     
 }
 
@@ -324,12 +324,12 @@ void tmc2590_single_read_all(TMC2590TypeDef *tmc2590)
 
 /************************************************ dual motors ***********************************************/
 
-void tmc2590_dual_writeInt(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t address, int32_t value_1, int32_t value_2)
+void tmc2590_dual_writeInt(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t address)
 {
-	value_1 = TMC2590_VALUE(value_1);
-	value_2 = TMC2590_VALUE(value_2);
-	tmc2590_1->config->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT] = value_1;
-	tmc2590_2->config->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT] = value_2;
+    int32_t value_1, value_2;
+
+    value_1 = tmc2590_1->config->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT];
+    value_2 = tmc2590_2->config->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT];
     
     uint8_t addressIsDrvConf = 0;
     uint8_t rdsel = 0;
@@ -352,31 +352,17 @@ void tmc2590_dual_writeInt(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2,
     /* can write to the same channel as both motors are on the same line */
     spi_schedule_dual_tx(tmc2590_1, tmc2590_2, data, TX_BUF_SIZE_DUAL, addressIsDrvConf, rdsel);    
 
-
-    /* deconstruct response */
-    //tmc2590_2->config->shadowRegister[respIdx] =               _8_32(data[0], data[1], data[2], 0) >> 12;    
-    //tmc2590_1->config->shadowRegister[respIdx] = TMC2590_VALUE(_8_32(data[2], data[3], data[4], 0) >> 8) ;    
 }
 
 
 uint8_t tmc2590_dual_restore(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
 {
 
-	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCONF,   
-                            tmc2590_1->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] , 
-                            tmc2590_2->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] );
-	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCTRL,   
-                            tmc2590_1->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT] , 
-                            tmc2590_2->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT] );
-	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_CHOPCONF, 
-                            tmc2590_1->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT], 
-                            tmc2590_2->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT]);
-	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_SMARTEN,   
-                            tmc2590_1->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] , 
-                            tmc2590_2->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] );
-	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_SGCSCONF, 
-                            tmc2590_1->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT], 
-                            tmc2590_2->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT]);
+	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCONF);
+	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCTRL);
+	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_CHOPCONF);
+	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_SMARTEN);
+	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_SGCSCONF);
     
 	return 1;
 }
@@ -395,9 +381,11 @@ void tmc2590_dual_read_single(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590
 	value_1 |= TMC2590_SET_RDSEL(rdsel);    // set rdsel
 	value_2 &= ~TMC2590_SET_RDSEL(-1);      // clear RDSEL bits
 	value_2 |= TMC2590_SET_RDSEL(rdsel);    // set rdsel
-    //nrf_delay_us(delay_us);
     
-    tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCONF, value_1, value_2); 
+    tmc2590_1->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = value_1;
+    tmc2590_2->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = value_2;
+
+    tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCONF);
     
 }
 
@@ -529,3 +517,139 @@ void init_TMC(void){
 	tmc2590_single_restore(&tmc2590_Z);
 
 }
+
+/* route single motor write to single or dual write command depend on the motor controller type */
+void tmc2590_single_write_route(uint8_t controller_id, uint8_t address){
+    TMC2590TypeDef *tmc2590_1, *tmc2590_2;
+    if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
+        /* choose second pair and execute dual write */
+        tmc2590_1 = get_TMC_controller(controller_id);
+        tmc2590_2 = get_TMC_controller(controller_id+1);
+        tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, address);
+
+    }
+    if ( (controller_id == TMC_X2) || (controller_id == TMC_Y2) ){
+        /* choose second pair and execute dual write */
+        tmc2590_1 = get_TMC_controller(controller_id-1);
+        tmc2590_2 = get_TMC_controller(controller_id);
+        tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, address);
+    }
+    if (controller_id == TMC_Z) {
+        /* choose second pair and execute single write */
+        tmc2590_1 = get_TMC_controller(controller_id);
+        tmc2590_single_writeInt(tmc2590_1, address);
+    }
+
+}
+
+
+/* fetch TMC host command from rtl serial buffer and execute */
+void execute_TMC_command(){
+    /* fetch 3 bytes from the buffer, calculate CRC and execute*/
+    uint8_t tmc_command[RTL_TMC_COMMAND_SIZE], idx;
+    for (idx = 0; idx < RTL_TMC_COMMAND_SIZE; idx++){
+        tmc_command[idx] = serial_read_rtl();
+    }
+    /* calculate CRC 8 on the command and value and compare with checksum */
+    uint8_t crc_in;
+    crc_in = crc8x_fast(0, tmc_command, 2);
+    if (crc_in == tmc_command[RTL_TMC_COMMAND_SIZE-1]){
+        TMC2590TypeDef *tmc2590;
+        uint32_t register_value;
+        uint8_t controller_id = (tmc_command[0] & ~MOTOR_OFFSET_MASK) >> TMC_COMMAND_BIT_SIZE;
+        uint8_t command = tmc_command[0] & MOTOR_OFFSET_MASK;
+        uint8_t value = tmc_command[1];
+        if (controller_id < TOTAL_TMCS){
+            tmc2590 = get_TMC_controller(controller_id);
+        }
+        else{
+            report_status_message(ASMCNC_STATUS_INVALID_STATEMENT);
+            return;
+        }
+
+        switch (command){
+
+        /* Microstep resolution for STEP/DIR mode. Microsteps per fullstep: %0000: 256; %0001: 128; %0010: 64; %0011: 32; %0100: 16; %0101: 8; %0110: 4; %0111: 2 (halfstep); %1000: 1 (fullstep) */
+        case SET_MRES:
+            break;
+
+        /* Enable STEP interpolation. 0: Disable STEP pulse interpolation. 1: Enable MicroPlyer STEP pulse multiplication by 16 */
+        case SET_INTERPOL:
+            break;
+
+        /* Lower CoolStep threshold/CoolStep disable. If SEMIN is 0, CoolStep is disabled. If SEMIN is nonzero and the StallGuard2 value SG falls below SEMIN x 32, the CoolStep current scaling factor is increased */
+        case SET_SEMIN:
+            break;
+
+        /* Current increment size. Number of current increment steps for each time that the StallGuard2 value SG is sampled below the lower threshold: %00: 1; %01: 2; %10: 4; %11: 8 */
+        case SET_SEUP:
+            break;
+
+        /* Upper CoolStep threshold as an offset from the lower threshold. If the StallGuard2 measurement value SG is sampled equal to or above (SEMIN+SEMAX+1) x 32 enough times, then the coil current scaling factor is decremented. */
+        case SET_SEMAX:
+            break;
+
+        /* Current decrement speed. Number of times that the StallGuard2 value must be sampled equal to or above the upper threshold for each decrement of the coil current: %00: 32; %01: 8; %10: 2; %11: 1 */
+        case SET_SEDN:
+            break;
+
+        /* Minimum CoolStep current: 0: 1/2 CS current setting; 1: 1/4 CS current setting */
+        case SET_SEIMIN:
+            break;
+
+        /* Current scale (scales digital currents A and B). Current scaling for SPI and STEP/DIR operation. 0-31: 1/32, 2/32, 3/32, ... 32/32;  This value is biased by 1 and divided by 32, so the range is 1/32 to 32/32. Example: CS=20 is 21/32 current. */
+        case SET_CS:
+            /* TMC2590_SGCSCONF */
+            register_value = tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT];
+            //printPgmString(PSTR("before:")); printInteger( register_value ); printPgmString(PSTR(","));
+            tmc2590->currentScale = value;
+            register_value &= ~TMC2590_SET_CS(-1);                           // clear Current scale bits
+            register_value |= TMC2590_SET_CS(tmc2590->currentScale);         // set Current scale  = 16
+            tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = register_value;
+            tmc2590_single_write_route(controller_id, TMC2590_SGCSCONF);
+            //printPgmString(PSTR("after:"));printInteger( register_value ); printPgmString(PSTR(",")); printPgmString(PSTR("SET_CS"));
+            break;
+
+        /* StallGuard2 threshold value. The StallGuard2 threshold value controls the optimum measurement range for readout and stall indicator output (SG_TST). A lower value results in a higher sensitivity and less torque is required to indicate a stall. The value is a two’s complement signed integer. Range: -64 to +63 */
+        case SET_SGT:
+            /* TMC2590_SGCSCONF */
+            register_value = tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT];
+            tmc2590->stallGuardThreshold = value;
+            register_value &= ~TMC2590_SET_SGT(-1);                          // clear,
+            register_value |= TMC2590_SET_SGT(tmc2590->stallGuardThreshold); // set threshold
+            tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = register_value;
+            tmc2590_writeInt(tmc2590, TMC2590_SGCSCONF, tmc2590->registerResetState[TMC2590_SGCSCONF]);
+            break;
+
+        /* StallGuard2 filter enable. 0: Standard mode, fastest response time. 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy. */
+        case SET_SFILT:
+            /* TMC2590_SGCSCONF */
+            register_value = tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT];
+            tmc2590->stallGuardFilter = value;
+            register_value &= ~TMC2590_SET_SFILT(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value |= TMC2590_SET_SFILT(tmc2590->stallGuardFilter);  // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
+            tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = register_value;
+            tmc2590_writeInt(tmc2590, TMC2590_SGCSCONF, tmc2590->registerResetState[TMC2590_SGCSCONF]);
+            break;
+
+        /* set the current scale applied when no pulses are detected on the given axis */
+        case SET_IDLE_CURRENT:
+            break;
+
+        /* shut off the motor completely, for example to let user move turret easier */
+        case SET_SHUT_OFF:
+            break;
+
+        default:
+            break;
+        }
+
+
+    }
+    else{ /* crc error */
+        report_status_message(ASMCNC_STATUS_INVALID_STATEMENT);
+    }
+
+
+}
+

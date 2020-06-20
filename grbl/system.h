@@ -114,6 +114,13 @@
 #define SPINDLE_STOP_OVR_RESTORE        bit(2)
 #define SPINDLE_STOP_OVR_RESTORE_CYCLE  bit(3)
 
+// Define RTL override control states.
+#define RTL_OVR_DISABLED                0  // Must be zero.
+#define RTL_OVR_TMC_COMMAND             bit(0)
+#define RTL_OVR_RGB_COMMAND             bit(1)
+#define RTL_OVR_VAC_COMMAND             bit(2)
+#define RTL_OVR_LASER_DATUM_COMMAND     bit(3)
+
 
 // Define global system variables
 typedef struct {
@@ -150,6 +157,7 @@ extern volatile uint8_t sys_rt_exec_state;   // Global realtime executor bitflag
 extern volatile uint8_t sys_rt_exec_alarm;   // Global realtime executor bitflag variable for setting various alarms.
 extern volatile uint8_t sys_rt_exec_motion_override; // Global realtime executor bitflag variable for motion-based overrides.
 extern volatile uint8_t sys_rt_exec_accessory_override; // Global realtime executor bitflag variable for spindle/coolant overrides.
+extern volatile uint8_t sys_rt_exec_rtl_override; // Global realtime executor bitflag variable for Yeti overrides (RGB, TMC etc).
 
 #ifdef DEBUG
   #define EXEC_DEBUG_REPORT  bit(0)
@@ -198,6 +206,8 @@ void system_set_exec_motion_override_flag(uint8_t mask);
 void system_set_exec_accessory_override_flag(uint8_t mask);
 void system_clear_exec_motion_overrides();
 void system_clear_exec_accessory_overrides();
+void system_set_exec_rtl_override_flag(uint8_t mask);
+void system_clear_exec_rtl_overrides();
 
 
 #endif

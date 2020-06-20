@@ -8,7 +8,7 @@
 #ifndef ASMCNC_h
 #define ASMCNC_h
 
-#define ASMCNC_VERSION			"2.0.0"
+#define ASMCNC_VERSION			"2.0.1"
 #define ASMCNC_VERSION_BUILD	"20200901"
 
 #define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
@@ -84,10 +84,15 @@
 
 /* RGB HEX Rx state machine state */
 enum rgbHexStates{
-	RGB_HEX_RTL_IDLE, // normal state, usual operation
-	RGB_HEX_RTL_RX,   // hex code reception ongoing
-	RGB_HEX_RTL_ERR   // FAULT - other than "0123456789ABCDEF" char received
+	RTL_IDLE, 			// normal state, usual operation
+	RTL_RGB_HEX_RX,   	// hex code reception ongoing
+	RTL_RGB_HEX_ERR,   	// FAULT - other than "0123456789ABCDEF" char received
+	RTL_TMC_RX,   		// TMC command code reception ongoing
 };
+
+#define RTL_TMC_COMMAND_SIZE 3 /* 3 bytes: command, value, crc */
+#define RTL_RGB_COMMAND_SIZE 6 /* 6 hex bytes: 2xR, 2xG, 2xB */
+
 
 /* setup TMC port */
 #define TMC_DDR			DDRB
@@ -126,6 +131,7 @@ void asmcnc_TMC_Timer2_setup(void);
 uint8_t asmcnc_execute_line(char *line);
 void asmcnc_init_ADC(void); /* initialise ADC for spindle load monitoring */
 uint8_t char2intValidate(char); /* convert hex char to int and validate result (return 0xFF if character is not hex byte code */
+uint8_t crc8x_fast(uint8_t crc, uint8_t *mem, size_t len); /* fast crc8 calculator */
 
 #define UNUSED_VARIABLE(X)  ((void)(X))
 #define UNUSED_PARAMETER(X) UNUSED_VARIABLE(X)

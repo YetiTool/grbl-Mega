@@ -403,3 +403,18 @@ void system_clear_exec_accessory_overrides() {
   sys_rt_exec_accessory_override = 0;
   SREG = sreg;
 }
+
+void system_set_exec_rtl_override_flag(uint8_t mask) {
+  //uint8_t sreg = SREG;
+  //cli();
+  sys_rt_exec_rtl_override |= (mask);
+  //SREG = sreg;
+}
+
+void system_clear_exec_rtl_overrides() {
+  //uint8_t sreg = SREG;
+  //cli();
+  sys_rt_exec_rtl_override = 0;
+  //SREG = sreg;
+}
+

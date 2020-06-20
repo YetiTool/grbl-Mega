@@ -492,6 +492,19 @@ void protocol_exec_rt_system()
     }
   }
 
+
+
+  // Execute TMC control commands that arrived to the UART buffer
+  rt_exec = sys_rt_exec_rtl_override;
+  if (rt_exec) {
+    system_clear_exec_rtl_overrides(); // Clear all accessory override flags. Shall be done after last command in the buffer is processed
+
+    /* process RTL commands arrived in the serial buffer */
+    if (rt_exec & RTL_OVR_TMC_COMMAND) {
+        execute_TMC_command();
+    }
+  } //if rt_exec = sys_rt_exec_rtl_override;
+
   #ifdef DEBUG
     if (sys_rt_exec_debug) {
       report_realtime_debug();
