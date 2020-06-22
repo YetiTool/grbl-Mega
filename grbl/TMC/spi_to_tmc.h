@@ -8,7 +8,7 @@
 #include <string.h>
 #include "TMC2590.h"
 
-#define SPI_TX_BUFFER_MASK 						0x1F                 	/**< TX Buffer mask, must be a mask of contiguous zeroes, followed by contiguous sequence of ones: 000...111. */
+#define SPI_TX_BUFFER_MASK 						0x3F                 	/**< TX Buffer mask, must be a mask of contiguous zeroes, followed by contiguous sequence of ones: 000...111. */
 #define SPI_TX_BUFFER_SIZE 						(SPI_TX_BUFFER_MASK + 1)/**< Size of the send buffer, which is 1 higher than the mask. */
 #define TX_BUF_SIZE_SINGLE                      3                       /* maximum number of bytes transmitted to the TMC chip */
 #define TX_BUF_SIZE_DUAL                        5                       /* maximum number of bytes transmitted to two TMC chips */

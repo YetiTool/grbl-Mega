@@ -77,11 +77,18 @@ void SPI_MasterInit(void)
 	/* Set MOSI and SCK output, all others input */
 	TMC_DDR			|= TMC_PORT_MASK;
 
-	/* Enable SPI, Master */
-	SPCR |= ( (1<<SPE)|(1<<MSTR) );
+    /* enable pull-up resistor on MISO pin */
+    //tmc_pin_write(1, SPI_MISO_PIN);
 
-	/* set clock rate fck/4 = 4MHz*/
-	//SPCR |= (1<<SPR0);
+    /* Enable SPI, Master */
+    SPCR |= ( (1<<SPE)|(1<<MSTR) );
+
+    /* SPI clocking options: */
+    /* option 1: set clock rate fck/4 = 4MHz - defautl config - nothing to be written */
+    /* option 2: set clock rate fck/16 = 1MHz*/
+    //SPCR |= (1<<SPR0);
+    /* option 3: set clock rate fck/64 = 0.25MHz*/
+    //SPCR |= (1<<SPR1);
 
 	/* Set phase and polarity to mode3 */
 	SPCR |= ( (1<<CPOL)|(1<<CPHA) );
