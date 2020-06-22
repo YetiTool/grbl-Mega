@@ -12,8 +12,14 @@ add handling of status and diag flags -
 /********************************************** below are Atmega2560 specific - timers, SPI, pins etc **********************************************/
 
 void tmc_pin_write(uint32_t level, uint32_t pin){
-	if (level==0) TMC_PORT &=~(1<<pin); /* clear pin */
-	else          TMC_PORT |= (1<<pin); /* set pin */
+    if ( (pin == SPI_CS_X2_PIN) || (pin == SPI_CS_Y2_PIN)) {
+        if (level==0) TMC2_PORT &=~(1<<pin); /* clear pin */
+        else          TMC2_PORT |= (1<<pin); /* set pin */
+    }
+    else{
+        if (level==0) TMC_PORT &=~(1<<pin); /* clear pin */
+        else          TMC_PORT |= (1<<pin); /* set pin */
+    }
 }
 
 /* the only remaining unused timer is 8bit timer 2*/
@@ -75,13 +81,22 @@ void SPI_MasterInit(void)
     tmc_pin_write(1, SPI_SS_PIN);
 
 	/* Set MOSI and SCK output, all others input */
-	TMC_DDR			|= TMC_PORT_MASK;
+    TMC_DDR         |= TMC_PORT_MASK;
+    TMC2_DDR         |= TMC_PORT2_MASK;
+
+	/* enable pull-up resistor on MISO pin */
+	//tmc_pin_write(1, SPI_MISO_PIN);
 
 	/* Enable SPI, Master */
 	SPCR |= ( (1<<SPE)|(1<<MSTR) );
 
-	/* set clock rate fck/4 = 4MHz*/
-	//SPCR |= (1<<SPR0);
+	/* set clock rate fck/4 = 4MHz - defautl config - nothing to be written */
+
+    /* set clock rate fck/16 = 1MHz*/
+    //SPCR |= (1<<SPR0);
+
+    /* set clock rate fck/64 = 0.25MHz*/
+    SPCR |= (1<<SPR1);
 
 	/* Set phase and polarity to mode3 */
 	SPCR |= ( (1<<CPOL)|(1<<CPHA) );
@@ -101,6 +116,8 @@ void spi_hw_init(void){
     tmc_pin_write(1, SPI_CS_X_PIN);
     tmc_pin_write(1, SPI_CS_Y_PIN);
     tmc_pin_write(1, SPI_CS_Z_PIN);
+    tmc_pin_write(1, SPI_CS_X2_PIN);
+    tmc_pin_write(1, SPI_CS_Y2_PIN);
     
 }
 
