@@ -12,7 +12,7 @@ static void continousSync(TMC2590TypeDef *tmc2590);
 static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value);
 static void readImmediately(TMC2590TypeDef *tmc2590, uint8_t rdsel);
 
-/* declare structures for all 5 motors */
+/* declare sctructures for all 5 motors */
 TMC2590TypeDef tmc2590_X1, tmc2590_X2, tmc2590_Y1, tmc2590_Y2, tmc2590_Z;
 ConfigurationTypeDef tmc2590_config_X1, tmc2590_config_X2, tmc2590_config_Y1, tmc2590_config_Y2, tmc2590_config_Z;
 
@@ -406,9 +406,7 @@ void tmc2590_dual_read_all(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
 
 /* schedule periodic read of all values */
 void tmc2590_schedule_read_all(void){
-    //tmc2590_dual_read_all(&tmc2590_X1, &tmc2590_X2);
-    tmc2590_single_read_all(&tmc2590_X1);
-    tmc2590_single_read_all(&tmc2590_X2);
+    tmc2590_dual_read_all(&tmc2590_X1, &tmc2590_X2);
     tmc2590_dual_read_all(&tmc2590_Y1, &tmc2590_Y2);
     tmc2590_single_read_all(&tmc2590_Z);
 }
@@ -454,9 +452,7 @@ void process_status_of_dual_controller(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef
 
 void process_status_of_all_controllers(void){
     /* process all responses and update the current status of controller's parameters */
-    //process_status_of_dual_controller(&tmc2590_X1, &tmc2590_X2);
-    process_status_of_single_controller(&tmc2590_X1);
-    process_status_of_single_controller(&tmc2590_X2);
+    process_status_of_dual_controller(&tmc2590_X1, &tmc2590_X2);
     process_status_of_dual_controller(&tmc2590_Y1, &tmc2590_Y2);
     process_status_of_single_controller(&tmc2590_Z);    
 }
@@ -489,15 +485,13 @@ void init_TMC(void){
 	/* init TMC */
     uint8_t channel_X = SPI_CS_X_PIN;
     uint8_t channel_Y = SPI_CS_Y_PIN;
-    uint8_t channel_X2 = SPI_CS_X2_PIN;
-    uint8_t channel_Y2 = SPI_CS_Y2_PIN;
     uint8_t channel_Z = SPI_CS_Z_PIN;
 
 	tmc2590_X1.interpolationEn      = 1;
 	tmc2590_X1.microSteps           = 4; /* 4 : set MRES  = 16*/
 	tmc2590_X1.currentScale         = 4; /* 0 - 31 where 31 is max */
 	tmc2590_X1.stallGuardFilter     = 1; // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
-	tmc2590_X1.stallGuardThreshold  = 0;
+	tmc2590_X1.stallGuardThreshold  = 5;
 	tmc2590_X1.vSense               = 0; /* 0: Full-scale sense resistor voltage is 325mV. */
 	tmc2590_X1.currentStandStill    = 1; // 1: set 1/4 of full scale
 	tmc2590_X1.coolStepMin          = 7; // set to trigger if SG below 7x32 = 224
@@ -512,38 +506,35 @@ void init_TMC(void){
 
 	/* initialise wanted variables */
 	tmc2590_init(&tmc2590_X1, channel_X, &tmc2590_config_X1, tmc2590_defaultRegisterResetState);
-	tmc2590_init(&tmc2590_X2, channel_X2, &tmc2590_config_X2, tmc2590_defaultRegisterResetState);
+	tmc2590_init(&tmc2590_X2, channel_X, &tmc2590_config_X2, tmc2590_defaultRegisterResetState);
 	tmc2590_init(&tmc2590_Y1, channel_Y, &tmc2590_config_Y1, tmc2590_defaultRegisterResetState);
-	tmc2590_init(&tmc2590_Y2, channel_Y2, &tmc2590_config_Y2, tmc2590_defaultRegisterResetState);
+	tmc2590_init(&tmc2590_Y2, channel_Y, &tmc2590_config_Y2, tmc2590_defaultRegisterResetState);
 	tmc2590_init(&tmc2590_Z,  channel_Z, &tmc2590_config_Z, tmc2590_defaultRegisterResetState);
 
 	/* initialise motors with wanted parameters */
-    //tmc2590_dual_restore(&tmc2590_X1, &tmc2590_X2);
-    tmc2590_single_restore(&tmc2590_X1);
-    tmc2590_single_restore(&tmc2590_X2);
-
+    tmc2590_dual_restore(&tmc2590_X1, &tmc2590_X2);
     tmc2590_dual_restore(&tmc2590_Y1, &tmc2590_Y2);
-    tmc2590_single_restore(&tmc2590_Z);
+	tmc2590_single_restore(&tmc2590_Z);
 
 }
 
 /* route single motor write to single or dual write command depend on the motor controller type */
 void tmc2590_single_write_route(uint8_t controller_id, uint8_t address){
     TMC2590TypeDef *tmc2590_1, *tmc2590_2;
-    if ( controller_id == TMC_Y1) {
+    if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
         /* choose second pair and execute dual write */
         tmc2590_1 = get_TMC_controller(controller_id);
         tmc2590_2 = get_TMC_controller(controller_id+1);
         tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, address);
 
     }
-    if ( controller_id == TMC_Y2 ){
+    if ( (controller_id == TMC_X2) || (controller_id == TMC_Y2) ){
         /* choose second pair and execute dual write */
         tmc2590_1 = get_TMC_controller(controller_id-1);
         tmc2590_2 = get_TMC_controller(controller_id);
         tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, address);
     }
-    if ( (controller_id == TMC_X1) || (controller_id == TMC_X2) || (controller_id == TMC_Z) ) {
+    if (controller_id == TMC_Z) {
         /* choose second pair and execute single write */
         tmc2590_1 = get_TMC_controller(controller_id);
         tmc2590_single_writeInt(tmc2590_1, address);
