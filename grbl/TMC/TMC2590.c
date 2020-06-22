@@ -12,7 +12,7 @@ static void continousSync(TMC2590TypeDef *tmc2590);
 static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value);
 static void readImmediately(TMC2590TypeDef *tmc2590, uint8_t rdsel);
 
-/* declare sctructures for all 5 motors */
+/* declare structures for all 5 motors */
 TMC2590TypeDef tmc2590_X1, tmc2590_X2, tmc2590_Y1, tmc2590_Y2, tmc2590_Z;
 ConfigurationTypeDef tmc2590_config_X1, tmc2590_config_X2, tmc2590_config_Y1, tmc2590_config_Y2, tmc2590_config_Z;
 
