@@ -107,6 +107,13 @@ enum rgbHexStates{
 #define SPI_CS_Z_PIN		6 //PB6
 #define TMC_PORT_MASK	( (1<<SPI_SCK_PIN) | (1<<SPI_MOSI_PIN) | (1<<SPI_CS_X_PIN) | (1<<SPI_CS_Y_PIN) | (1<<SPI_CS_Z_PIN) |(SPI_SS_PIN));
 
+#define TMC2_DDR         DDRH
+#define TMC2_PORT        PORTH
+#define SPI_CS_X2_PIN        1 //PH1
+#define SPI_CS_Y2_PIN        2 //PH2
+#define TMC_PORT2_MASK ( (1<<SPI_CS_X2_PIN) | (1<<SPI_CS_Y2_PIN) );
+
+
 /* setup debug port. Designed for monitoring real time performance of individual functions to identify potential weaknesses and clashes in the code*/
 //#define DEBUG_PINS_ENABLED // comment out to remove debug pins functionality - remove for production version
 
