@@ -23,9 +23,9 @@
 
 void coolant_init()
 {
-  COOLANT_FLOOD_DDR |= (1 << COOLANT_FLOOD_BIT); // Configure as output pin.
-  COOLANT_MIST_DDR |= (1 << COOLANT_MIST_BIT); // Configure as output pin.
-  coolant_stop();
+//  COOLANT_FLOOD_DDR |= (1 << COOLANT_FLOOD_BIT); // Configure as output pin.
+//  COOLANT_MIST_DDR |= (1 << COOLANT_MIST_BIT); // Configure as output pin.
+//  coolant_stop();
 }
 
 
@@ -33,20 +33,20 @@ void coolant_init()
 uint8_t coolant_get_state()
 {
   uint8_t cl_state = COOLANT_STATE_DISABLE;
-  #ifdef INVERT_COOLANT_FLOOD_PIN
-    if (bit_isfalse(COOLANT_FLOOD_PORT,(1 << COOLANT_FLOOD_BIT))) {
-  #else
-    if (bit_istrue(COOLANT_FLOOD_PORT,(1 << COOLANT_FLOOD_BIT))) {
-  #endif
-    cl_state |= COOLANT_STATE_FLOOD;
-  }
-  #ifdef INVERT_COOLANT_MIST_PIN
-    if (bit_isfalse(COOLANT_MIST_PORT,(1 << COOLANT_MIST_BIT))) {
-  #else
-    if (bit_istrue(COOLANT_MIST_PORT,(1 << COOLANT_MIST_BIT))) {
-  #endif
-    cl_state |= COOLANT_STATE_MIST;
-  }
+//  #ifdef INVERT_COOLANT_FLOOD_PIN
+//    if (bit_isfalse(COOLANT_FLOOD_PORT,(1 << COOLANT_FLOOD_BIT))) {
+//  #else
+//    if (bit_istrue(COOLANT_FLOOD_PORT,(1 << COOLANT_FLOOD_BIT))) {
+//  #endif
+//    cl_state |= COOLANT_STATE_FLOOD;
+//  }
+//  #ifdef INVERT_COOLANT_MIST_PIN
+//    if (bit_isfalse(COOLANT_MIST_PORT,(1 << COOLANT_MIST_BIT))) {
+//  #else
+//    if (bit_istrue(COOLANT_MIST_PORT,(1 << COOLANT_MIST_BIT))) {
+//  #endif
+//    cl_state |= COOLANT_STATE_MIST;
+//  }
   return(cl_state);
 }
 
@@ -55,16 +55,16 @@ uint8_t coolant_get_state()
 // an interrupt-level. No report flag set, but only called by routines that don't need it.
 void coolant_stop()
 {
-  #ifdef INVERT_COOLANT_FLOOD_PIN
-    COOLANT_FLOOD_PORT |= (1 << COOLANT_FLOOD_BIT);
-  #else
-    COOLANT_FLOOD_PORT &= ~(1 << COOLANT_FLOOD_BIT);
-  #endif
-  #ifdef INVERT_COOLANT_MIST_PIN
-    COOLANT_MIST_PORT |= (1 << COOLANT_MIST_BIT);
-  #else
-    COOLANT_MIST_PORT &= ~(1 << COOLANT_MIST_BIT);
-  #endif
+//  #ifdef INVERT_COOLANT_FLOOD_PIN
+//    COOLANT_FLOOD_PORT |= (1 << COOLANT_FLOOD_BIT);
+//  #else
+//    COOLANT_FLOOD_PORT &= ~(1 << COOLANT_FLOOD_BIT);
+//  #endif
+//  #ifdef INVERT_COOLANT_MIST_PIN
+//    COOLANT_MIST_PORT |= (1 << COOLANT_MIST_BIT);
+//  #else
+//    COOLANT_MIST_PORT &= ~(1 << COOLANT_MIST_BIT);
+//  #endif
 }
 
 
@@ -74,31 +74,32 @@ void coolant_stop()
 // parser program end, and g-code parser coolant_sync().
 void coolant_set_state(uint8_t mode)
 {
+  UNUSED_PARAMETER(mode); /* BK suppress "warning: unused parameter  [-Wunused-parameter]" */
   if (sys.abort) { return; } // Block during abort.  
   
-  if (mode == COOLANT_DISABLE) {
-  
-    coolant_stop(); 
-  
-  } else {
-  
-    if (mode & COOLANT_FLOOD_ENABLE) {
-      #ifdef INVERT_COOLANT_FLOOD_PIN
-        COOLANT_FLOOD_PORT &= ~(1 << COOLANT_FLOOD_BIT);
-      #else
-        COOLANT_FLOOD_PORT |= (1 << COOLANT_FLOOD_BIT);
-      #endif
-    }
-  
-    if (mode & COOLANT_MIST_ENABLE) {
-      #ifdef INVERT_COOLANT_MIST_PIN
-        COOLANT_MIST_PORT &= ~(1 << COOLANT_MIST_BIT);
-      #else
-        COOLANT_MIST_PORT |= (1 << COOLANT_MIST_BIT);
-      #endif
-    }
-  
-  }
+//  if (mode == COOLANT_DISABLE) {
+//
+//    coolant_stop();
+//
+//  } else {
+//
+//    if (mode & COOLANT_FLOOD_ENABLE) {
+//      #ifdef INVERT_COOLANT_FLOOD_PIN
+//        COOLANT_FLOOD_PORT &= ~(1 << COOLANT_FLOOD_BIT);
+//      #else
+//        COOLANT_FLOOD_PORT |= (1 << COOLANT_FLOOD_BIT);
+//      #endif
+//    }
+//
+//    if (mode & COOLANT_MIST_ENABLE) {
+//      #ifdef INVERT_COOLANT_MIST_PIN
+//        COOLANT_MIST_PORT &= ~(1 << COOLANT_MIST_BIT);
+//      #else
+//        COOLANT_MIST_PORT |= (1 << COOLANT_MIST_BIT);
+//      #endif
+//    }
+//
+//  }
   sys.report_ovr_counter = 0; // Set to report change immediately
 }
 

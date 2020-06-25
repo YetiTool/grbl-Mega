@@ -33,7 +33,7 @@ void spindle_init()
   SPINDLE_TCCRB_REGISTER = SPINDLE_TCCRB_INIT_MASK;
   SPINDLE_OCRA_REGISTER = SPINDLE_OCRA_TOP_VALUE; // Set the top value for 16-bit fast PWM mode
   SPINDLE_ENABLE_DDR |= (1<<SPINDLE_ENABLE_BIT); // Configure as output pin.
-  SPINDLE_DIRECTION_DDR |= (1<<SPINDLE_DIRECTION_BIT); // Configure as output pin.
+  //SPINDLE_DIRECTION_DDR |= (1<<SPINDLE_DIRECTION_BIT); // Configure as output pin.
 
   pwm_gradient = SPINDLE_PWM_RANGE/(settings.rpm_max-settings.rpm_min);
   spindle_stop();
@@ -47,8 +47,9 @@ uint8_t spindle_get_state()
   #else
     if (bit_istrue(SPINDLE_ENABLE_PORT,(1<<SPINDLE_ENABLE_BIT)) && (SPINDLE_TCCRA_REGISTER & (1<<SPINDLE_COMB_BIT))) {
   #endif
-    if (SPINDLE_DIRECTION_PORT & (1<<SPINDLE_DIRECTION_BIT)) { return(SPINDLE_STATE_CCW); }
-    else { return(SPINDLE_STATE_CW); }
+    //if (SPINDLE_DIRECTION_PORT & (1<<SPINDLE_DIRECTION_BIT)) { return(SPINDLE_STATE_CCW); }
+    //else { return(SPINDLE_STATE_CW); }
+    return(SPINDLE_STATE_CW);
   }
 	return(SPINDLE_STATE_DISABLE);
 }
@@ -190,11 +191,11 @@ void spindle_set_state(uint8_t state, float rpm)
   
   } else {
   
-    if (state == SPINDLE_ENABLE_CW) {
-      SPINDLE_DIRECTION_PORT &= ~(1<<SPINDLE_DIRECTION_BIT);
-    } else {
-      SPINDLE_DIRECTION_PORT |= (1<<SPINDLE_DIRECTION_BIT);
-    }
+//    if (state == SPINDLE_ENABLE_CW) {
+//      SPINDLE_DIRECTION_PORT &= ~(1<<SPINDLE_DIRECTION_BIT);
+//    } else {
+//      SPINDLE_DIRECTION_PORT |= (1<<SPINDLE_DIRECTION_BIT);
+//    }
 
     // NOTE: Assumes all calls to this function is when Grbl is not moving or must remain off.
     if (settings.flags & BITFLAG_LASER_MODE) { 

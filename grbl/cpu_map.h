@@ -51,10 +51,10 @@
   #define DIRECTION_MASK ((1<<X_DIRECTION_BIT)|(1<<Y_DIRECTION_BIT)|(1<<Z_DIRECTION_BIT)) // All direction bits
 
   // Define stepper driver enable/disable output pin.
-  #define STEPPERS_DISABLE_DDR   DDRB
-  #define STEPPERS_DISABLE_PORT  PORTB
-  #define STEPPERS_DISABLE_BIT   7 // MEGA2560 Digital Pin 13
-  #define STEPPERS_DISABLE_MASK (1<<STEPPERS_DISABLE_BIT)
+//  #define STEPPERS_DISABLE_DDR   DDRB
+//  #define STEPPERS_DISABLE_PORT  PORTB
+//  #define STEPPERS_DISABLE_BIT   7 // MEGA2560 Digital Pin 13
+//  #define STEPPERS_DISABLE_MASK (1<<STEPPERS_DISABLE_BIT)
 
   // Define homing/hard limit switch input pins and limit interrupt vectors. 
   // NOTE: All limit bit pins must be on the same port
@@ -76,33 +76,33 @@
   #define SPINDLE_ENABLE_DDR      DDRH
   #define SPINDLE_ENABLE_PORT     PORTH
   #define SPINDLE_ENABLE_BIT      3 // MEGA2560 Digital Pin 6
-  #define SPINDLE_DIRECTION_DDR   DDRE
-  #define SPINDLE_DIRECTION_PORT  PORTE
-  #define SPINDLE_DIRECTION_BIT   3 // MEGA2560 Digital Pin 5
+  //#define SPINDLE_DIRECTION_DDR   DDRE
+  //#define SPINDLE_DIRECTION_PORT  PORTE
+  //#define SPINDLE_DIRECTION_BIT   3 // MEGA2560 Digital Pin 5
 
   // Define flood and mist coolant enable output pins.
-  #define COOLANT_FLOOD_DDR   DDRH
-  #define COOLANT_FLOOD_PORT  PORTH
-  #define COOLANT_FLOOD_BIT   5 // MEGA2560 Digital Pin 8
-  #define COOLANT_MIST_DDR    DDRH
-  #define COOLANT_MIST_PORT   PORTH
-  #define COOLANT_MIST_BIT    6 // MEGA2560 Digital Pin 9
+//  #define COOLANT_FLOOD_DDR   DDRH
+//  #define COOLANT_FLOOD_PORT  PORTH
+//  #define COOLANT_FLOOD_BIT   5 // MEGA2560 Digital Pin 8
+//  #define COOLANT_MIST_DDR    DDRH
+//  #define COOLANT_MIST_PORT   PORTH
+//  #define COOLANT_MIST_BIT    6 // MEGA2560 Digital Pin 9
 
   // Define user-control CONTROLs (cycle start, reset, feed hold) input pins.
   // NOTE: All CONTROLs pins must be on the same port and not on a port with other input pins (limits).
   #define CONTROL_DDR       DDRK
   #define CONTROL_PIN       PINK
   #define CONTROL_PORT      PORTK
-  #define CONTROL_RESET_BIT         6  // MEGA2560 Analog Pin 14 ASM: unused
-  #define CONTROL_FEED_HOLD_BIT     1  // MEGA2560 Analog Pin 9  ASM: unused
-  #define CONTROL_CYCLE_START_BIT   5  // MEGA2560 Analog Pin 13 ASM: unused
+  //#define CONTROL_RESET_BIT         6  // MEGA2560 Analog Pin 14 ASM: unused
+  //#define CONTROL_FEED_HOLD_BIT     1  // MEGA2560 Analog Pin 9  ASM: unused
+  //#define CONTROL_CYCLE_START_BIT   5  // MEGA2560 Analog Pin 13 ASM: unused
   #define CONTROL_SAFETY_DOOR_BIT   3  // MEGA2560 Analog Pin 11
   #define CONTROL_ENCLOSURE_BIT     2  // MEGA2560 Analog Pin 10
   #define CONTROL_SPARE1_BIT     	4  // MEGA2560 Analog Pin 12
   #define CONTROL_INT       PCIE2  // Pin change interrupt enable pin
   #define CONTROL_INT_vect  PCINT2_vect
   #define CONTROL_PCMSK     PCMSK2 // Pin change interrupt register
-  #define CONTROL_MASK      ((1<<CONTROL_RESET_BIT)|(1<<CONTROL_FEED_HOLD_BIT)|(1<<CONTROL_CYCLE_START_BIT)|(1<<CONTROL_SAFETY_DOOR_BIT))
+  #define CONTROL_MASK      (1<<CONTROL_SAFETY_DOOR_BIT)
 
   // Define probe switch input pin.
   #define PROBE_DDR       DDRK

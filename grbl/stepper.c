@@ -249,8 +249,8 @@ void st_wake_up()
       st.step_outbits[idx] = step_port_invert_mask[idx];
     }
   #else
-    if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
-    else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
+    //if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
+    //else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
     // Initialize stepper output bits to ensure first ISR call does not step.
     st.step_outbits = step_port_invert_mask;
   #endif // Ramps Board
@@ -299,8 +299,8 @@ void st_go_idle()
       STEPPER_DISABLE_PORT(2) &= ~(1 << STEPPER_DISABLE_BIT(2));
     }
   #else
-    if (pin_state) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
-    else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
+    //if (pin_state) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
+    //else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
   #endif // Ramps Board
 }
 
@@ -688,7 +688,7 @@ void stepper_init()
     DIRECTION_DDR(2) |= 1<<DIRECTION_BIT(2);
   #else
     STEP_DDR |= STEP_MASK;
-    STEPPERS_DISABLE_DDR |= 1<<STEPPERS_DISABLE_BIT;
+    //STEPPERS_DISABLE_DDR |= 1<<STEPPERS_DISABLE_BIT;
     DIRECTION_DDR |= DIRECTION_MASK;
   #endif // Ramps Board
 
