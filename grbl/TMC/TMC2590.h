@@ -49,13 +49,26 @@ typedef struct {
 
 	uint8_t interpolationEn;
     uint8_t microSteps;         /* 4 : set MRES  = 16*/
+
 	uint8_t currentScale;       /* 0 - 31 where 31 is max */
 	uint8_t stallGuardFilter;   // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
 	uint8_t stallGuardThreshold;
 	uint8_t vSense;             /* 0: Full-scale sense resistor voltage is 325mV. */   
 	uint8_t currentStandStill;  //set 1/4 of full scale
-	uint8_t coolStepMin;        // set to trigger if SG below 7x32 = 224
-	uint8_t coolStepMax;        // set to trigger if SG below 7x32 = 224
+
+    uint8_t chopperMode;        // Chopper mode. This mode bit affects the interpretation of the HDEC, HEND, and HSTRT parameters shown below. 0 Standard mode (SpreadCycle)
+    uint8_t chopperBlankTime;   // Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54
+
+	uint8_t coolStepMin;        // Lower CoolStep threshold/CoolStep disable. If SEMIN is 0, CoolStep is disabled. If SEMIN is nonzero and the StallGuard2 value SG falls below SEMIN x 32, the CoolStep current scaling factor is increased
+    uint8_t coolStepMax;        // Upper CoolStep threshold as an offset from the lower threshold. If the StallGuard2 measurement value SG is sampled equal to or above (SEMIN+SEMAX+1) x 32 enough times, then the coil current scaling factor is decremented.
+    uint8_t coolStepUp;         // Current increment size. Number of current increment steps for each time that the StallGuard2 value SG is sampled below the lower threshold: %00: 1; %01: 2; %10: 4; %11: 8
+    uint8_t coolStepDown;       // Current decrement speed. Number of times that the StallGuard2 value must be sampled equal to or above the upper threshold for each decrement of the coil current: %00: 32; %01: 8; %10: 2; %11: 1
+    uint8_t coolStepCurrentMin; // Minimum CoolStep current: 0: 1/2 CS current setting; 1: 1/4 CS current setting
+
+    uint8_t slopeCtrlHigh;      // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    uint8_t slopeCtrlLow;       // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    uint8_t senseVoltage;       // Sense resistor voltage-based current scaling. 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV. (Full-scale refers to a current setting of 31.) */
+
     
     uint8_t respIdx;            /* current rdsel to know which response is coming next */
     
@@ -138,13 +151,13 @@ typedef enum
 #define SET_MRES    1   /* Microstep resolution for STEP/DIR mode. Microsteps per fullstep: %0000: 256; %0001: 128; %0010: 64; %0011: 32; %0100: 16; %0101: 8; %0110: 4; %0111: 2 (halfstep); %1000: 1 (fullstep) */
 #define SET_DEDGE       2   /*  */
 #define SET_INTERPOL    3   /* Enable STEP interpolation. 0: Disable STEP pulse interpolation. 1: Enable MicroPlyer STEP pulse multiplication by 16 */
-#define SET_TOFF        4   /*  */
+#define SET_TOFF        4   /* Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 … %1111: 2 … 15 */
 #define SET_HSTRT       5   /*  */
 #define SET_HEND        6   /*  */
 #define SET_HDEC        7   /*  */
 #define SET_RNDTF       8   /*  */
-#define SET_CHM         9   /*  */
-#define SET_TBL         10   /*  */
+#define SET_CHM         9   /* Chopper mode. This mode bit affects the interpretation of the HDEC, HEND, and HSTRT parameters shown below. 0 Standard mode (SpreadCycle) */
+#define SET_TBL         10   /* Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54 */
 #define SET_SEMIN       11   /* Lower CoolStep threshold/CoolStep disable. If SEMIN is 0, CoolStep is disabled. If SEMIN is nonzero and the StallGuard2 value SG falls below SEMIN x 32, the CoolStep current scaling factor is increased */
 #define SET_SEUP        12   /* Current increment size. Number of current increment steps for each time that the StallGuard2 value SG is sampled below the lower threshold: %00: 1; %01: 2; %10: 4; %11: 8 */
 #define SET_SEMAX       13   /* Upper CoolStep threshold as an offset from the lower threshold. If the StallGuard2 measurement value SG is sampled equal to or above (SEMIN+SEMAX+1) x 32 enough times, then the coil current scaling factor is decremented. */
@@ -154,12 +167,12 @@ typedef enum
 #define SET_SGT         17   /* StallGuard2 threshold value. The StallGuard2 threshold value controls the optimum measurement range for readout and stall indicator output (SG_TST). A lower value results in a higher sensitivity and less torque is required to indicate a stall. The value is a two’s complement signed integer. Range: -64 to +63 */
 #define SET_SFILT       18   /* StallGuard2 filter enable. 0: Standard mode, fastest response time. 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy. */
 #define SET_RDSEL       19   /*  */
-#define SET_VSENSE      20   /*  */
+#define SET_VSENSE      20   /* Sense resistor voltage-based current scaling. 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV. (Full-scale refers to a current setting of 31.) */
 #define SET_SDOFF       21   /*  */
 #define SET_TS2G        22   /*  */
 #define SET_DISS2G      23   /*  */
-#define SET_SLPL        24   /*  */
-#define SET_SLPH        25   /*  */
+#define SET_SLPL        24   /* Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes */
+#define SET_SLPH        25   /* Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes */
 #define SET_TST         26   /*  */
 #define SET_IDLE_CURRENT    27   /* set the current scale applied when no pulses are detected on the given axis */
 #define SET_SHUT_OFF    28   /* shut off the motor completely, for example to let user move turret easier */

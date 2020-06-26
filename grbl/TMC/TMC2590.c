@@ -571,30 +571,101 @@ void execute_TMC_command(){
 
         /* Microstep resolution for STEP/DIR mode. Microsteps per fullstep: %0000: 256; %0001: 128; %0010: 64; %0011: 32; %0100: 16; %0101: 8; %0110: 4; %0111: 2 (halfstep); %1000: 1 (fullstep) */
         case SET_MRES:
+            /* TMC2590_DRVCTRL */
+            register_value = tmc2590->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT];
+            tmc2590->microSteps = value;
+            register_value &= ~TMC2590_SET_MRES(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value |= TMC2590_SET_MRES(tmc2590->microSteps);  // Microstep resolution for STEP/DIR mode. Microsteps per fullstep: %0000: 256; %0001: 128; %0010: 64; %0011: 32; %0100: 16; %0101: 8; %0110: 4; %0111: 2 (halfstep); %1000: 1 (fullstep)
+            tmc2590->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT] = register_value;
+            tmc2590_single_write_route(controller_id, TMC2590_DRVCTRL);
             break;
 
         /* Enable STEP interpolation. 0: Disable STEP pulse interpolation. 1: Enable MicroPlyer STEP pulse multiplication by 16 */
         case SET_INTERPOL:
+            /* TMC2590_DRVCTRL */
+            register_value = tmc2590->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT];
+            tmc2590->interpolationEn = value;
+            register_value &= ~TMC2590_SET_INTERPOL(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value |= TMC2590_SET_INTERPOL(tmc2590->interpolationEn);  // Enable STEP interpolation. 0: Disable STEP pulse interpolation. 1: Enable MicroPlyer STEP pulse multiplication by 16
+            tmc2590->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT] = register_value;
+            tmc2590_single_write_route(controller_id, TMC2590_DRVCTRL);
+            break;
+
+        /* Chopper mode. This mode bit affects the interpretation of the HDEC, HEND, and HSTRT parameters shown below. 0 Standard mode (SpreadCycle) */
+        case SET_CHM:
+            /* TMC2590_CHOPCONF */
+            register_value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];
+            tmc2590->chopperMode = value;
+            register_value &= ~TMC2590_SET_CHM(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value |= TMC2590_SET_CHM(tmc2590->chopperMode);  // Chopper mode. This mode bit affects the interpretation of the HDEC, HEND, and HSTRT parameters shown below. 0 Standard mode (SpreadCycle)
+            tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT] = register_value;
+            tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
+            break;
+
+        /* Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54 */
+        case SET_TBL:
+            /* TMC2590_CHOPCONF */
+            register_value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];
+            tmc2590->chopperBlankTime = value;
+            register_value &= ~TMC2590_SET_TBL(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value |= TMC2590_SET_TBL(tmc2590->chopperBlankTime);  // Chopper mode. This mode bit affects the interpretation of the HDEC, HEND, and HSTRT parameters shown below. 0 Standard mode (SpreadCycle)
+            tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT] = register_value;
+            tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
             break;
 
         /* Lower CoolStep threshold/CoolStep disable. If SEMIN is 0, CoolStep is disabled. If SEMIN is nonzero and the StallGuard2 value SG falls below SEMIN x 32, the CoolStep current scaling factor is increased */
         case SET_SEMIN:
+            /* TMC2590_SMARTEN */
+            register_value = tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT];
+            tmc2590->coolStepMin = value;
+            register_value &= ~TMC2590_SET_SEMIN(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value |= TMC2590_SET_SEMIN(tmc2590->coolStepMin);
+            tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] = register_value;
+            tmc2590_single_write_route(controller_id, TMC2590_SMARTEN);
             break;
 
         /* Current increment size. Number of current increment steps for each time that the StallGuard2 value SG is sampled below the lower threshold: %00: 1; %01: 2; %10: 4; %11: 8 */
         case SET_SEUP:
+            /* TMC2590_SMARTEN */
+            register_value = tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT];
+            tmc2590->coolStepUp = value;
+            register_value &= ~TMC2590_SET_SEUP(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value |= TMC2590_SET_SEUP(tmc2590->coolStepUp);
+            tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] = register_value;
+            tmc2590_single_write_route(controller_id, TMC2590_SMARTEN);
             break;
 
         /* Upper CoolStep threshold as an offset from the lower threshold. If the StallGuard2 measurement value SG is sampled equal to or above (SEMIN+SEMAX+1) x 32 enough times, then the coil current scaling factor is decremented. */
         case SET_SEMAX:
+            /* TMC2590_SMARTEN */
+            register_value = tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT];
+            tmc2590->coolStepMax = value;
+            register_value &= ~TMC2590_SET_SEMAX(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value |= TMC2590_SET_SEMAX(tmc2590->coolStepMax);
+            tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] = register_value;
+            tmc2590_single_write_route(controller_id, TMC2590_SMARTEN);
             break;
 
         /* Current decrement speed. Number of times that the StallGuard2 value must be sampled equal to or above the upper threshold for each decrement of the coil current: %00: 32; %01: 8; %10: 2; %11: 1 */
         case SET_SEDN:
+            /* TMC2590_SMARTEN */
+            register_value = tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT];
+            tmc2590->coolStepDown = value;
+            register_value &= ~TMC2590_SET_SEDN(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value |= TMC2590_SET_SEDN(tmc2590->coolStepDown);
+            tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] = register_value;
+            tmc2590_single_write_route(controller_id, TMC2590_SMARTEN);
             break;
 
         /* Minimum CoolStep current: 0: 1/2 CS current setting; 1: 1/4 CS current setting */
         case SET_SEIMIN:
+            /* TMC2590_SMARTEN */
+            register_value = tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT];
+            tmc2590->coolStepCurrentMin = value;
+            register_value &= ~TMC2590_SET_SEIMIN(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value |= TMC2590_SET_SEIMIN(tmc2590->coolStepCurrentMin);
+            tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] = register_value;
+            tmc2590_single_write_route(controller_id, TMC2590_SMARTEN);
             break;
 
         /* Current scale (scales digital currents A and B). Current scaling for SPI and STEP/DIR operation. 0-31: 1/32, 2/32, 3/32, ... 32/32;  This value is biased by 1 and divided by 32, so the range is 1/32 to 32/32. Example: CS=20 is 21/32 current. */
@@ -618,7 +689,7 @@ void execute_TMC_command(){
             register_value &= ~TMC2590_SET_SGT(-1);                          // clear,
             register_value |= TMC2590_SET_SGT(tmc2590->stallGuardThreshold); // set threshold
             tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = register_value;
-            tmc2590_writeInt(tmc2590, TMC2590_SGCSCONF, tmc2590->registerResetState[TMC2590_SGCSCONF]);
+            tmc2590_single_write_route(controller_id, TMC2590_SGCSCONF);
             break;
 
         /* StallGuard2 filter enable. 0: Standard mode, fastest response time. 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy. */
@@ -629,7 +700,40 @@ void execute_TMC_command(){
             register_value &= ~TMC2590_SET_SFILT(-1);                        // clear, //0: Standard mode, fastest response time.
             register_value |= TMC2590_SET_SFILT(tmc2590->stallGuardFilter);  // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
             tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = register_value;
-            tmc2590_writeInt(tmc2590, TMC2590_SGCSCONF, tmc2590->registerResetState[TMC2590_SGCSCONF]);
+            tmc2590_single_write_route(controller_id, TMC2590_SGCSCONF);
+            break;
+
+        /* Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes */
+        case SET_SLPL:
+            /* TMC2590_DRVCONF */
+            register_value = tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT];
+            tmc2590->slopeCtrlLow = value;
+            register_value &= ~TMC2590_SET_SLPL(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value |= TMC2590_SET_SLPL(tmc2590->slopeCtrlLow);
+            tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = register_value;
+            tmc2590_single_write_route(controller_id, TMC2590_DRVCONF);
+            break;
+
+        /* Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes */
+        case SET_SLPH:
+            /* TMC2590_DRVCONF */
+            register_value = tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT];
+            tmc2590->slopeCtrlHigh = value;
+            register_value &= ~TMC2590_SET_SLPH(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value |= TMC2590_SET_SLPH(tmc2590->slopeCtrlHigh);
+            tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = register_value;
+            tmc2590_single_write_route(controller_id, TMC2590_DRVCONF);
+            break;
+
+            /* Sense resistor voltage-based current scaling. 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV. (Full-scale refers to a current setting of 31.) */
+        case SET_VSENSE:
+            /* TMC2590_DRVCONF */
+            register_value = tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT];
+            tmc2590->senseVoltage = value;
+            register_value &= ~TMC2590_SET_VSENSE(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value |= TMC2590_SET_VSENSE(tmc2590->senseVoltage);
+            tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = register_value;
+            tmc2590_single_write_route(controller_id, TMC2590_DRVCONF);
             break;
 
         /* set the current scale applied when no pulses are detected on the given axis */
