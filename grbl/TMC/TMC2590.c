@@ -198,6 +198,10 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
     value &= ~TMC2590_SET_TOFF(-1);                       // clear
     value |= TMC2590_SET_TOFF(tmc2590->SlowDecayDuration);// Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 … %1111: 2 … 15 */
 
+    value &= ~TMC2590_SET_TBL(-1);                       // clear
+    value |= TMC2590_SET_TBL(tmc2590->chopperBlankTime); // Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54
+
+
     tmc2590->config->shadowRegister[TMC2590_CHOPCONF  | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
     
 
@@ -512,12 +516,13 @@ void init_TMC(void){
 	tmc2590_X1.coolStepMax                  = 1; // set to trigger if SG above (7+1)8x32 = 256
     tmc2590_X1.respIdx                      = 0; // very first resp index would be 0
     tmc2590_X1.SlowDecayDuration            = 5; // Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 … %1111: 2 … 15 */
+    tmc2590_X1.chopperBlankTime             = 2; // Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54
 
     /* control protection */
     tmc2590_X1.overcurrentSense             = 0; //0/1 0: Low sensitivity 1: High sensitivity. The high-side overcurrent detector can be set to a higher sensitivity by setting this flag. This will allow detection of wrong cabling even with higher resistive motors.
     tmc2590_X1.shortDetectionDelay          = 0; //0/1 %00: 3.2us, %01: 1.6us, %10: 1.2us, %11: 0.8us, Short detection delay for high-side and low side detectors. The short detection delay shall cover the bridge switching time. %01 will work for most applications. A higher delay makes detection less sensitive to capacitive load.
-    tmc2590_X1.disableShortToVSprotection   = 1; //0/1 Leave detection enabled for normal use (0). Allows to disable short to VS protection. 0/1 Leave detection enabled for normal use (0).
-    tmc2590_X1.EnableProtection             = 0; //0/1 Enable detection for normal use (1). Explicitly enable short to VS and overcurrent protection by setting this bit.
+    tmc2590_X1.disableShortToVSprotection   = 0; //0/1 Leave detection enabled for normal use (0). Allows to disable short to VS protection. 0/1 Leave detection enabled for normal use (0).
+    tmc2590_X1.EnableProtection             = 1; //0/1 Enable detection for normal use (1). Explicitly enable short to VS and overcurrent protection by setting this bit.
 
 	memcpy(&tmc2590_X2, &tmc2590_X1, sizeof(tmc2590_X1));
 	memcpy(&tmc2590_Y1, &tmc2590_X1, sizeof(tmc2590_X1));
@@ -596,7 +601,7 @@ void execute_TMC_command(){
             /* TMC2590_DRVCTRL */
             register_value = tmc2590->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT];
             tmc2590->microSteps = value;
-            register_value &= ~TMC2590_SET_MRES(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value &= ~TMC2590_SET_MRES(-1);                        // clear
             register_value |= TMC2590_SET_MRES(tmc2590->microSteps);  // Microstep resolution for STEP/DIR mode. Microsteps per fullstep: %0000: 256; %0001: 128; %0010: 64; %0011: 32; %0100: 16; %0101: 8; %0110: 4; %0111: 2 (halfstep); %1000: 1 (fullstep)
             tmc2590->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_DRVCTRL);
@@ -607,7 +612,7 @@ void execute_TMC_command(){
             /* TMC2590_DRVCTRL */
             register_value = tmc2590->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT];
             tmc2590->interpolationEn = value;
-            register_value &= ~TMC2590_SET_INTERPOL(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value &= ~TMC2590_SET_INTERPOL(-1);                        // clear
             register_value |= TMC2590_SET_INTERPOL(tmc2590->interpolationEn);  // Enable STEP interpolation. 0: Disable STEP pulse interpolation. 1: Enable MicroPlyer STEP pulse multiplication by 16
             tmc2590->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_DRVCTRL);
@@ -618,7 +623,7 @@ void execute_TMC_command(){
             /* TMC2590_CHOPCONF */
             register_value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];
             tmc2590->chopperMode = value;
-            register_value &= ~TMC2590_SET_CHM(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value &= ~TMC2590_SET_CHM(-1);                        // clear
             register_value |= TMC2590_SET_CHM(tmc2590->chopperMode);  // Chopper mode. This mode bit affects the interpretation of the HDEC, HEND, and HSTRT parameters shown below. 0 Standard mode (SpreadCycle)
             tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
@@ -629,19 +634,19 @@ void execute_TMC_command(){
             /* TMC2590_CHOPCONF */
             register_value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];
             tmc2590->chopperBlankTime = value;
-            register_value &= ~TMC2590_SET_TBL(-1);                        // clear, //0: Standard mode, fastest response time.
-            register_value |= TMC2590_SET_TBL(tmc2590->chopperBlankTime);  // Chopper mode. This mode bit affects the interpretation of the HDEC, HEND, and HSTRT parameters shown below. 0 Standard mode (SpreadCycle)
+            register_value &= ~TMC2590_SET_TBL(-1);                        // clear
+            register_value |= TMC2590_SET_TBL(tmc2590->chopperBlankTime);
             tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
             break;
 
-        /* Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54 */
+        /* Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 … %1111: 2 … 15 */
         case SET_TOFF:
             /* TMC2590_CHOPCONF */
             register_value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];
             tmc2590->SlowDecayDuration = value;
-            register_value &= ~TMC2590_SET_TOFF(-1);                        // clear, //0: Standard mode, fastest response time.
-            register_value |= TMC2590_SET_TOFF(tmc2590->SlowDecayDuration);  /* Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 … %1111: 2 … 15 */
+            register_value &= ~TMC2590_SET_TOFF(-1);                        // clear
+            register_value |= TMC2590_SET_TOFF(tmc2590->SlowDecayDuration);
             tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
             break;
@@ -651,7 +656,7 @@ void execute_TMC_command(){
             /* TMC2590_SMARTEN */
             register_value = tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT];
             tmc2590->coolStepMin = value;
-            register_value &= ~TMC2590_SET_SEMIN(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value &= ~TMC2590_SET_SEMIN(-1);                        // clear
             register_value |= TMC2590_SET_SEMIN(tmc2590->coolStepMin);
             tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_SMARTEN);
@@ -662,7 +667,7 @@ void execute_TMC_command(){
             /* TMC2590_SMARTEN */
             register_value = tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT];
             tmc2590->coolStepUp = value;
-            register_value &= ~TMC2590_SET_SEUP(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value &= ~TMC2590_SET_SEUP(-1);                        // clear
             register_value |= TMC2590_SET_SEUP(tmc2590->coolStepUp);
             tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_SMARTEN);
@@ -673,7 +678,7 @@ void execute_TMC_command(){
             /* TMC2590_SMARTEN */
             register_value = tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT];
             tmc2590->coolStepMax = value;
-            register_value &= ~TMC2590_SET_SEMAX(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value &= ~TMC2590_SET_SEMAX(-1);                        // clear
             register_value |= TMC2590_SET_SEMAX(tmc2590->coolStepMax);
             tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_SMARTEN);
@@ -684,7 +689,7 @@ void execute_TMC_command(){
             /* TMC2590_SMARTEN */
             register_value = tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT];
             tmc2590->coolStepDown = value;
-            register_value &= ~TMC2590_SET_SEDN(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value &= ~TMC2590_SET_SEDN(-1);                        // clear
             register_value |= TMC2590_SET_SEDN(tmc2590->coolStepDown);
             tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_SMARTEN);
@@ -695,7 +700,7 @@ void execute_TMC_command(){
             /* TMC2590_SMARTEN */
             register_value = tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT];
             tmc2590->coolStepCurrentMin = value;
-            register_value &= ~TMC2590_SET_SEIMIN(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value &= ~TMC2590_SET_SEIMIN(-1);                        // clear
             register_value |= TMC2590_SET_SEIMIN(tmc2590->coolStepCurrentMin);
             tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_SMARTEN);
@@ -730,7 +735,7 @@ void execute_TMC_command(){
             /* TMC2590_SGCSCONF */
             register_value = tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT];
             tmc2590->stallGuardFilter = value;
-            register_value &= ~TMC2590_SET_SFILT(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value &= ~TMC2590_SET_SFILT(-1);                        // clear
             register_value |= TMC2590_SET_SFILT(tmc2590->stallGuardFilter);  // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
             tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_SGCSCONF);
@@ -741,7 +746,7 @@ void execute_TMC_command(){
             /* TMC2590_DRVCONF */
             register_value = tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT];
             tmc2590->slopeCtrlLow = value;
-            register_value &= ~TMC2590_SET_SLPL(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value &= ~TMC2590_SET_SLPL(-1);                        // clear
             register_value |= TMC2590_SET_SLPL(tmc2590->slopeCtrlLow);
             tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_DRVCONF);
@@ -752,7 +757,7 @@ void execute_TMC_command(){
             /* TMC2590_DRVCONF */
             register_value = tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT];
             tmc2590->slopeCtrlHigh = value;
-            register_value &= ~TMC2590_SET_SLPH(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value &= ~TMC2590_SET_SLPH(-1);                        // clear
             register_value |= TMC2590_SET_SLPH(tmc2590->slopeCtrlHigh);
             tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_DRVCONF);
@@ -763,7 +768,7 @@ void execute_TMC_command(){
             /* TMC2590_DRVCONF */
             register_value = tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT];
             tmc2590->senseVoltage = value;
-            register_value &= ~TMC2590_SET_VSENSE(-1);                        // clear, //0: Standard mode, fastest response time.
+            register_value &= ~TMC2590_SET_VSENSE(-1);                        // clear
             register_value |= TMC2590_SET_VSENSE(tmc2590->senseVoltage);
             tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_DRVCONF);
