@@ -54,10 +54,16 @@ typedef struct {
 	uint8_t stallGuardFilter;   // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
 	uint8_t stallGuardThreshold;
 	uint8_t vSense;             /* 0: Full-scale sense resistor voltage is 325mV. */   
-	uint8_t currentStandStill;  //set 1/4 of full scale
+    uint8_t currentStandStill;  //set 1/4 of full scale
+
+    uint8_t overcurrentSense;       //0/1 0: Low sensitivity 1: High sensitivity. The high-side overcurrent detector can be set to a higher sensitivity by setting this flag. This will allow detection of wrong cabling even with higher resistive motors.
+    uint8_t shortDetectionDelay ;   //0/1 %00: 3.2us, %01: 1.6us, %10: 1.2us, %11: 0.8us, Short detection delay for high-side and low side detectors. The short detection delay shall cover the bridge switching time. %01 will work for most applications. A higher delay makes detection less sensitive to capacitive load.
+    uint8_t disableShortToVSprotection ;   //0/1 Leave detection enabled for normal use (0). Allows to disable short to VS protection. 0/1 Leave detection enabled for normal use (0).
+    uint8_t EnableProtection ;   //0/1 Enable detection for normal use (1). Explicitly enable short to VS and overcurrent protection by setting this bit.
 
     uint8_t chopperMode;        // Chopper mode. This mode bit affects the interpretation of the HDEC, HEND, and HSTRT parameters shown below. 0 Standard mode (SpreadCycle)
     uint8_t chopperBlankTime;   // Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54
+    uint8_t SlowDecayDuration;  /* Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 … %1111: 2 … 15 */
 
 	uint8_t coolStepMin;        // Lower CoolStep threshold/CoolStep disable. If SEMIN is 0, CoolStep is disabled. If SEMIN is nonzero and the StallGuard2 value SG falls below SEMIN x 32, the CoolStep current scaling factor is increased
     uint8_t coolStepMax;        // Upper CoolStep threshold as an offset from the lower threshold. If the StallGuard2 measurement value SG is sampled equal to or above (SEMIN+SEMAX+1) x 32 enough times, then the coil current scaling factor is decremented.
