@@ -716,6 +716,7 @@ void execute_TMC_command(){
             register_value |= TMC2590_SET_CS(tmc2590->currentScale);         // set Current scale  = 16
             tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_SGCSCONF);
+            TIMSK2 &= ~(1<<OCIE2A); // disable timer that feeds the dog
             //printPgmString(PSTR("after:"));printInteger( register_value ); printPgmString(PSTR(",")); printPgmString(PSTR("SET_CS"));
             break;
 

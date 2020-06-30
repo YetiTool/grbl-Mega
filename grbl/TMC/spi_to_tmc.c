@@ -353,6 +353,9 @@ ISR(TIMER2_COMPA_vect)
 {
 	sei(); // Re-enable interrupts to allow Stepper Interrupt to fire on-time.
 
+	/* feed the dog */
+	asm("WDR");
+
 	/* slow down polling the drivers, 250 is around 1s */
     static uint8_t skip_count;
     if (++skip_count % 25 != 0)  	return;
