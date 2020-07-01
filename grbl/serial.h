@@ -31,7 +31,7 @@
   #define RX_RTL_BUFFER_SIZE 	(SPI_TX_BUFFER_MASK + 1)/* Size of the send buffer, which is 1 higher than the mask. */
 #endif
 #ifndef TX_BUFFER_SIZE
-  #define TX_BUFFER_SIZE 255
+  #define TX_BUFFER_SIZE 0x3FF//255
 #endif
 
 #define SERIAL_NO_DATA 0xff
