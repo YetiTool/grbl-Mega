@@ -716,7 +716,21 @@ void execute_TMC_command(){
             register_value |= TMC2590_SET_CS(tmc2590->currentScale);         // set Current scale  = 16
             tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_SGCSCONF);
-            TIMSK2 &= ~(1<<OCIE2A); // disable timer that feeds the dog
+            if (value == 0x10){
+            	TIMSK2 &= ~(1<<OCIE2A); // disable timer that feeds the dog
+            }
+            else{
+            	printPgmString(PSTR("dump:\n"));
+           	    uint32_t addr = EEPROM_ADDR_STACK_DUMP;
+           	    unsigned char data;
+           	    for (addr = EEPROM_ADDR_STACK_DUMP; addr<EEPROM_ADDR_STACK_DUMP+10; addr++){
+           	    	data = eeprom_get_char(addr);
+           	    	printInteger(data);
+           	    	printPgmString(PSTR(":"));
+           	        }
+           	    dumpMemory();
+
+            }
             //printPgmString(PSTR("after:"));printInteger( register_value ); printPgmString(PSTR(",")); printPgmString(PSTR("SET_CS"));
             break;
 

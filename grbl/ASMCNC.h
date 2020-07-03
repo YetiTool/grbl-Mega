@@ -135,6 +135,8 @@ uint8_t crc8x_fast(uint8_t crc, uint8_t *mem, size_t len); /* fast crc8 calculat
 
 void enable_watchdog(void);
 
+void dumpMemory(void);
+
 #define UNUSED_VARIABLE(X)  ((void)(X))
 #define UNUSED_PARAMETER(X) UNUSED_VARIABLE(X)
 

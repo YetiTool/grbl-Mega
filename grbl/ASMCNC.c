@@ -392,7 +392,7 @@ char ByteArrayToHexViaLookup2[] = "0123456789ABCDEF";
 //#include <avr/wdt.h>
 #endif
 
-inline void serial_print_hex8(uint8_t byte){
+void serial_print_hex8(uint8_t byte){
 
 	/* convert bytes to hex str  */
 	char hex_str_buffer1[3];
@@ -403,7 +403,7 @@ inline void serial_print_hex8(uint8_t byte){
 
 }
 
-inline void serial_print_hex16(uint32_t byte){
+void serial_print_hex16(uint32_t byte){
 
 	/* convert bytes to hex str  */
 	char hex_str_buffer2[5];
@@ -416,7 +416,7 @@ inline void serial_print_hex16(uint32_t byte){
 
 }
 
-inline void serial_print_hex32(uint32_t byte){
+void serial_print_hex32(uint32_t byte){
 
 	/* convert bytes to hex str  */
 	char hex_str_buffer4[9];
@@ -433,7 +433,7 @@ inline void serial_print_hex32(uint32_t byte){
 
 }
 
-inline void dumpExtAddrLineIhex(uint16_t upper_addr) {
+void dumpExtAddrLineIhex(uint16_t upper_addr) {
   // Since normal records only have 16 address bit, this special record
   // sets the upper 16 address bits to be a prepended to all subsequent
   // records.
@@ -445,12 +445,12 @@ inline void dumpExtAddrLineIhex(uint16_t upper_addr) {
   printPgmString(PSTR("\n"));
 }
 
-inline void dumpLineIhex(uint8_t *addr, uint8_t *end, uint8_t *prev_addr) {
+void dumpLineIhex(uint16_t addr, uint16_t end, uint16_t sp) {
   uint8_t sum = 0;
 
   uintptr_t intaddr = (uintptr_t)addr;
-  if ((intaddr >> 16) != ((uintptr_t)prev_addr >> 16))
-    dumpExtAddrLineIhex(intaddr >> 16);
+  //if ((intaddr >> 16) != ((uintptr_t)prev_addr >> 16))
+    //dumpExtAddrLineIhex(intaddr >> 16);
 
   serial_write(':');
   uint8_t len = end - addr;
@@ -459,7 +459,8 @@ inline void dumpLineIhex(uint8_t *addr, uint8_t *end, uint8_t *prev_addr) {
   sum -= len;
 
   // Addr
-  uint16_t addr16 = (uint16_t)intaddr;
+  //uint16_t addr16 = (uint16_t)intaddr;
+  uint16_t addr16 = sp+1;
   serial_print_hex16(addr16);
   sum -= addr16 >> 8;
   sum -= addr16 & 0xff;
@@ -469,7 +470,7 @@ inline void dumpLineIhex(uint8_t *addr, uint8_t *end, uint8_t *prev_addr) {
   sum -= 0;
 
   while (addr < end) {
-    uint8_t byte = *addr++;
+    uint8_t byte = eeprom_get_char(addr++);
     sum -= byte;
     serial_print_hex8(byte);
   }
@@ -479,14 +480,14 @@ inline void dumpLineIhex(uint8_t *addr, uint8_t *end, uint8_t *prev_addr) {
 
 #define LINE_LENGTH 32
 
-inline void dumpMemoryIhex(uint8_t *addr, uint8_t *end) {
-  uint8_t *prev_addr = NULL;
+void dumpMemoryIhex(uint16_t addr, uint16_t end, uint16_t sp) {
+
   while (addr < end) {
-    uint8_t *next = addr + LINE_LENGTH;
+	uint16_t next = addr + LINE_LENGTH;
     if (next > end)
       next = end;
-    dumpLineIhex(addr, next, prev_addr);
-    prev_addr = addr;
+    dumpLineIhex(addr, next, sp);
+    sp += LINE_LENGTH;
     addr = next;
   }
   //EOF marker
@@ -532,19 +533,19 @@ inline void dumpMemoryIhex(uint8_t *addr, uint8_t *end) {
   //using retaddr_t = uint32_t;
 #endif
 
-inline void dumpMemory() __attribute__((__always_inline__));
-#if defined(__AVR__)
-inline void dumpMemory() {
-  uint16_t sp;
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    sp = SP;
-  }
-  printPgmString(PSTR("SP = 0x"));
-  serial_print_hex16(sp);
-  printPgmString(PSTR("\n"));
-  printPgmString(PSTR("Return = 0x"));
-  serial_print_hex32(get_return_address() * 2);
-  printPgmString(PSTR(" (byte address)\n"));
+//inline void dumpMemory() __attribute__((__always_inline__));
+
+void dumpMemory(void) {
+  //uint16_t sp;
+  //ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+//    sp = SP;
+  //}
+  //printPgmString(PSTR("SP = 0x"));
+  //serial_print_hex16(sp);
+//  printPgmString(PSTR("\n"));
+//  printPgmString(PSTR("Return = 0x"));
+//  serial_print_hex32(get_return_address() * 2);
+//  printPgmString(PSTR(" (byte address)\n"));
 
   // Dump I/O memory
   //printPgmString(PSTR("IO registers:"));
@@ -556,24 +557,135 @@ inline void dumpMemory() {
 	  //printPgmString(PSTR("-"));
 	  //serial_print_hex32(RAMSTART);
 
+
+// recover stack length
+	uint16_t stack_size;
+	uint16_t sp;
+	uint32_t ret_addr;
+	uint32_t addr = EEPROM_ADDR_STACK_DUMP;
+
+	stack_size  = eeprom_get_char(addr  );
+	stack_size <<= 8;
+	stack_size |= eeprom_get_char(addr+1);
+	printPgmString(PSTR("stack_size: "));
+	printInteger(stack_size);
+	printPgmString(PSTR("\n"));
+
+	//stack pointer
+	sp  = eeprom_get_char(addr+2);
+	sp <<= 8;
+	sp |= eeprom_get_char(addr+3);
+	printPgmString(PSTR("SP: 0x"));
+	serial_print_hex32(sp);
+	printPgmString(PSTR("\n"));
+
+	//ret addres
+	ret_addr  = eeprom_get_char(addr+4);
+	ret_addr <<= 8;
+	ret_addr |= eeprom_get_char(addr+5);
+	ret_addr <<= 8;
+	ret_addr |= eeprom_get_char(addr+6);
+	printPgmString(PSTR("ret_addr: 0x"));
+	serial_print_hex32(ret_addr);
+	printPgmString(PSTR("\n"));
+
+
   printPgmString(PSTR("Stack:\n"));
   // Dump stack (SP is the next unused value, so SP + 1 is the first valid
   // stack value)
-  dumpMemoryIhex((uint8_t*)sp + 1, (uint8_t*)RAMEND+1);
+  //dumpMemoryIhex((uint8_t*)sp + 1, (uint8_t*)RAMEND+1);
+
+  dumpMemoryIhex(EEPROM_ADDR_STACK_DUMP+EEPROM_STACK_HDR_SIZE, EEPROM_ADDR_STACK_DUMP+EEPROM_STACK_HDR_SIZE+stack_size, sp);
   printPgmString(PSTR("Dump complete\n"));
 
   // Ensure the output is transmitted before returning from the ISR
   //Serial.flush();
 }
 
-#endif //defined(__AVR__)
+//char line[512];
+
+
+inline void dumpMemoryToEEPROM() __attribute__((__always_inline__));
+
+inline void dumpMemoryToEEPROM() {
+
+  uint32_t addr = EEPROM_ADDR_STACK_DUMP;
+  uint16_t stack_size;
+  uint16_t sp;
+  uint32_t ret_addr;
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    sp = SP;
+  }
+  //printPgmString(PSTR("SP = 0x"));
+  //serial_print_hex16(sp);
+  //printPgmString(PSTR("\n"));
+  //printPgmString(PSTR("Return = 0x"));
+  //serial_print_hex32(get_return_address() * 2);
+  //printPgmString(PSTR(" (byte address)\n"));
+
+  // Dump I/O memory
+  //printPgmString(PSTR("IO registers:"));
+  //uint8_t * nullptr = NULL;
+  //dumpMemoryIhex(nullptr, (uint8_t*)RAMSTART);
+  //printPgmString(PSTR("\n"));
+
+
+  stack_size = RAMEND - sp;
+  //memset(line, 0, 1024);
+  //memcpy(line, (uint8_t*)sp + 1, stack_size);
+  //memcpy_to_eeprom_with_checksum(addr,(char*)line, stack_size);
+
+
+  //store the stack to EEPROM
+  memcpy_to_eeprom_with_checksum(addr+EEPROM_STACK_HDR_SIZE,(char*)sp + 1, stack_size);
+
+  //store length, stack pointer and return addr to eeprom
+  //char header[7];
+  //length
+  eeprom_put_char(addr+1, (stack_size   )&0xFF);
+  eeprom_put_char(addr  , (stack_size>>8)&0xFF);
+
+  //stack pointer
+  eeprom_put_char(addr+3, (sp   )&0xFF);
+  eeprom_put_char(addr+2, (sp>>8)&0xFF);
+
+  //ret addres
+  ret_addr = get_return_address() * 2;
+  eeprom_put_char(addr+6, (ret_addr      )&0xFF);
+  eeprom_put_char(addr+5, (ret_addr >>  8)&0xFF);
+  eeprom_put_char(addr+4, (ret_addr >> 16)&0xFF);
+
+
+	  //serial_print_hex32(NULL);
+	//printPgmString(PSTR("RAMSTART:"));
+	//serial_print_hex32(RAMSTART);
+	//printPgmString(PSTR("\n"));
+	//printPgmString(PSTR("sp:"));
+	//serial_print_hex32(sp);
+	//printPgmString(PSTR("\n"));
+	printPgmString(PSTR("stack_size: "));
+	printInteger(stack_size);
+	printPgmString(PSTR("\n"));
+	//dumpMemoryIhex((uint8_t*)sp + 1, (uint8_t*)RAMEND+1);
+
+  //printPgmString(PSTR("Stack:\n"));
+  // Dump stack (SP is the next unused value, so SP + 1 is the first valid
+  // stack value)
+  //dumpMemoryIhex((uint8_t*)sp + 1, (uint8_t*)RAMEND+1);
+  //printPgmString(PSTR("Dump complete\n"));
+
+  // Ensure the output is transmitted before returning from the ISR
+  //Serial.flush();
+}
+
 
 
 
 ISR(WDT_vect) // Watchdog timer ISR
 {
   //sei();
-  dumpMemory();
+  //dumpMemory();
+  dumpMemoryToEEPROM();
   //WDTCSR &= ~(1<<WDIE); // Disable watchdog timer.
   //printPgmString(PSTR("in WDT ISR\n"));
 }
