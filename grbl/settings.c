@@ -107,6 +107,8 @@ void settings_restore(uint8_t restore_flag) {
     settings.max_travel[Y_AXIS] = (-DEFAULT_Y_MAX_TRAVEL);
     settings.max_travel[Z_AXIS] = (-DEFAULT_Z_MAX_TRAVEL);
 
+    settings.product_code = 0.03F; /* BK mod requested by Ed to be efficient in production (override this setting on reset is not a good idea. This will work untill we have the new product code. But if customer with newer product code would ever issue reset settings it will revert the code to 3.. It is flawed, but acceptable.) */
+
     write_global_settings();
   }
 
