@@ -15,6 +15,3 @@ spec.d
 .settings/language.settings.xml
 .settings/org.eclipse.cdt.core.prefs
 Debug/
-grbl_mega.atsln
-grbl_mega.componentinfo.xml
-grbl_mega.cproj
