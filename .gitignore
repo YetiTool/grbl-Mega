@@ -11,3 +11,5 @@ Release/
 .settings/
 .cproject
 .project
+Debug/
+.vs/grbl_mega/v14/.atsuo
