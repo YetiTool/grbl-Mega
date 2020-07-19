@@ -651,6 +651,50 @@ void execute_TMC_command(){
             tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
             break;
 
+        /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be ? 15 */
+        case SET_HSTRT:
+			/* TMC2590_CHOPCONF */
+			register_value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];
+			tmc2590->SlowDecayDuration = value;
+			register_value &= ~TMC2590_SET_HSTRT(-1);                        // clear
+			register_value |= TMC2590_SET_HSTRT(tmc2590->SlowDecayDuration);
+			tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT] = register_value;
+			tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
+			break;
+
+        /* Hysteresis end (low) value; %0000 … %1111: Hysteresis is -3, -2, -1, 0, 1, …, 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+        case SET_HEND:
+			/* TMC2590_CHOPCONF */
+			register_value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];
+			tmc2590->SlowDecayDuration = value;
+			register_value &= ~TMC2590_SET_HEND(-1);                        // clear
+			register_value |= TMC2590_SET_HEND(tmc2590->SlowDecayDuration);
+			tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT] = register_value;
+			tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
+			break;
+
+        /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
+        case SET_HDEC:
+			/* TMC2590_CHOPCONF */
+			register_value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];
+			tmc2590->SlowDecayDuration = value;
+			register_value &= ~TMC2590_SET_HDEC(-1);                        // clear
+			register_value |= TMC2590_SET_HDEC(tmc2590->SlowDecayDuration);
+			tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT] = register_value;
+			tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
+			break;
+
+        /* Enable randomizing the slow decay phase duration: 0: Chopper off time is fixed as set by bits tOFF 1: Random mode, tOFF is random modulated by dNCLK= -12 - +3 clocks */
+        case SET_RNDTF:
+			/* TMC2590_CHOPCONF */
+			register_value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];
+			tmc2590->SlowDecayDuration = value;
+			register_value &= ~TMC2590_SET_RNDTF(-1);                        // clear
+			register_value |= TMC2590_SET_RNDTF(tmc2590->SlowDecayDuration);
+			tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT] = register_value;
+			tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
+			break;
+
         /* Lower CoolStep threshold/CoolStep disable. If SEMIN is 0, CoolStep is disabled. If SEMIN is nonzero and the StallGuard2 value SG falls below SEMIN x 32, the CoolStep current scaling factor is increased */
         case SET_SEMIN:
             /* TMC2590_SMARTEN */
@@ -748,6 +792,9 @@ void execute_TMC_command(){
             tmc2590->slopeCtrlLow = value;
             register_value &= ~TMC2590_SET_SLPL(-1);                        // clear
             register_value |= TMC2590_SET_SLPL(tmc2590->slopeCtrlLow);
+			/* hadle MSB */
+            register_value &= ~TMC2590_SET_SLP2(-1);                        // clear
+            register_value |= TMC2590_SET_SLP2((tmc2590->slopeCtrlLow)>>2);
             tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_DRVCONF);
             break;
@@ -759,6 +806,9 @@ void execute_TMC_command(){
             tmc2590->slopeCtrlHigh = value;
             register_value &= ~TMC2590_SET_SLPH(-1);                        // clear
             register_value |= TMC2590_SET_SLPH(tmc2590->slopeCtrlHigh);
+			/* handle MSB */
+			register_value &= ~TMC2590_SET_SLP2(-1);                        // clear
+			register_value |= TMC2590_SET_SLP2((tmc2590->slopeCtrlHigh)>>2);
             tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = register_value;
             tmc2590_single_write_route(controller_id, TMC2590_DRVCONF);
             break;

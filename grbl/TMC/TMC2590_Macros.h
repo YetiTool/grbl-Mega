@@ -62,6 +62,7 @@
 #define TMC2590_SET_SDOFF(X)     (((X) & 0x01UL) << 7)
 #define TMC2590_SET_TS2G(X)      (((X) & 0x03UL) << 8)
 #define TMC2590_SET_DISS2G(X)    (((X) & 0x01UL) << 10)
+#define TMC2590_SET_SLP2(X)      (((X) & 0x01UL) << 11)
 #define TMC2590_SET_SLPL(X)      (((X) & 0x03UL) << 12)
 #define TMC2590_SET_SLPH(X)      (((X) & 0x03UL) << 14)
 #define TMC2590_SET_TST(X)       (((X) & 0x01UL) << 16)
