@@ -163,6 +163,19 @@ uint8_t serial_read_rtl()
   }
 }
 
+// Check whether any data is available in serial rtl buffer
+uint8_t serial_rtl_data_available()
+{
+	if (serial_rx_rtl_buffer_head == serial_rx_rtl_buffer_tail) {
+		return SERIAL_NO_DATA;
+		} 
+	else {
+		return 0;
+	}
+}
+
+
+
 ISR(SERIAL_RX)
 {
   uint8_t data = UDR0;
@@ -218,6 +231,7 @@ ISR(SERIAL_RX)
         serial_rx_rtl_buffer[serial_rx_rtl_buffer_head] = data;
         serial_rx_rtl_buffer_head++;
         serial_rx_rtl_buffer_head &= RX_RTL_BUFFER_MASK;
+		/* TODO: rtl buffer size is power of 2, message size is multiple of 3, so if head reaches the tail then it could corrupt old messages. Maybe sometimes this need to be handled*/
 		//serial_rx_rtl_byte_buffer[serial_rx_rtl_count] = data;
 		serial_rx_rtl_count++;
 		if (serial_rx_rtl_count >= RTL_TMC_COMMAND_SIZE){ /* TMC code reception completed, pass to main loop */
