@@ -227,11 +227,15 @@ ISR(SERIAL_RX)
 		return; /* exit the ISR - this line is where serial bypass actually happens */
 
 	case RTL_TMC_RX:   /*  real-time TMC code reception ongoing */
-
-        serial_rx_rtl_buffer[serial_rx_rtl_buffer_head] = data;
-        serial_rx_rtl_buffer_head++;
-        serial_rx_rtl_buffer_head &= RX_RTL_BUFFER_MASK;
-		/* TODO: rtl buffer size is power of 2, message size is multiple of 3, so if head reaches the tail then it could corrupt old messages. Maybe sometimes this need to be handled*/
+		/* rtl buffer size is power of 2, message size is multiple of 3, so if head reaches the tail then it could corrupt old messages. Maybe sometimes this need to be handled better */
+        next_head = serial_rx_rtl_buffer_head + 1;
+        next_head &= RX_RTL_BUFFER_MASK;
+        // Write data to buffer unless it is full.
+        if (next_head != serial_rx_rtl_buffer_tail) {
+			serial_rx_rtl_buffer[serial_rx_rtl_buffer_head] = data;
+	        serial_rx_rtl_buffer_head = next_head;
+			}
+		
 		//serial_rx_rtl_byte_buffer[serial_rx_rtl_count] = data;
 		serial_rx_rtl_count++;
 		if (serial_rx_rtl_count >= RTL_TMC_COMMAND_SIZE){ /* TMC code reception completed, pass to main loop */
