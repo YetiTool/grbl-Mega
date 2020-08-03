@@ -17,3 +17,4 @@ spec.d
 Debug/
 grbl_mega.componentinfo.xml
 .vs/grbl_mega/v14/.atsuo
+*.rej

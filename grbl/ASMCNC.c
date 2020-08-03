@@ -264,8 +264,11 @@ void asmcnc_init_ADC(void)
 	if (PIND <= 5){ /* if HW version is 5 and lower*/
 		ADCchannel = 8;
 	}
+	else if (PIND <= 15){ /* if HW version is between 5 and 15 ADC channel is 3*/
+		ADCchannel = 3;
+	}
 	else{
-		/* for newer than 5 HW Vref is 1V1 bandgap and ADC channel is 3*/
+		/* for newer than 15 HW ADC channel is 1 */
 		ADCchannel = SPINDLE_LOAD_MONITOR;
 	}
 
