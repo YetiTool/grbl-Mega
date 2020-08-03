@@ -8,8 +8,8 @@
 #ifndef ASMCNC_h
 #define ASMCNC_h
 
-#define ASMCNC_VERSION			"1.1.2"
-#define ASMCNC_VERSION_BUILD	"20200707"
+#define ASMCNC_VERSION			"1.2.0"
+#define ASMCNC_VERSION_BUILD	"20200804"
 
 #define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
 
@@ -74,7 +74,7 @@
 #define AC_LIVE_SENSE 1           /* MEGA2560 Analog Pin 1 on port F, low when live is present, high when live is lost, only for Z-head HW >= Rev H */
 #define AC_LIVE_SENSE_MASK		(1<<AC_LIVE_SENSE)
 //Spindle load monitor pin
-#define SPINDLE_LOAD_MONITOR 3    /* MEGA2560 Analog Pin PF3, spindle load 0-5V signal monitor*/
+#define SPINDLE_LOAD_MONITOR 1    /* MEGA2560 Analog Pin PF1, spindle load 0-5V signal monitor*/
 //Spindle spare pin
 #define SPINDLE_SPARE 5           /* MEGA2560 Analog Pin PF5, for future use, for example low when brushes are ok, high when brushes are worn */
 #define SPINDLE_SPARE_MASK		(1<<SPINDLE_SPARE)
