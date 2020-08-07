@@ -585,15 +585,19 @@ void report_realtime_status()
 
   #ifdef ENABLE_SPINDLE_LOAD_MONITOR
   printPgmString(PSTR("|Ld:"));
-  long ADC_reading = ADC; /* must be long otherwise mV calculation overflows int16*/
-  /* Mafel load output range is 0-5V, convert 10bits ADC output into mV: */
-  /* on latest HW load sense is connected to the ADC pin through resistive divider of 10/2.4 kOhm,
-   * therefore for 5V input the output is 0.968mV. With 1.1V bandgap reference 5 V will be corresponded to ADC code 900
-   * to convert the ADC code to voltage: V_out_mV = ADC_code * 1.1*5*(10+2.4)/(5*1023*2.4)*1000 =
-   * = ADC*1100*(10+2.4)/(1023*2.4) = ADC * 136400 / 24552 */
-  ADC_reading = ( ADC_reading * 136400 ) / 24552;
-  printInteger( ADC_reading );
+  int spindle_load_volts = get_spindle_load_volts();
+  printInteger( spindle_load_volts );
   #endif //#ifdef ENABLE_SPINDLE_LOAD_MONITOR
+  
+  #ifdef ENABLE_TEMPERATURE_MONITOR
+  printPgmString(PSTR("|TC:"));
+  int temperature = get_temperature();
+  printInteger( temperature );
+  #endif //#ifdef ENABLE_TEMPERATURE_MONITOR
+  
+  #if defined(ENABLE_SPINDLE_LOAD_MONITOR) || defined(ENABLE_TEMPERATURE_MONITOR)
+  asmcnc_start_ADC(); /* start next measurement */
+  #endif //#if defined(ENABLE_SPINDLE_LOAD_MONITOR) || defined(ENABLE_TEMPERATURE_MONITOR)
 
   #ifdef ENABLE_TMC_FEEDBACK_MONITOR
   /* cycle through all motors */
