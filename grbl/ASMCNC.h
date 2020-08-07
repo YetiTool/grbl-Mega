@@ -8,8 +8,8 @@
 #ifndef ASMCNC_h
 #define ASMCNC_h
 
-#define ASMCNC_VERSION			"1.2.1"
-#define ASMCNC_VERSION_BUILD	"20200805"
+#define ASMCNC_VERSION			"1.2.2"
+#define ASMCNC_VERSION_BUILD	"20200806"
 
 #define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
 
@@ -75,11 +75,14 @@
 #define AC_LIVE_SENSE_MASK		(1<<AC_LIVE_SENSE)
 //Spindle load monitor pin
 #define SPINDLE_LOAD_MONITOR 1    /* MEGA2560 Analog Pin PF1, spindle load 0-5V signal monitor*/
+#define THERMISTOR_MONITOR   3    /* MEGA2560 Analog Pin PF3, 2k NTC thermistor monitor*/
 //Spindle spare pin
 #define SPINDLE_SPARE 5           /* MEGA2560 Analog Pin PF5, for future use, for example low when brushes are ok, high when brushes are worn */
 #define SPINDLE_SPARE_MASK		(1<<SPINDLE_SPARE)
 
 #define ENABLE_SPINDLE_LOAD_MONITOR // enable spindle load monitoring, apply to Mafell spindles
+#define ENABLE_TEMPERATURE_MONITOR  // enable temperatuer monitoring, apply to ZH2 and newer
+
 #define ENABLE_LASER_POINTER_CONTROL // Laser cross unit control
 
 /* RGB HEX Rx state machine state */
@@ -87,6 +90,13 @@ enum rgbHexStates{
 	RGB_HEX_RTL_IDLE, // normal state, usual operation
 	RGB_HEX_RTL_RX,   // hex code reception ongoing
 	RGB_HEX_RTL_ERR   // FAULT - other than "0123456789ABCDEF" char received
+};
+
+/* ADC state machine states */
+enum adc_states{
+	ADC_IDLE, // normal state, ADC is off
+	ADC_CH1,  // ADC is running conversion on Channel 1
+	ADC_CH2,  // ADC is running conversion on Channel 2	
 };
 
 
@@ -97,7 +107,10 @@ void asmcnc_RGB_white(void);
 void asmcnc_RGB_red_flash(void);
 void asmcnc_RGB_setup(void);
 uint8_t asmcnc_execute_line(char *line);
-void asmcnc_init_ADC(void); /* initialise ADC for spindle load monitoring */
-uint8_t char2intValidate(char); /* convert hex char to int and validate result (return 0xFF if character is not hex byte code */
+void asmcnc_init_ADC(void);         /* initialise ADC for spindle load monitoring */
+void asmcnc_start_ADC(void);        /* start ADC state machine from channel 1 */
+uint8_t char2intValidate(char);     /* convert hex char to int and validate result (return 0xFF if character is not hex byte code */
+int get_temperature (void);
+int get_spindle_load_volts(void);
 
 #endif /* ASMCNC_h */
