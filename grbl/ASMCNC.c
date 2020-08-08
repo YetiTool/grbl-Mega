@@ -288,7 +288,7 @@ void asmcnc_init_ADC(void)
 	//enable ADC interrupt
 	ADCSRA |= (1<<ADIE);
 
-  asmcnc_start_ADC();
+    asmcnc_start_ADC(); /* start ADC state machine to obtain first conversion values */
 
 }
 
@@ -298,6 +298,7 @@ void asmcnc_init_ADC(void)
  * of Thermistor_0402_Panasonic_2kOhm_ERT-J0EG202GM
  */
 
+/* simple filter to smooth out variability in temperature readings */
 int filter_fir_int16(long in_global_16, long in_16) {
     return (int)(((FIR_COEFF_TEMPC * in_16) + (256 - FIR_COEFF_TEMPC) * in_global_16)/256);
 }
@@ -362,7 +363,8 @@ void asmcnc_start_ADC_single(uint8_t ADCchannel){
 }
 
 /* ADC conversion complete interrupt 
- * ADC state machine is implemented here */
+ * ADC state machine is implemented here 
+ * ISR code must be minimal to prevent interruption of the core loops */
 ISR(ADC_vect)
 {
 
@@ -386,7 +388,9 @@ ISR(ADC_vect)
 
 		default:
 		break;
-	}
+
+	} //	switch (adc_state){
+
 }
 
 /* start ADC state machine from channel 1 */
@@ -397,7 +401,7 @@ void asmcnc_start_ADC(void){
     }
 }
 
-/* return global variable calculated earlier */
+/* calculated and return global variable */
 int get_temperature(void){
     convert_temperature(); // 2k NTC thermistor on 10k divider gives a voltage from 1.1 to 0.03V for temperature range of 15C to 150C
     return temperature_cent_celsius/100;
