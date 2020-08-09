@@ -36,16 +36,16 @@
   #define DEFAULT_X_MAX_RATE 8000.0 // mm/min
   #define DEFAULT_Y_MAX_RATE 6000.0 // mm/min
   #define DEFAULT_Z_MAX_RATE 750.0 // mm/min
-  #define DEFAULT_X_ACCELERATION 500.0 // mm/sec^2
-  #define DEFAULT_Y_ACCELERATION 200.0 // mm/sec^2
-  #define DEFAULT_Z_ACCELERATION 200.0 // mm/sec^2
+  #define DEFAULT_X_ACCELERATION (500.0*60*60) // 500*60*60 mm/min^2 = 500 mm/sec^2
+  #define DEFAULT_Y_ACCELERATION (200.0*60*60) // 200*60*60 mm/min^2 = 200 mm/sec^2
+  #define DEFAULT_Z_ACCELERATION (200.0*60*60) // 200*60*60 mm/min^2 = 200 mm/sec^2  
   #define DEFAULT_X_MAX_TRAVEL 1300.0 // mm NOTE: Must be a positive value.
   #define DEFAULT_Y_MAX_TRAVEL 2502.0 // mm NOTE: Must be a positive value.
   #define DEFAULT_Z_MAX_TRAVEL 150.0 // mm NOTE: Must be a positive value.
   #define DEFAULT_SPINDLE_RPM_MAX 25000.0 // rpm
   #define DEFAULT_SPINDLE_RPM_MIN 0.0 // rpm
   #define DEFAULT_STEP_PULSE_MICROSECONDS 10
-  #define DEFAULT_STEPPING_INVERT_MASK 4
+  #define DEFAULT_STEPPING_INVERT_MASK 6 // for ZH2, Y step shall not be inverted (active low) to minimize current consumption of the Xbeam PCB 5V LDO
   #define DEFAULT_DIRECTION_INVERT_MASK 1
   #define DEFAULT_STEPPER_IDLE_LOCK_TIME 255 // msec (0-254, 255 keeps steppers enabled)
   #define DEFAULT_STATUS_REPORT_MASK 3 // MPos enabled
