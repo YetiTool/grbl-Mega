@@ -8,76 +8,11 @@
 #include "spi_to_tmc.h"
 #include <string.h>
 
-static void continousSync(TMC2590TypeDef *tmc2590);
 static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value);
-static void readImmediately(TMC2590TypeDef *tmc2590, uint8_t rdsel);
 
 /* declare structures for all 5 motors */
 TMC2590TypeDef tmc2590_X1, tmc2590_X2, tmc2590_Y1, tmc2590_Y2, tmc2590_Z;
 ConfigurationTypeDef tmc2590_config_X1, tmc2590_config_X2, tmc2590_config_Y1, tmc2590_config_Y2, tmc2590_config_Z;
-
-
-static void standStillCurrentLimitation(TMC2590TypeDef *tmc2590, uint32_t tick)
-{
-	// Check if the motor is in standstill
-	if (!TMC2590_GET_STST(tmc2590_readInt(tmc2590, TMC2590_RESPONSE_LATEST)))
-	{
-		// The standStillTick variable holds the tick counter where a standstill
-		// started.
-		// Not standing still -> standstill tick equals tick -> Time since
-		// standstill == 0
-		tmc2590->standStillTick = tick;
-	}
-
-	// Check if standstill timeout has been reached
-	if (tick - tmc2590->standStillTick > tmc2590->standStillTimeout)
-	{
-		tmc2590->isStandStillCurrent = 1;
-		// Change to standstill current
-		TMC2590_FIELD_UPDATE(tmc2590, TMC2590_SGCSCONF, TMC2590_CS_MASK, TMC2590_CS_SHIFT, tmc2590->standStillCurrentScale);
-	}
-	else
-	{
-		tmc2590->isStandStillCurrent = 0;
-		// Change to run current
-		TMC2590_FIELD_UPDATE(tmc2590, TMC2590_SGCSCONF, TMC2590_CS_MASK, TMC2590_CS_SHIFT, tmc2590->runCurrentScale);
-	}
-}
-
-static void continousSync(TMC2590TypeDef *tmc2590)
-{ // refreshes settings to prevent chip from loosing settings on brownout
-	static uint8_t write  = 0;
-	static uint8_t read   = 0;
-	static uint8_t rdsel  = 0;
-
-	// rotational reading all replys to keep values up to date
-	uint32_t value, drvConf;
-
-	// additional reading to keep all replies up to date
-	value = drvConf = tmc2590_readInt(0, TMC2590_WRITE_BIT | TMC2590_DRVCONF);  // buffer value amd  drvConf to write back later
-	value &= ~TMC2590_SET_RDSEL(-1);                                        // clear RDSEL bits
-	value |= TMC2590_SET_RDSEL(rdsel % 3);                                  // clear set rdsel
-	readWrite(tmc2590, value);
-	readWrite(tmc2590, drvConf);
-
-	// determine next read address
-	read = (read + 1) % 3;
-
-	// Write settings from shadow register to chip.
-	readWrite(tmc2590, tmc2590->config->shadowRegister[TMC2590_WRITE_BIT | write]);
-
-	// Determine next write address while skipping unused addresses
-	if (write == TMC2590_DRVCTRL)
-	{
-		// Skip over the unused addresses between DRVCTRL and CHOPCONF
-		write = TMC2590_CHOPCONF;
-	}
-	else
-	{
-		// Increase the address
-		write = (write + 1) & TMC2590_REGISTER_COUNT;
-	}
-}
 
 static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value)
 {	// sending data (value) via spi to TMC262, coping written and received data to shadow register
@@ -98,34 +33,12 @@ static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value)
 	tmc2590->config->shadowRegister[TMC2590_GET_ADDRESS(value)] = value;
 }
 
-static void readImmediately(TMC2590TypeDef *tmc2590, uint8_t rdsel)
-{ // sets desired reply in DRVCONF register, resets it to previous settings whilst reading desired reply
-	uint32_t value, drvConf;
-
-// additional reading to keep all replies up to date
-
-	value = tmc2590_readInt(tmc2590, TMC2590_WRITE_BIT | TMC2590_DRVCONF);  // buffer value amd  drvConf to write back later
-	drvConf = value;
-	value &= ~TMC2590_SET_RDSEL(-1);                              // clear RDSEL bits
-	value |= TMC2590_SET_RDSEL(rdsel%3);                          // set rdsel
-	readWrite(tmc2590, value);                                    // write to chip and readout reply
-	readWrite(tmc2590, drvConf);
-}
 
 void tmc2590_writeInt(TMC2590TypeDef *tmc2590, uint8_t address, int32_t value)
 {
 	value = TMC2590_VALUE(value);
 	tmc2590->config->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT] = value;
-	if(!tmc2590->continuousModeEnable)
-		readWrite(tmc2590, value);
-}
-
-uint32_t tmc2590_readInt(TMC2590TypeDef *tmc2590, uint8_t address)
-{
-	if(!tmc2590->continuousModeEnable && !(address & TMC2590_WRITE_BIT))
-		readImmediately(tmc2590, address);
-
-	return tmc2590->config->shadowRegister[TMC_ADDRESS(address)];
+	readWrite(tmc2590, value);
 }
 
 void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef *tmc2590_config, const int32_t *registerResetState)
@@ -133,21 +46,7 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
   	uint32_t value;    
 
 	tmc2590->config               = tmc2590_config;
-	//tmc2590->config->callback     = NULL;
 	tmc2590->config->channel      = channel;
-	//tmc2590->config->configIndex  = 0;
-	//tmc2590->config->state        = CONFIG_READY;
-
-	tmc2590->continuousModeEnable      = 0;
-
-	tmc2590->coolStepActiveValue       = 0;
-	tmc2590->coolStepInactiveValue     = 0;
-	tmc2590->coolStepThreshold         = 0;
-
-	tmc2590->isStandStillCurrent       = 0;
-	tmc2590->runCurrentScale           = 7;
-	tmc2590->standStillCurrentScale    = 3;
-	tmc2590->standStillTimeout         = 0;
 
 	for(size_t i = 0; i < TMC2590_REGISTER_COUNT; i++)
 	{
@@ -210,7 +109,7 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
     //default: 0x000A0000,  
     
 	value &= ~TMC2590_SET_SEIMIN(-1);                       // clear 
-	value |= TMC2590_SET_SEIMIN(tmc2590->currentStandStill);// set 1/4 of full scale
+	value |= TMC2590_SET_SEIMIN(tmc2590->currentSEmin);// set 1/4 of full scale
     
     value &= ~TMC2590_SET_SEMIN(-1);                        // clear, 
   	value |= TMC2590_SET_SEMIN(tmc2590->coolStepMin);       // set to trigger if SG below 7x32 = 224
@@ -227,7 +126,7 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
 
     /* 16 scale of 31 for current */
 	value &= ~TMC2590_SET_CS(-1);                           // clear Current scale bits
-	value |= TMC2590_SET_CS(tmc2590->currentScale);         // set Current scale  = 16
+	value |= TMC2590_SET_CS(tmc2590->currentScale);         // set Current scale  = default
     
     value &= ~TMC2590_SET_SFILT(-1);                        // clear, //0: Standard mode, fastest response time.
   	value |= TMC2590_SET_SFILT(tmc2590->stallGuardFilter);  // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
@@ -238,16 +137,6 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
 
     tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
 
-}
-
-void tmc2590_periodicJob(TMC2590TypeDef *tmc2590, uint32_t tick)
-{
-	standStillCurrentLimitation(tmc2590, tick);
-
-	if(tmc2590->continuousModeEnable)
-	{ // continuously write settings to chip and rotate through all reply types to keep data up to date
-		continousSync(tmc2590);
-	}
 }
 
 uint8_t tmc2590_reset(TMC2590TypeDef *tmc2590)
@@ -494,7 +383,7 @@ TMC2590TypeDef * get_TMC_controller(uint8_t controller){
         default:
             break;                             
     } //switch (controller){
-    return &tmc2590_X1;
+    return &tmc2590_X1; /* return first controller in case of a wrong parameter supplied */
 }
 
 
@@ -507,16 +396,17 @@ void init_TMC(void){
 
 	tmc2590_X1.interpolationEn              = 1;
 	tmc2590_X1.microSteps                   = 4; /* 4 : set MRES  = 16*/
-	tmc2590_X1.currentScale                 = 4; /* 0 - 31 where 31 is max */
+	tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
 	tmc2590_X1.stallGuardFilter             = 1; // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
 	tmc2590_X1.stallGuardThreshold          = 5;
 	tmc2590_X1.vSense                       = 0; /* 0: Full-scale sense resistor voltage is 325mV. */
-	tmc2590_X1.currentStandStill            = 1; // 1: set 1/4 of full scale
-	tmc2590_X1.coolStepMin                  = 7; // set to trigger if SG below 7x32 = 224
+	tmc2590_X1.currentSEmin                 = 1; // 1: set 1/4 of full scale when CoolStep is active
+	tmc2590_X1.coolStepMin                  = 0; // default CoolStep = 0 (disable); if want to enable then set for example to trigger if SG below 7x32 = 224
 	tmc2590_X1.coolStepMax                  = 1; // set to trigger if SG above (7+1)8x32 = 256
     tmc2590_X1.respIdx                      = 0; // very first resp index would be 0
     tmc2590_X1.SlowDecayDuration            = 5; // Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 … %1111: 2 … 15 */
     tmc2590_X1.chopperBlankTime             = 2; // Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54
+	tmc2590_X1.standStillCurrentScale       = 15; // 15: set 1/2 of full scale, 1/4th of power
 
     /* control protection */
     tmc2590_X1.overcurrentSense             = 0; //0/1 0: Low sensitivity 1: High sensitivity. The high-side overcurrent detector can be set to a higher sensitivity by setting this flag. This will allow detection of wrong cabling even with higher resistive motors.
@@ -528,6 +418,9 @@ void init_TMC(void){
 	memcpy(&tmc2590_Y1, &tmc2590_X1, sizeof(tmc2590_X1));
 	memcpy(&tmc2590_Y2, &tmc2590_X1, sizeof(tmc2590_X1));
 	memcpy(&tmc2590_Z,  &tmc2590_X1, sizeof(tmc2590_X1));
+    
+	tmc2590_Y1.standStillCurrentScale       = 30; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
+	tmc2590_Y2.standStillCurrentScale       = 30; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
     
     spi_hw_init();
 
@@ -841,23 +734,76 @@ void execute_TMC_command(){
 
 			/* set the current scale applied when no pulses are detected on the given axis */
 			case SET_IDLE_CURRENT:
+                tmc2590->standStillCurrentScale = value;
 				break;
 
 			/* shut off the motor completely, for example to let user move turret easier */
-			case SET_SHUT_OFF:
-				break;
+			case SET_MOTOR_FREEWHEEL:
+			break;
+
+			/* energize the motor  */
+			case SET_MOTOR_ENERGIZED:
+			break;
 
 			default:
 				break;
-			}
-
+			} //switch (command){
 
 		} // if (crc_in == tmc_command[RTL_TMC_COMMAND_SIZE-1]){
+            
 		else{ /* crc error */
 			report_status_message(ASMCNC_STATUS_INVALID_STATEMENT);
-		}
+		} //else{ /* crc error */
 
 	} // if rtl_data_available != SERIAL_NO_DATA {
 
+} //void execute_TMC_command(){
+
+
+/* reduce the current through energized motors when idle */
+void tmc_all_current_scale_apply(uint8_t current_scale_standstill_state){
+    
+    uint8_t controller_id;    
+	TMC2590TypeDef *tmc2590;
+	uint32_t register_value;
+    
+    /* reduce current in each TMC controller */
+    for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+
+        tmc2590 = get_TMC_controller(controller_id);        
+		/* TMC2590_SGCSCONF */
+		register_value = tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT];
+		register_value &= ~TMC2590_SET_CS(-1);                           // clear Current scale bits
+        if (current_scale_standstill_state == CURRENT_SCALE_STANDSTILL) register_value |= TMC2590_SET_CS(tmc2590->standStillCurrentScale);  // set standstill Current scale
+        else                                                            register_value |= TMC2590_SET_CS(tmc2590->currentScale);            // set full operational Current scale
+		tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = register_value;
+        
+        /* below if statement is to ensure both dual controllers are bing written in one transaction to speed up the execution */
+        if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
+            /* choose second pair and prepare for dual write */
+            controller_id++;
+            tmc2590 = get_TMC_controller(controller_id);
+            /* TMC2590_SGCSCONF */
+            register_value = tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT];
+            register_value &= ~TMC2590_SET_CS(-1);                           // clear Current scale bits
+            if (current_scale_standstill_state == CURRENT_SCALE_STANDSTILL) register_value |= TMC2590_SET_CS(tmc2590->standStillCurrentScale);  // set standstill Current scale
+            else                                                            register_value |= TMC2590_SET_CS(tmc2590->currentScale);            // set full operational Current scale
+            tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = register_value;            
+        } //if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
+        
+        tmc2590_single_write_route(controller_id, TMC2590_SGCSCONF);            
+    } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS, controller_id++){
+    
+} //void tmc_standstill_apply(uint8_t current_scale_standstill_state){
+
+/* reduce the current through energized motors when idle */
+void tmc_standstill_on(void){
+    tmc_all_current_scale_apply(CURRENT_SCALE_STANDSTILL); /* set standstill Current scale on all motors */
 }
+
+/* bump the current through energized motors back to working level when cycle starts */
+void tmc_standstill_off(void){     
+    tmc_all_current_scale_apply(CURRENT_SCALE_ACTIVE); /* set full operational Current scale on all motors */
+}
+
 

@@ -27,12 +27,7 @@ typedef enum {
 // structure for configuration mechanism
 typedef struct
 {
-	//ConfigState          state;
-	//uint8_t                configIndex;
 	int32_t                shadowRegister[TMC_REGISTER_COUNT];
-	//uint8_t (*reset)       (void);
-	//uint8_t (*restore)     (void);
-	//tmc_callback_config  callback;
 	uint8_t                   channel;
 } ConfigurationTypeDef;
 

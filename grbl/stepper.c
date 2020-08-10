@@ -251,6 +251,7 @@ void st_wake_up()
   #else
     //if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
     //else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
+    tmc_standstill_off();        
     // Initialize stepper output bits to ensure first ISR call does not step.
     st.step_outbits = step_port_invert_mask;
   #endif // Ramps Board
@@ -301,6 +302,7 @@ void st_go_idle()
   #else
     //if (pin_state) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
     //else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
+    tmc_standstill_on();
   #endif // Ramps Board
 }
 
