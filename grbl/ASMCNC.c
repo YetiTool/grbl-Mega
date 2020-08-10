@@ -397,6 +397,10 @@ void asmcnc_start_ADC(void){
         asmcnc_start_ADC_single(ADC_channel_load);
         adc_state = ADC_CH1;
     }
+    else{
+        /* should not really come here, but if happened, reset state to idle, so next cycle will initialise ADC correctly */
+        adc_state = ADC_IDLE;
+    }
 }
 
 /* return global variable calculated earlier */
