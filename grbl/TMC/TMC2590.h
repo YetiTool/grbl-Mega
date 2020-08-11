@@ -216,4 +216,6 @@ void execute_TMC_command(void); /* fetch TMC command from rtl serial buffer and 
 void tmc_standstill_on(void); /* reduce the current through energized motors when idle */
 void tmc_standstill_off(void); /* bump the current through energized motors back to working level when cycle starts */
 
+void spi_process_tx_queue(void); /* flush the SPI queue starting from next SPI transfer */    
+
 #endif /* TMC_IC_TMC2590_H_ */

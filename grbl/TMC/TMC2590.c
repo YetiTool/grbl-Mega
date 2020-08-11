@@ -10,6 +10,8 @@
 
 static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value);
 
+uint8_t current_scale_state = CURRENT_SCALE_STANDSTILL; /* global holding effective current scale */
+
 /* declare structures for all 5 motors */
 TMC2590TypeDef tmc2590_X1, tmc2590_X2, tmc2590_Y1, tmc2590_Y2, tmc2590_Z;
 ConfigurationTypeDef tmc2590_config_X1, tmc2590_config_X2, tmc2590_config_Y1, tmc2590_config_Y2, tmc2590_config_Z;
@@ -761,7 +763,7 @@ void execute_TMC_command(){
 
 
 /* reduce the current through energized motors when idle */
-void tmc_all_current_scale_apply(uint8_t current_scale_standstill_state){
+void tmc_all_current_scale_apply( void ){
     
     uint8_t controller_id;    
 	TMC2590TypeDef *tmc2590;
@@ -774,7 +776,7 @@ void tmc_all_current_scale_apply(uint8_t current_scale_standstill_state){
 		/* TMC2590_SGCSCONF */
 		register_value = tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT];
 		register_value &= ~TMC2590_SET_CS(-1);                           // clear Current scale bits
-        if (current_scale_standstill_state == CURRENT_SCALE_STANDSTILL) register_value |= TMC2590_SET_CS(tmc2590->standStillCurrentScale);  // set standstill Current scale
+        if (current_scale_state == CURRENT_SCALE_STANDSTILL) register_value |= TMC2590_SET_CS(tmc2590->standStillCurrentScale);  // set standstill Current scale
         else                                                            register_value |= TMC2590_SET_CS(tmc2590->currentScale);            // set full operational Current scale
 		tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = register_value;
         
@@ -786,7 +788,7 @@ void tmc_all_current_scale_apply(uint8_t current_scale_standstill_state){
             /* TMC2590_SGCSCONF */
             register_value = tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT];
             register_value &= ~TMC2590_SET_CS(-1);                           // clear Current scale bits
-            if (current_scale_standstill_state == CURRENT_SCALE_STANDSTILL) register_value |= TMC2590_SET_CS(tmc2590->standStillCurrentScale);  // set standstill Current scale
+            if (current_scale_state == CURRENT_SCALE_STANDSTILL) register_value |= TMC2590_SET_CS(tmc2590->standStillCurrentScale);  // set standstill Current scale
             else                                                            register_value |= TMC2590_SET_CS(tmc2590->currentScale);            // set full operational Current scale
             tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = register_value;            
         } //if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
@@ -794,16 +796,28 @@ void tmc_all_current_scale_apply(uint8_t current_scale_standstill_state){
         tmc2590_single_write_route(controller_id, TMC2590_SGCSCONF);            
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS, controller_id++){
     
+    /* kick SPI process buffer immediately to apply new current settings before the motors start */
+    spi_process_tx_queue();
+
+    
 } //void tmc_standstill_apply(uint8_t current_scale_standstill_state){
 
 /* reduce the current through energized motors when idle */
 void tmc_standstill_on(void){
-    tmc_all_current_scale_apply(CURRENT_SCALE_STANDSTILL); /* set standstill Current scale on all motors */
+    /* only apply new current scale if state is different. Prevents muptiple writes of the same command */
+    if (current_scale_state != CURRENT_SCALE_STANDSTILL){
+        current_scale_state = CURRENT_SCALE_STANDSTILL;    
+        tmc_all_current_scale_apply(); /* set standstill Current scale on all motors */
+    }      
 }
 
 /* bump the current through energized motors back to working level when cycle starts */
 void tmc_standstill_off(void){     
-    tmc_all_current_scale_apply(CURRENT_SCALE_ACTIVE); /* set full operational Current scale on all motors */
+    /* only apply new current scale if state is different. Prevents muptiple writes of the same command */
+    if (current_scale_state != CURRENT_SCALE_ACTIVE){
+        current_scale_state = CURRENT_SCALE_ACTIVE;
+        tmc_all_current_scale_apply(); /* set standstill Current scale on all motors */
+    }
 }
 
 

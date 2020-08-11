@@ -387,8 +387,7 @@ ISR(TIMER2_COMPA_vect)
     debug_pin_write(1, DEBUG_0_PIN);
 #endif
     
-    /* start SPI transfers flushing the queue */
-    
+    /* start SPI transfers flushing the queue */    
     spi_process_tx_queue();
 
     //printPgmString(PSTR("."));
