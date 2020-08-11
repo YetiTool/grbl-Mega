@@ -112,14 +112,15 @@ enum rgbHexStates{
 
 /* setup debug port. Designed for monitoring real time performance of individual functions to identify potential weaknesses and clashes in the code*/
 //#define DEBUG_PINS_ENABLED // comment out to remove debug pins functionality - remove for production version
+//#define DEBUG_ADC_ENABLED // comment out to remove ADC debug pins functionality - remove for production version
 
-#ifdef DEBUG_PINS_ENABLED
-#define DEBUG_DDR			DDRH
-#define DEBUG_PORT			PORTH
+#if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED)
+#define DEBUG_DDR			DDRK
+#define DEBUG_PORT			PORTK
 // Port bits
-#define DEBUG_0_PIN			0 //PH0 / RXD2
-#define DEBUG_1_PIN			1 //PH1
-#define DEBUG_2_PIN			2 //PH2
+#define DEBUG_0_PIN			0 //PK0 / RXD2
+#define DEBUG_1_PIN			1 //PK1
+#define DEBUG_2_PIN			5 //PK5
 #define DEBUG_PORT_MASK	( (1<<DEBUG_0_PIN) | (1<<DEBUG_1_PIN) | (1<<DEBUG_2_PIN) );
 void debug_pin_write(uint32_t level, uint32_t pin);
 #endif

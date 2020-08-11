@@ -22,7 +22,7 @@ void asmcnc_init(void)
 	AC_ACCS_DDR			|=AC_ACCS_MASK;
 	AC_DOOR_DDR			|=AC_DOOR_RED_MASK;
 	AC_RGB_DDR 			|=AC_RGB_MASK;
-#ifdef DEBUG_PINS_ENABLED
+#if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED)
 	DEBUG_DDR  			|=DEBUG_PORT_MASK;
 #endif
 	AC_PROBE_HOLDER_DDR	&=~AC_PROBE_HOLDER_MASK; //Set as input
@@ -314,7 +314,12 @@ long k[] = { 176   ,
 			-25245,
 			  7590};
 
+/* function takes 270us ~ 4320 cycles */
 void convert_temperature (void){
+#ifdef DEBUG_ADC_ENABLED
+debug_pin_write(0, DEBUG_1_PIN);
+#endif
+    
 	int i;
 	int pow;
 	long tmp;    
@@ -331,6 +336,9 @@ void convert_temperature (void){
 		temperature_instantaneous += tmp;
 	}	
     temperature_cent_celsius = filter_fir_int16(temperature_cent_celsius, temperature_instantaneous*100);
+#ifdef DEBUG_ADC_ENABLED
+debug_pin_write(1, DEBUG_1_PIN);
+#endif    
 }
 
 void convert_spindle_load (void){
@@ -367,6 +375,11 @@ void asmcnc_start_ADC_single(uint8_t ADCchannel){
  * ADC state machine is implemented here */
 ISR(ADC_vect)
 {
+    /* routine takes 3.26us ~ 50 cycles */
+#ifdef DEBUG_ADC_ENABLED
+debug_pin_write(0, DEBUG_0_PIN);
+debug_pin_write(1, DEBUG_0_PIN);
+#endif
 
 	switch (adc_state){
 
@@ -389,6 +402,10 @@ ISR(ADC_vect)
 		default:
 		break;
 	}
+#ifdef DEBUG_ADC_ENABLED
+debug_pin_write(0, DEBUG_0_PIN);
+debug_pin_write(1, DEBUG_0_PIN);
+#endif
 }
 
 /* start ADC state machine from channel 1 */
@@ -415,7 +432,8 @@ int get_spindle_load_volts(void){
     return spindle_load_volts;
 }
 
-#ifdef DEBUG_PINS_ENABLED
+#if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED)
+/* function including jumps in out takes 5 cycles = 310ns */
 void debug_pin_write(uint32_t level, uint32_t pin){
 	if (level==0) DEBUG_PORT &=~(1<<pin); /* clear pin */
 	else          DEBUG_PORT |= (1<<pin); /* set pin */

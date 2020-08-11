@@ -10,7 +10,7 @@
 
 static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value);
 
-uint8_t current_scale_state = CURRENT_SCALE_STANDSTILL; /* global holding effective current scale */
+uint8_t current_scale_state = CURRENT_SCALE_ACTIVE; /* global holding effective current scale */
 
 /* declare structures for all 5 motors */
 TMC2590TypeDef tmc2590_X1, tmc2590_X2, tmc2590_Y1, tmc2590_Y2, tmc2590_Z;

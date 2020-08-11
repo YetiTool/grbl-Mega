@@ -455,6 +455,9 @@ void report_echo_line_received(char *line)
  // especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
 void report_realtime_status()
 {
+#ifdef DEBUG_ADC_ENABLED
+debug_pin_write(0, DEBUG_2_PIN);
+#endif    
   uint8_t idx;
   int32_t current_position[N_AXIS]; // Copy current state of the system position variable
   memcpy(current_position,sys_position,sizeof(sys_position));
@@ -584,93 +587,91 @@ void report_realtime_status()
   #endif //#ifdef REPORT_FIELD_PIN_STATE
 
   #ifdef ENABLE_SPINDLE_LOAD_MONITOR
-  printPgmString(PSTR("|Ld:"));
-  int spindle_load_volts = get_spindle_load_volts();
-  printInteger( spindle_load_volts );
+      printPgmString(PSTR("|Ld:"));
+      int spindle_load_volts = get_spindle_load_volts();
+      printInteger( spindle_load_volts );
   #endif //#ifdef ENABLE_SPINDLE_LOAD_MONITOR
   
   #ifdef ENABLE_TEMPERATURE_MONITOR
-  printPgmString(PSTR("|TC:"));
-  int temperature = get_temperature();
-  printInteger( temperature );
+      printPgmString(PSTR("|TC:"));
+      int temperature = get_temperature();
+      printInteger( temperature );
   #endif //#ifdef ENABLE_TEMPERATURE_MONITOR
   
   #if defined(ENABLE_SPINDLE_LOAD_MONITOR) || defined(ENABLE_TEMPERATURE_MONITOR)
-  asmcnc_start_ADC(); /* start next measurement */
+    asmcnc_start_ADC(); /* start next measurement */
   #endif //#if defined(ENABLE_SPINDLE_LOAD_MONITOR) || defined(ENABLE_TEMPERATURE_MONITOR)
 
   #ifdef ENABLE_TMC_FEEDBACK_MONITOR
-  /* cycle through all motors */
-  uint8_t controller_id;
-  TMC2590TypeDef *tmc2590;
-  uint8_t hex_byte_buffer[HEX_BYTES_LEN];
-  printPgmString(PSTR("|T:"));
-  for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
-	  tmc2590 = get_TMC_controller(controller_id);
-//
-//	    switch (controller_id){
-//	        case TMC_X1:
-//				  printPgmString(PSTR("|X1:"));
-//				break;
-//	        case TMC_X2:
-//		      	  printPgmString(PSTR("|X2:"));
-//		      	break;
-//	        case TMC_Y1:
-//		      	  printPgmString(PSTR("|Y1:"));
-//		      	break;
-//	        case TMC_Y2:
-//		      	  printPgmString(PSTR("|Y2:"));
-//		      	break;
-//	        case TMC_Z:
-//		      	  printPgmString(PSTR("|Z:"));
-//		      	break;
-//	        default:
-//	            break;
-//	    } //switch (controller){
-//	  printInteger( tmc2590->resp.stallGuardCurrenValue );
-//	  printPgmString(PSTR(","));
-//	  printInteger( tmc2590->resp.stallGuardShortValue );
-//	  printPgmString(PSTR(","));
-//	  printInteger( tmc2590->resp.coolStepCurrenValue );
-//	  printPgmString(PSTR(","));
-//	  printInteger( tmc2590->resp.StatusBits );
-//	  printPgmString(PSTR(","));
-//	  printInteger( tmc2590->resp.DiagnosticBits );
-//	  printPgmString(PSTR(","));
-//	  printInteger( tmc2590->resp.mStepCurrenValue );
-//	  printPgmString(PSTR(">"));
+      /* cycle through all motors */
+      uint8_t controller_id;
+      TMC2590TypeDef *tmc2590;
+      uint8_t hex_byte_buffer[HEX_BYTES_LEN];
+      printPgmString(PSTR("|T:"));
+      for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+	      tmc2590 = get_TMC_controller(controller_id);
+    //
+    //	    switch (controller_id){
+    //	        case TMC_X1:
+    //				  printPgmString(PSTR("|X1:"));
+    //				break;
+    //	        case TMC_X2:
+    //		      	  printPgmString(PSTR("|X2:"));
+    //		      	break;
+    //	        case TMC_Y1:
+    //		      	  printPgmString(PSTR("|Y1:"));
+    //		      	break;
+    //	        case TMC_Y2:
+    //		      	  printPgmString(PSTR("|Y2:"));
+    //		      	break;
+    //	        case TMC_Z:
+    //		      	  printPgmString(PSTR("|Z:"));
+    //		      	break;
+    //	        default:
+    //	            break;
+    //	    } //switch (controller){
+    //	  printInteger( tmc2590->resp.stallGuardCurrenValue );
+    //	  printPgmString(PSTR(","));
+    //	  printInteger( tmc2590->resp.stallGuardShortValue );
+    //	  printPgmString(PSTR(","));
+    //	  printInteger( tmc2590->resp.coolStepCurrenValue );
+    //	  printPgmString(PSTR(","));
+    //	  printInteger( tmc2590->resp.StatusBits );
+    //	  printPgmString(PSTR(","));
+    //	  printInteger( tmc2590->resp.DiagnosticBits );
+    //	  printPgmString(PSTR(","));
+    //	  printInteger( tmc2590->resp.mStepCurrenValue );
+    //	  printPgmString(PSTR(">"));
 
-	  /* pack values to hex string
-	  * motor                       param                   range, bits bytes   hex bytes
-	  * X1                          stallGuardCurrenValue   10          2       4
-	  * X1                          coolStepCurrenValue     5
-	  * X1                          StatusBits              8           1       2
-	  * X1                          DiagnosticBits          10          3       6
-	  * X1                          MSTEP                   10
-	  * */
-	  /* split the data into nibbles and convert to hex string through the lookup table */
-	  hex_byte_buffer[0]  =  tmc2590->resp.stallGuardCurrenValue       & 0xFF; /* LSB 8 bits of SG */
-	  hex_byte_buffer[1]  = (tmc2590->resp.stallGuardCurrenValue >> 8) & 0x03; /* MSB 2 bits of SG */
-	  hex_byte_buffer[1] |=  tmc2590->resp.coolStepCurrenValue   << 2;
-	  hex_byte_buffer[2]  =  tmc2590->resp.StatusBits;
-	  hex_byte_buffer[3]  =  tmc2590->resp.DiagnosticBits              & 0xFF; /* LSB 8 bits of DiagnosticBits */
-	  hex_byte_buffer[4]  = (tmc2590->resp.DiagnosticBits        >> 8) & 0x03; /* MSB 2 bits of DiagnosticBits */
-	  hex_byte_buffer[4] |= (tmc2590->resp.mStepCurrenValue      << 2) & 0xFC; /* LSB 6 bits of MSTEP */
-	  hex_byte_buffer[5]  = (tmc2590->resp.mStepCurrenValue      >> 6) & 0xF;  /* MSB 4 bits of MSTEP */
-	  /* convert bytes to hex str  */
-	  char hex_str_buffer[HEX_BYTES_LEN*2+1];
-	  for (uint8_t i = 0; i < HEX_BYTES_LEN ; i ++){
-	      hex_str_buffer[i*2+1] = ByteArrayToHexViaLookup[hex_byte_buffer[i]    & 0xF];        /* LSB 4 bits */
-	      hex_str_buffer[i*2  ] = ByteArrayToHexViaLookup[hex_byte_buffer[i]>>4 & 0xF];        /* MSB 4 bits */
-	      //printInteger( hex_byte_buffer[i] );
-	      //printPgmString(PSTR(","));
-	  }
-	  hex_str_buffer[HEX_BYTES_LEN*2] = 0; /* terminator */
-	  printString(hex_str_buffer);
+	      /* pack values to hex string
+	      * motor                       param                   range, bits bytes   hex bytes
+	      * X1                          stallGuardCurrenValue   10          2       4
+	      * X1                          coolStepCurrenValue     5
+	      * X1                          StatusBits              8           1       2
+	      * X1                          DiagnosticBits          10          3       6
+	      * X1                          MSTEP                   10
+	      * */
+	      /* split the data into nibbles and convert to hex string through the lookup table */
+	      hex_byte_buffer[0]  =  tmc2590->resp.stallGuardCurrenValue       & 0xFF; /* LSB 8 bits of SG */
+	      hex_byte_buffer[1]  = (tmc2590->resp.stallGuardCurrenValue >> 8) & 0x03; /* MSB 2 bits of SG */
+	      hex_byte_buffer[1] |=  tmc2590->resp.coolStepCurrenValue   << 2;
+	      hex_byte_buffer[2]  =  tmc2590->resp.StatusBits;
+	      hex_byte_buffer[3]  =  tmc2590->resp.DiagnosticBits              & 0xFF; /* LSB 8 bits of DiagnosticBits */
+	      hex_byte_buffer[4]  = (tmc2590->resp.DiagnosticBits        >> 8) & 0x03; /* MSB 2 bits of DiagnosticBits */
+	      hex_byte_buffer[4] |= (tmc2590->resp.mStepCurrenValue      << 2) & 0xFC; /* LSB 6 bits of MSTEP */
+	      hex_byte_buffer[5]  = (tmc2590->resp.mStepCurrenValue      >> 6) & 0xF;  /* MSB 4 bits of MSTEP */
+	      /* convert bytes to hex str  */
+	      char hex_str_buffer[HEX_BYTES_LEN*2+1];
+	      for (uint8_t i = 0; i < HEX_BYTES_LEN ; i ++){
+	          hex_str_buffer[i*2+1] = ByteArrayToHexViaLookup[hex_byte_buffer[i]    & 0xF];        /* LSB 4 bits */
+	          hex_str_buffer[i*2  ] = ByteArrayToHexViaLookup[hex_byte_buffer[i]>>4 & 0xF];        /* MSB 4 bits */
+	          //printInteger( hex_byte_buffer[i] );
+	          //printPgmString(PSTR(","));
+	      }
+	      hex_str_buffer[HEX_BYTES_LEN*2] = 0; /* terminator */
+	      printString(hex_str_buffer);
 
-  } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
-
-
+      } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
 
   #endif //#ifdef ENABLE_TMC_FEEDBACK_MONITOR
 
@@ -715,6 +716,11 @@ void report_realtime_status()
 
   serial_write('>');
   report_util_line_feed();
+  
+#ifdef DEBUG_ADC_ENABLED
+debug_pin_write(1, DEBUG_2_PIN);
+#endif
+  
 }
 
 
