@@ -363,7 +363,7 @@ ISR(TIMER1_COMPA_vect)
 
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
 
-#ifdef DEBUG_PINS_ENABLED
+#ifdef DEBUG_STEPPER_ENABLED
     debug_pin_write(1, DEBUG_0_PIN);
 #endif
 
@@ -455,7 +455,7 @@ ISR(TIMER1_COMPA_vect)
       // Ensure pwm is set properly upon completion of rate-controlled motion.
       if (st.exec_block->is_pwm_rate_adjusted) { spindle_set_speed(SPINDLE_PWM_OFF_VALUE); }
       system_set_exec_state_flag(EXEC_CYCLE_STOP); // Flag main program for cycle end
-#ifdef DEBUG_PINS_ENABLED
+#ifdef DEBUG_STEPPER_ENABLED
     debug_pin_write(0, DEBUG_0_PIN);
 #endif
 
@@ -559,7 +559,7 @@ ISR(TIMER1_COMPA_vect)
   #endif // Ramps Board
   busy = false;
 
-#ifdef DEBUG_PINS_ENABLED
+#ifdef DEBUG_STEPPER_ENABLED
     debug_pin_write(0, DEBUG_0_PIN);
 #endif
 

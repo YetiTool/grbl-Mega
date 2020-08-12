@@ -112,9 +112,10 @@ enum rgbHexStates{
 
 /* setup debug port. Designed for monitoring real time performance of individual functions to identify potential weaknesses and clashes in the code*/
 //#define DEBUG_PINS_ENABLED // comment out to remove debug pins functionality - remove for production version
+//#define DEBUG_STEPPER_ENABLED // comment out to remove debug pins functionality - remove for production version
 //#define DEBUG_ADC_ENABLED // comment out to remove ADC debug pins functionality - remove for production version
 
-#if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED)
+#if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED)
 #define DEBUG_DDR			DDRK
 #define DEBUG_PORT			PORTK
 // Port bits
