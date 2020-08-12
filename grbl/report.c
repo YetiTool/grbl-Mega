@@ -652,8 +652,8 @@ debug_pin_write(0, DEBUG_2_PIN);
 	      * X1                          MSTEP                   10
 	      * */
 	      /* split the data into nibbles and convert to hex string through the lookup table */
-	      hex_byte_buffer[0]  =  tmc2590->resp.stallGuardCurrenValue       & 0xFF; /* LSB 8 bits of SG */
-	      hex_byte_buffer[1]  = (tmc2590->resp.stallGuardCurrenValue >> 8) & 0x03; /* MSB 2 bits of SG */
+	      hex_byte_buffer[0]  =  tmc2590->resp.stallGuardMinValue       & 0xFF; /* LSB 8 bits of SG */
+	      hex_byte_buffer[1]  = (tmc2590->resp.stallGuardMinValue >> 8) & 0x03; /* MSB 2 bits of SG */
 	      hex_byte_buffer[1] |=  tmc2590->resp.coolStepCurrenValue   << 2;
 	      hex_byte_buffer[2]  =  tmc2590->resp.StatusBits;
 	      hex_byte_buffer[3]  =  tmc2590->resp.DiagnosticBits              & 0xFF; /* LSB 8 bits of DiagnosticBits */
@@ -672,6 +672,7 @@ debug_pin_write(0, DEBUG_2_PIN);
 	      printString(hex_str_buffer);
 
       } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+  stall_guard_statistics_reset();
 
   #endif //#ifdef ENABLE_TMC_FEEDBACK_MONITOR
 

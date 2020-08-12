@@ -25,6 +25,7 @@ typedef struct {
 	uint8_t coolStepCurrenValue;
 	uint8_t stallGuardShortValue;
 	uint16_t stallGuardCurrenValue;
+	uint16_t stallGuardMinValue;
 	uint16_t StatusBits;
 	uint16_t DiagnosticBits;
 } TMC2590Response;
@@ -41,6 +42,8 @@ typedef struct {
 	uint8_t standStillCurrentScale; /* standstill current - to reduce energy consumption while job is idle */
 	uint8_t stallGuardFilter;   // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
 	uint8_t stallGuardThreshold;
+	uint16_t stallGuardAlarmValue;
+    
 	uint8_t vSense;             /* 0: Full-scale sense resistor voltage is 325mV. */   
     uint8_t currentSEmin;       /* set 1/4 of full scale */
 
@@ -217,5 +220,7 @@ void tmc_standstill_on(void); /* reduce the current through energized motors whe
 void tmc_standstill_off(void); /* bump the current through energized motors back to working level when cycle starts */
 
 void spi_process_tx_queue(void); /* flush the SPI queue starting from next SPI transfer */    
+
+void stall_guard_statistics_reset(void); /* statistics is collected for the whole period between consecutive UART polls so that lost step is not missed between. Reset the statistics on all motors */
 
 #endif /* TMC_IC_TMC2590_H_ */

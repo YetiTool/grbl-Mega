@@ -326,6 +326,13 @@ void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
     
     /* TMC2590_RESPONSE1 #define TMC2590_GET_SG(X)     (0x3FF & ((X) >> 10)) */
     tmc2590->resp.stallGuardCurrenValue = TMC2590_GET_SG(tmc2590->config->shadowRegister[TMC2590_RESPONSE1]);  
+    if (tmc2590->resp.stallGuardCurrenValue < tmc2590->resp.stallGuardMinValue) {
+        tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrenValue;}
+    if (tmc2590->resp.stallGuardMinValue    < tmc2590->stallGuardAlarmValue) {
+        /* trigger alarm */
+        //printPgmString(PSTR("\n!!! SG ALARM !!!\n"));
+        //printPgmString(PSTR("--\n"));
+    }
 
     /* TMC2590_RESPONSE2 #define TMC2590_GET_SGU(X)    (0x1F & ((X) >> 15)) #define TMC2590_GET_SE(X)     (0x1F & ((X) >> 10))    */
     tmc2590->resp.stallGuardShortValue= TMC2590_GET_SGU(tmc2590->config->shadowRegister[TMC2590_RESPONSE2]);  
@@ -344,6 +351,21 @@ void process_status_of_dual_controller(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef
     /* TMC2590_RESPONSE1 #define TMC2590_GET_SG(X)     (0x3FF & ((X) >> 10)) */
     tmc2590_1->resp.stallGuardCurrenValue = TMC2590_GET_SG(tmc2590_1->config->shadowRegister[TMC2590_RESPONSE1]);  
     tmc2590_2->resp.stallGuardCurrenValue = TMC2590_GET_SG(tmc2590_2->config->shadowRegister[TMC2590_RESPONSE1]);  
+    if (tmc2590_1->resp.stallGuardCurrenValue < tmc2590_1->resp.stallGuardMinValue) {
+        tmc2590_1->resp.stallGuardMinValue    = tmc2590_1->resp.stallGuardCurrenValue;}
+    if (tmc2590_1->resp.stallGuardMinValue    < tmc2590_1->stallGuardAlarmValue) {
+        /* trigger alarm */
+        //printPgmString(PSTR("\n!!! SG ALARM !!!\n"));
+        //printPgmString(PSTR("--\n"));
+    }        
+    if (tmc2590_2->resp.stallGuardCurrenValue  < tmc2590_2->resp.stallGuardMinValue) {
+        tmc2590_2->resp.stallGuardMinValue     = tmc2590_2->resp.stallGuardCurrenValue;}
+    if (tmc2590_2->resp.stallGuardMinValue     < tmc2590_2->stallGuardAlarmValue) {
+        /* trigger alarm */
+        //printPgmString(PSTR("\n!!! SG ALARM !!!\n"));
+        printPgmString(PSTR("--\n"));
+    }
+    
 
     /* TMC2590_RESPONSE2 #define TMC2590_GET_SGU(X)    (0x1F & ((X) >> 15)) #define TMC2590_GET_SE(X)     (0x1F & ((X) >> 10))    */
     tmc2590_1->resp.stallGuardShortValue= TMC2590_GET_SGU(tmc2590_1->config->shadowRegister[TMC2590_RESPONSE2]);  
@@ -357,6 +379,21 @@ void process_status_of_dual_controller(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef
     tmc2590_2->resp.StatusBits = tmc2590_2->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFF;   
     tmc2590_2->resp.DiagnosticBits = (tmc2590_2->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFFC00) >> 10 ;
 }
+
+/* statistics is collected for the whole period between consecutive UART polls so that lost step is not missed between */
+/* reset the statistics on all motors */
+void stall_guard_statistics_reset(void ){
+    uint8_t controller_id;
+    TMC2590TypeDef *tmc2590;
+    /* reset SG min value in each TMC controller */
+    for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+        tmc2590 = get_TMC_controller(controller_id);
+        tmc2590->resp.stallGuardMinValue = 1023;        
+    }
+}
+
+
+
 
 
 void process_status_of_all_controllers(void){
@@ -400,7 +437,8 @@ void init_TMC(void){
 	tmc2590_X1.microSteps                   = 4; /* 4 : set MRES  = 16*/
 	tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
 	tmc2590_X1.stallGuardFilter             = 1; // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
-	tmc2590_X1.stallGuardThreshold          = 5;
+	tmc2590_X1.stallGuardThreshold          = 4; 
+	tmc2590_X1.stallGuardAlarmValue         = 100; /* when current SG reading is lower than this value corresponded axis alarm will be triggered */
 	tmc2590_X1.vSense                       = 0; /* 0: Full-scale sense resistor voltage is 325mV. */
 	tmc2590_X1.currentSEmin                 = 1; // 1: set 1/4 of full scale when CoolStep is active
 	tmc2590_X1.coolStepMin                  = 0; // default CoolStep = 0 (disable); if want to enable then set for example to trigger if SG below 7x32 = 224
@@ -437,6 +475,8 @@ void init_TMC(void){
     tmc2590_dual_restore(&tmc2590_X1, &tmc2590_X2);
     tmc2590_dual_restore(&tmc2590_Y1, &tmc2590_Y2);
 	tmc2590_single_restore(&tmc2590_Z);
+    
+    stall_guard_statistics_reset();
 
 }
 
