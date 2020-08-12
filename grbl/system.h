@@ -120,6 +120,7 @@
 #define RTL_OVR_RGB_COMMAND             bit(1)
 #define RTL_OVR_VAC_COMMAND             bit(2)
 #define RTL_OVR_LASER_DATUM_COMMAND     bit(3)
+#define SPI_GO_TMC_COMMAND              bit(4)
 
 
 // Define global system variables

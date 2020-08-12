@@ -20,7 +20,7 @@ void tmc_pin_write(uint32_t level, uint32_t pin){
 /* initialise timer to periodically poll TMC motor controllers */
 void asmcnc_TMC_Timer2_setup(void){
 
-	TCCR2A = 0;	//Clear timer3 registers
+	TCCR2A = 0;	//Clear timer2 registers
 	TCCR2B = 0;
 
 
@@ -34,9 +34,14 @@ void asmcnc_TMC_Timer2_setup(void){
 //	TCCR2B |=(1<<CS21); /* set bit */
 //	TCCR2B |=(1<<CS22); /* set bit */
 
-	/* Setup pre-scaling = 256 to ensure slowest rate of 240.5Hz / 3.5ms ticks */
-	//TCCR2B |=(1<<CS20); /* set bit */
-	TCCR2B |=(1<<CS21); /* set bit */
+	///* Setup pre-scaling = 256 to ensure slowest of 240.5Hz / 4.1ms ticks */
+	////TCCR2B |=(1<<CS20); /* set bit */
+	//TCCR2B |=(1<<CS21); /* set bit */
+	//TCCR2B |=(1<<CS22); /* set bit */
+
+	/* Setup pre-scaling = 128 to ensure slowest of 581Hz / 2.05ms ticks */
+	TCCR2B |=(1<<CS20); /* set bit */
+	//TCCR2B |=(1<<CS21); /* set bit */
 	TCCR2B |=(1<<CS22); /* set bit */
 
 
@@ -160,7 +165,7 @@ void spi_schedule_dual_tx(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, 
 
 void spi_process_tx_queue(void){
     /* if something is waiting then send it */
-    if (m_spi_tx_index != m_spi_tx_insert_index){
+    if ( (m_spi_tx_index != m_spi_tx_insert_index) && ( spi_busy == false ) ){
         spi_busy = true;
         
         /* keep log of next element - is it 3 or 5 bytes (single or dual motors) */
@@ -352,19 +357,25 @@ ISR(SPI_STC_vect)
 ISR(TIMER2_COMPA_vect)
 {
 	sei(); // Re-enable interrupts to allow Stepper Interrupt to fire on-time.
-
-	/* slow down polling the drivers, 250 is around 1s */
+    
+#ifdef DEBUG_PINS_ENABLED
+debug_pin_write(1, DEBUG_0_PIN);
+#endif
+    
+	/* slow down polling the drivers, 1 is 2ms , 500 is around 1s */
     static uint8_t skip_count;
-    if (++skip_count % 25 != 0)  	return;
+    if (++skip_count % 3 != 0)  { /* set SPI poll interval to 6ms */
+        #ifdef DEBUG_PINS_ENABLED
+        debug_pin_write(0, DEBUG_0_PIN);
+        #endif        
+        return;}
     skip_count = 0;
 
-#ifdef DEBUG_PINS_ENABLED
-	debug_pin_write(1, DEBUG_0_PIN);
-#endif
 
     /* if for some reason the SPI was not released (HW glitch or comms loss) wait for 10 timer cycles and reset the busy flag */
     if ( (spi_busy) && (tmc_busy) && ( busy_reset_count <10 ) ){
         busy_reset_count++;
+        printPgmString(PSTR("\n!!! SPI BUSY !!!\n"));
         return;
     }
 
@@ -379,8 +390,12 @@ ISR(TIMER2_COMPA_vect)
      * best way to do it is to add 3 write requests to the end of the queue
     */
     
-    /* BK profiling: 750us */
-    tmc2590_schedule_read_all();
+    
+    /* schedule next SPI transfer: indicate to main loop that there is a time to prepare SPI buffer and send it */
+    system_set_exec_rtl_override_flag(SPI_GO_TMC_COMMAND);
+    
+    /* BK profiling: SPI prepare: 900us  + actual SPI reads: 1.2-2.0 ms */
+    //tmc2590_schedule_read_all();
 
 #ifdef DEBUG_PINS_ENABLED
     debug_pin_write(0, DEBUG_0_PIN);
@@ -388,7 +403,7 @@ ISR(TIMER2_COMPA_vect)
 #endif
     
     /* start SPI transfers flushing the queue */    
-    spi_process_tx_queue();
+    //spi_process_tx_queue();
 
     //printPgmString(PSTR("."));
     //static uint8_t toggle;

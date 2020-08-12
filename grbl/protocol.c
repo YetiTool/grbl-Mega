@@ -503,6 +503,16 @@ void protocol_exec_rt_system()
     if (rt_exec & RTL_OVR_TMC_COMMAND) {
         execute_TMC_command();
     }
+    
+    /* schedule next SPI transfer: indicate to main loop that there is a time to prepare SPI buffer and send it */
+    if (rt_exec & SPI_GO_TMC_COMMAND) {
+        /* BK profiling: SPI prepare: 900us  + actual SPI reads: 1.2-2.0 ms */
+        tmc2590_schedule_read_all();
+    
+        /* start SPI transfers flushing the queue */
+        spi_process_tx_queue();
+    }   
+    
   } //if rt_exec = sys_rt_exec_rtl_override;
 
   #ifdef DEBUG
