@@ -549,7 +549,7 @@ void execute_TMC_command(){
 		rtl_data_available = serial_rtl_data_available();
 		if (rtl_data_available != SERIAL_NO_DATA) {
 			/* schedule next TMC execute: indicate to main loop that there is a TMC command to process */
-			system_set_exec_tmc_command_flag(RTL_TMC_COMMAND);		
+			system_set_exec_rtl_command_flag(RTL_TMC_COMMAND);		
 		};
 
 
