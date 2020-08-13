@@ -45,7 +45,7 @@
   #define DEFAULT_SPINDLE_RPM_MAX 25000.0 // rpm
   #define DEFAULT_SPINDLE_RPM_MIN 0.0 // rpm
   #define DEFAULT_STEP_PULSE_MICROSECONDS 10
-  #define DEFAULT_STEPPING_INVERT_MASK 6 // for ZH2, Y step shall not be inverted (active low) to minimize current consumption of the Xbeam PCB 5V LDO
+  #define DEFAULT_STEPPING_INVERT_MASK 7 // for ZH2, all steps shall be inverted (active low) to minimize current consumption of LDOs (for example the Xbeam PCB 5V LDO)
   #define DEFAULT_DIRECTION_INVERT_MASK 1
   #define DEFAULT_STEPPER_IDLE_LOCK_TIME 255 // msec (0-254, 255 keeps steppers enabled)
   #define DEFAULT_STATUS_REPORT_MASK 3 // MPos enabled
