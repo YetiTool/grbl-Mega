@@ -35,6 +35,8 @@ typedef struct {
 typedef struct {
 	ConfigurationTypeDef *config;
 
+	uint8_t thisMotor;          /* this motor index */
+
 	uint8_t interpolationEn;
     uint8_t microSteps;         /* 4 : set MRES  = 16*/
 

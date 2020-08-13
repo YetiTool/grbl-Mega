@@ -25,7 +25,6 @@ typedef struct
 	uint8_t m_spi_tx_buf[TX_BUF_SIZE_DUAL]; 						    /* individual buffer storage for each element of the Tx queue*/
     TMC2590TypeDef *tmc2590_1;                                          /* pointer to current motor controller 1 */
     TMC2590TypeDef *tmc2590_2;                                          /* pointer to current motor controller 2 */
-    uint8_t addressIsDrvConf;
     uint8_t rdsel;    
 } tx_spi_msg_t;								
 
@@ -44,8 +43,8 @@ typedef enum
 
 
 void spi_hw_init(void);
-void spi_schedule_single_tx(TMC2590TypeDef *tmc2590_1, uint8_t *data, uint8_t size, uint8_t addressIsDrvConf, uint8_t rdsel);
-void spi_schedule_dual_tx(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t *data, uint8_t size, uint8_t addressIsDrvConf, uint8_t rdsel);
+void spi_schedule_single_tx(TMC2590TypeDef *tmc2590_1, uint8_t *data, uint8_t size, uint8_t rdsel);
+void spi_schedule_dual_tx(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t *data, uint8_t size, uint8_t rdsel);
 
 void tmc_pin_write(uint32_t level, uint32_t pin);
 

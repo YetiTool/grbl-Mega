@@ -138,26 +138,24 @@ static spi_state_type_t SPI_current_state 		= SPI_STATE_IDLE; 		/* flag to disti
 
 
 /* below function is to schedule event in the spi send queue */
-void spi_schedule_single_tx(TMC2590TypeDef *tmc2590_1, uint8_t *data, uint8_t size, uint8_t addressIsDrvConf, uint8_t rdsel)
+void spi_schedule_single_tx(TMC2590TypeDef *tmc2590_1, uint8_t *data, uint8_t size, uint8_t rdsel)
 {
     m_spi_tx_buffer[m_spi_tx_insert_index].buf_size = size;
     m_spi_tx_buffer[m_spi_tx_insert_index].tmc2590_1 = tmc2590_1;
 	//memset(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, 0, size);
   	memcpy(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, data, size);		
-    m_spi_tx_buffer[m_spi_tx_insert_index].addressIsDrvConf = addressIsDrvConf;
     m_spi_tx_buffer[m_spi_tx_insert_index].rdsel = rdsel;
 	m_spi_tx_insert_index++;
     m_spi_tx_insert_index &= SPI_TX_BUFFER_MASK;    
 }
 
-void spi_schedule_dual_tx(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t *data, uint8_t size, uint8_t addressIsDrvConf, uint8_t rdsel)
+void spi_schedule_dual_tx(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t *data, uint8_t size, uint8_t rdsel)
 {
     m_spi_tx_buffer[m_spi_tx_insert_index].buf_size = size;
     m_spi_tx_buffer[m_spi_tx_insert_index].tmc2590_1 = tmc2590_1;
     m_spi_tx_buffer[m_spi_tx_insert_index].tmc2590_2 = tmc2590_2;
 	//memset(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, 0, size);
   	memcpy(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, data, size);		
-    m_spi_tx_buffer[m_spi_tx_insert_index].addressIsDrvConf = addressIsDrvConf;
     m_spi_tx_buffer[m_spi_tx_insert_index].rdsel = rdsel;
 	m_spi_tx_insert_index++;
     m_spi_tx_insert_index &= SPI_TX_BUFFER_MASK;    
@@ -166,7 +164,7 @@ void spi_schedule_dual_tx(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, 
 void spi_process_tx_queue(void){
     /* if something is waiting then send it */
     if ( (m_spi_tx_index != m_spi_tx_insert_index) && ( spi_busy == false ) ){
-        spi_busy = true;
+        spi_busy = true; /*prevent reentry while transaction is active*/
         
         /* keep log of next element - is it 3 or 5 bytes (single or dual motors) */
         current_transfer_type = m_spi_tx_buffer[m_spi_tx_index].buf_size; //TX_BUF_SIZE_DUAL) { //or TX_BUF_SIZE_SINGLE
@@ -183,16 +181,18 @@ void spi_process_tx_queue(void){
         /* next step will be handled by interrupt handler ISR_SPI_STC_vect */
         
     } //if (m_spi_tx_index != m_spi_tx_insert_index){
-    else{
+    else if (m_spi_tx_index == m_spi_tx_insert_index){
         /*nothing else left in a queue, release tmc_busy flag */
         tmc_busy = false;
         spi_busy = false;
         SPI_current_state = SPI_STATE_IDLE;
         
         /* process all responses and update the current status of controller's parameters */
-        process_status_of_all_controllers();
-        
+        process_status_of_all_controllers();        
     }
+    else{
+        printPgmString(PSTR("\n--- SPI process BUSY ---\n"));
+    }    
 }
 
 
@@ -278,8 +278,8 @@ ISR(SPI_STC_vect)
 #endif
     			/* BK profiling: 2us */
                 // set virtual read address for next reply given by RDSEL on given motor, can only change by setting RDSEL in DRVCONF
-                if(m_spi_tx_buffer[m_spi_tx_index].addressIsDrvConf == 1)
-                    m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx = m_spi_tx_buffer[m_spi_tx_index].rdsel;
+                //if(m_spi_tx_buffer[m_spi_tx_index].addressIsDrvConf == 1)
+                m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx = m_spi_tx_buffer[m_spi_tx_index].rdsel;
 #ifdef DEBUG_PINS_ENABLED
     debug_pin_write(1, DEBUG_2_PIN);
     debug_pin_write(0, DEBUG_2_PIN);
@@ -323,10 +323,8 @@ ISR(SPI_STC_vect)
                         TMC2590_VALUE(_8_32(m_spi_rx_data[0], m_spi_rx_data[1], m_spi_rx_data[2], 0) >> 12) ;    
             
             // set virtual read address for next reply given by RDSEL on given motor, can only change by setting RDSEL in DRVCONF
-            if(m_spi_tx_buffer[m_spi_tx_index].addressIsDrvConf == 1){
-                m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx = m_spi_tx_buffer[m_spi_tx_index].rdsel;
-                m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->respIdx = m_spi_tx_buffer[m_spi_tx_index].rdsel;
-            }
+            m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx = m_spi_tx_buffer[m_spi_tx_index].rdsel;
+            m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->respIdx = m_spi_tx_buffer[m_spi_tx_index].rdsel;
             
             /* pull CS pin up */
             tmc_pin_write(1, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->channel);
@@ -387,35 +385,14 @@ debug_pin_write(1, DEBUG_0_PIN);
     
     /* check for pending tx buffers and flush them 
      * otherwise collect data from all 5 motors
-     * best way to do it is to add 3 write requests to the end of the queue
-    */
-    
+     * best way to do it is to add 3 write requests to the end of the queue    */    
     
     /* schedule next SPI transfer: indicate to main loop that there is a time to prepare SPI buffer and send it */
     system_set_exec_rtl_override_flag(SPI_GO_TMC_COMMAND);
     
-    /* BK profiling: SPI prepare: 900us  + actual SPI reads: 1.2-2.0 ms */
-    //tmc2590_schedule_read_all();
-
 #ifdef DEBUG_PINS_ENABLED
     debug_pin_write(0, DEBUG_0_PIN);
-    debug_pin_write(1, DEBUG_0_PIN);
-#endif
-    
-    /* start SPI transfers flushing the queue */    
-    //spi_process_tx_queue();
-
-    //printPgmString(PSTR("."));
-    //static uint8_t toggle;
-    //tmc_pin_write(toggle%2, SPI_CS_X_PIN);
-    //tmc_pin_write(toggle%2, SPI_CS_Y_PIN);
-    //tmc_pin_write(toggle%2, SPI_CS_Z_PIN);
-    //debug_pin_write(toggle%2, DEBUG_0_PIN);
-    //toggle++;
-
-    //SPDR = 0x05;
-
-#ifdef DEBUG_PINS_ENABLED
+    debug_pin_write(1, DEBUG_0_PIN); /* second cycle to indicate that this time the "if (++skip_count" came through */
     debug_pin_write(0, DEBUG_0_PIN);
 #endif
 }
