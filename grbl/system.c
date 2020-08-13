@@ -404,17 +404,19 @@ void system_clear_exec_accessory_overrides() {
   SREG = sreg;
 }
 
-void system_set_exec_rtl_override_flag(uint8_t mask) {
-  //uint8_t sreg = SREG;
-  //cli();
-  sys_rt_exec_rtl_override |= (mask);
-  //SREG = sreg;
+void system_set_exec_rtl_command_flag(uint8_t mask) {
+  sys_rt_exec_rtl_command |= (mask);
 }
 
-void system_clear_exec_rtl_overrides() {
-  //uint8_t sreg = SREG;
-  //cli();
-  sys_rt_exec_rtl_override = 0;
-  //SREG = sreg;
+void system_clear_exec_rtl_flags() {
+  sys_rt_exec_rtl_command = 0;
+}
+
+void system_set_exec_tmc_command_flag(uint8_t mask) {
+    sys_rt_exec_tmc_command |= (mask);
+}
+
+void system_clear_exec_tmc_flags() {
+    sys_rt_exec_tmc_command = 0;
 }
 

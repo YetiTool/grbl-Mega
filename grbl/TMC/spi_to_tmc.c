@@ -187,8 +187,8 @@ void spi_process_tx_queue(void){
         spi_busy = false;
         SPI_current_state = SPI_STATE_IDLE;
         
-        /* process all responses and update the current status of controller's parameters */
-        process_status_of_all_controllers();        
+        /* indicate to main loop to process all responses and update the current status of controller's parameters */
+        system_set_exec_tmc_command_flag(TMC_SPI_PROCESS_COMMAND);
     }
     else{
         printPgmString(PSTR("\n--- SPI process BUSY ---\n"));
@@ -388,7 +388,7 @@ debug_pin_write(1, DEBUG_0_PIN);
      * best way to do it is to add 3 write requests to the end of the queue    */    
     
     /* schedule next SPI transfer: indicate to main loop that there is a time to prepare SPI buffer and send it */
-    system_set_exec_rtl_override_flag(SPI_GO_TMC_COMMAND);
+    system_set_exec_tmc_command_flag(TMC_SPI_GO_COMMAND);
     
 #ifdef DEBUG_PINS_ENABLED
     debug_pin_write(0, DEBUG_0_PIN);

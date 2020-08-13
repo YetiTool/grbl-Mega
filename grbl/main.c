@@ -31,7 +31,8 @@ volatile uint8_t sys_rt_exec_state;   // Global realtime executor bitflag variab
 volatile uint8_t sys_rt_exec_alarm;   // Global realtime executor bitflag variable for setting various alarms.
 volatile uint8_t sys_rt_exec_motion_override; // Global realtime executor bitflag variable for motion-based overrides.
 volatile uint8_t sys_rt_exec_accessory_override; // Global realtime executor bitflag variable for spindle/coolant overrides.
-volatile uint8_t sys_rt_exec_rtl_override; // Global realtime executor bitflag variable for Yeti overrides (RGB, TMC etc).
+volatile uint8_t sys_rt_exec_rtl_command; // Global realtime executor bitflag variable for Yeti commands: real-time commands arrived from UART buffer (RGB, TMC etc).
+volatile uint8_t sys_rt_exec_tmc_command; // Global realtime executor bitflag variable for Yeti commands: internal SPI - TMC flags to pass execution from SPI ISRs to main loop.
 #ifdef DEBUG
   volatile uint8_t sys_rt_exec_debug;
 #endif
@@ -85,7 +86,8 @@ int main(void)
     sys_rt_exec_alarm = 0;
     sys_rt_exec_motion_override = 0;
     sys_rt_exec_accessory_override = 0;
-    sys_rt_exec_rtl_override = 0;
+    sys_rt_exec_rtl_command = 0;
+    sys_rt_exec_tmc_command = 0;    
 
     // Reset Grbl primary systems.
     serial_reset_read_buffer(); // Clear serial read buffer

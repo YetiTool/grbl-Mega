@@ -475,10 +475,10 @@ void init_TMC(void){
 	tmc2590_Y1.standStillCurrentScale       = 30; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
 	tmc2590_Y2.standStillCurrentScale       = 30; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
     
-	tmc2590_X1.stallGuardThreshold          = 6;
-	tmc2590_X1.stallGuardAlarmValue         = 200; 
-	tmc2590_X2.stallGuardThreshold          = 6;
-	tmc2590_X2.stallGuardAlarmValue         = 200; 
+	tmc2590_X1.stallGuardThreshold          = 7;
+	tmc2590_X1.stallGuardAlarmValue         = 300; 
+	tmc2590_X2.stallGuardThreshold          = 7;
+	tmc2590_X2.stallGuardAlarmValue         = 300; 
     tmc2590_Y1.stallGuardThreshold          = 6;
 	tmc2590_Y1.stallGuardAlarmValue         = 300; 
     tmc2590_Y2.stallGuardThreshold          = 6;
@@ -549,7 +549,7 @@ void execute_TMC_command(){
 		rtl_data_available = serial_rtl_data_available();
 		if (rtl_data_available != SERIAL_NO_DATA) {
 			/* schedule next TMC execute: indicate to main loop that there is a TMC command to process */
-			system_set_exec_rtl_override_flag(RTL_OVR_TMC_COMMAND);		
+			system_set_exec_tmc_command_flag(RTL_TMC_COMMAND);		
 		};
 
 

@@ -242,7 +242,7 @@ ISR(SERIAL_RX)
 			serial_rx_rtl_state = RTL_IDLE;
 			serial_rx_rtl_count = 0;
 			/* indicate to main loop that there is a TMC command to process */
-			system_set_exec_rtl_override_flag(RTL_OVR_TMC_COMMAND);
+			system_set_exec_rtl_command_flag(RTL_TMC_COMMAND);
 		}
 		return; /* exit the ISR - this line is where serial bypass actually happens */
 

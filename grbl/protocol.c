@@ -494,26 +494,51 @@ void protocol_exec_rt_system()
 
 
 
-  // Execute TMC control commands that arrived to the UART buffer
-  rt_exec = sys_rt_exec_rtl_override;
+  // Execute real-time Yeti control commands that arrived to the UART buffer
+  rt_exec = sys_rt_exec_rtl_command;
   if (rt_exec) {
-    system_clear_exec_rtl_overrides(); // Clear all accessory override flags. Shall be done after last command in the buffer is processed
+    system_clear_exec_rtl_flags(); // Clear all accessory override flags. Shall be done after last command in the buffer is processed
 
     /* process RTL commands arrived in the serial buffer */
-    if (rt_exec & RTL_OVR_TMC_COMMAND) {
+    if (rt_exec & RTL_TMC_COMMAND) {
         execute_TMC_command();
     }
     
-    /* schedule next SPI transfer: indicate to main loop that there is a time to prepare SPI buffer and send it */
-    if (rt_exec & SPI_GO_TMC_COMMAND) {
-        /* BK profiling: SPI prepare: 900us  + actual SPI reads: 1.2-2.0 ms */
-        tmc2590_schedule_read_all();
-    
-        /* start SPI transfers flushing the queue */
-        spi_process_tx_queue();
-    }   
-    
-  } //if rt_exec = sys_rt_exec_rtl_override;
+  } //if rt_exec = sys_rt_exec_rtl_command;
+
+  // Execute TMC control commands that arrived from SPI ISR routines
+  rt_exec = sys_rt_exec_tmc_command;
+  if (rt_exec) {
+      system_clear_exec_tmc_flags(); // Clear all accessory override flags. Shall be done after last command in the buffer is processed
+      
+      /* schedule standstill current SPI command transfer*/
+      if (rt_exec & TMC_STANDSTILL_COMMAND) {
+          tmc_standstill_on();
+      }
+      
+      /* schedule standstill current SPI command transfer*/
+      if (rt_exec & TMC_ACTIVE_COMMAND) {
+          tmc_standstill_off();
+      }
+      
+      /* schedule next SPI read all */
+      if (rt_exec & TMC_SPI_GO_COMMAND) {
+          /* BK profiling: SPI prepare: 900us  + actual SPI reads: 1.2-2.0 ms */
+          tmc2590_schedule_read_all();
+          
+          /* start SPI transfers flushing the queue */
+          spi_process_tx_queue();
+      }    
+
+      /* indicate to main loop to process all responses and update the current status of controller's parameters */
+      if (rt_exec & TMC_SPI_PROCESS_COMMAND) {
+          /* process all responses and update the current status of controller's parameters */
+          process_status_of_all_controllers();
+      }
+
+      
+  } //if rt_exec = sys_rt_exec_tmc_command;
+
 
   #ifdef DEBUG
     if (sys_rt_exec_debug) {

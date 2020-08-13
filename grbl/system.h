@@ -114,13 +114,20 @@
 #define SPINDLE_STOP_OVR_RESTORE        bit(2)
 #define SPINDLE_STOP_OVR_RESTORE_CYCLE  bit(3)
 
-// Define RTL override control states.
-#define RTL_OVR_DISABLED                0  // Must be zero.
-#define RTL_OVR_TMC_COMMAND             bit(0)
-#define RTL_OVR_RGB_COMMAND             bit(1)
-#define RTL_OVR_VAC_COMMAND             bit(2)
-#define RTL_OVR_LASER_DATUM_COMMAND     bit(3)
-#define SPI_GO_TMC_COMMAND              bit(4)
+// Define RTL control states.
+#define RTL_DISABLED                    0  // Must be zero.
+#define RTL_TMC_COMMAND                 bit(0)
+#define RTL_RGB_COMMAND                 bit(1)
+#define RTL_VAC_COMMAND                 bit(2)
+#define RTL_LASER_DATUM_COMMAND         bit(3)
+
+// Define TMC SPI control states.
+#define TMC_DISABLED                    0  // Must be zero.
+#define TMC_STANDSTILL_COMMAND          bit(0)
+#define TMC_ACTIVE_COMMAND              bit(1)
+#define TMC_SPI_GO_COMMAND              bit(2)
+#define TMC_SPI_PROCESS_COMMAND         bit(3)
+
 
 
 // Define global system variables
@@ -158,7 +165,8 @@ extern volatile uint8_t sys_rt_exec_state;   // Global realtime executor bitflag
 extern volatile uint8_t sys_rt_exec_alarm;   // Global realtime executor bitflag variable for setting various alarms.
 extern volatile uint8_t sys_rt_exec_motion_override; // Global realtime executor bitflag variable for motion-based overrides.
 extern volatile uint8_t sys_rt_exec_accessory_override; // Global realtime executor bitflag variable for spindle/coolant overrides.
-extern volatile uint8_t sys_rt_exec_rtl_override; // Global realtime executor bitflag variable for Yeti overrides (RGB, TMC etc).
+extern volatile uint8_t sys_rt_exec_rtl_command; // Global realtime executor bitflag variable for Yeti commands: real-time commands arrived from UART buffer (RGB, TMC etc).
+extern volatile uint8_t sys_rt_exec_tmc_command; // Global realtime executor bitflag variable for Yeti commands: internal SPI - TMC flags to pass execution from SPI ISRs to main loop.
 
 #ifdef DEBUG
   #define EXEC_DEBUG_REPORT  bit(0)
@@ -207,8 +215,10 @@ void system_set_exec_motion_override_flag(uint8_t mask);
 void system_set_exec_accessory_override_flag(uint8_t mask);
 void system_clear_exec_motion_overrides();
 void system_clear_exec_accessory_overrides();
-void system_set_exec_rtl_override_flag(uint8_t mask);
-void system_clear_exec_rtl_overrides();
+void system_set_exec_rtl_command_flag(uint8_t mask);
+void system_clear_exec_rtl_flags();
+void system_set_exec_tmc_command_flag(uint8_t mask);
+void system_clear_exec_tmc_flags();
 
 
 #endif
