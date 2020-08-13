@@ -130,7 +130,6 @@ uint8_t m_spi_rx_data[TX_BUF_SIZE_DUAL]; 						        /* buffer storage for Rx 
 
 
 // Used to avoid ISR nesting of the "TMC SPI interrupt". Should never occur though.
-static uint8_t tmc_busy = false;
 static uint8_t spi_busy = false;
 static uint8_t busy_reset_count = 0;
 
@@ -182,8 +181,7 @@ void spi_process_tx_queue(void){
         
     } //if (m_spi_tx_index != m_spi_tx_insert_index){
     else if (m_spi_tx_index == m_spi_tx_insert_index){
-        /*nothing else left in a queue, release tmc_busy flag */
-        tmc_busy = false;
+        /*nothing else left in a queue, release busy flag */
         spi_busy = false;
         SPI_current_state = SPI_STATE_IDLE;
         
@@ -371,7 +369,7 @@ debug_pin_write(1, DEBUG_0_PIN);
 
 
     /* if for some reason the SPI was not released (HW glitch or comms loss) wait for 10 timer cycles and reset the busy flag */
-    if ( (spi_busy) && (tmc_busy) && ( busy_reset_count <10 ) ){
+    if ( (spi_busy) && ( busy_reset_count <10 ) ){
         busy_reset_count++;
         printPgmString(PSTR("\n!!! SPI BUSY !!!\n"));
         return;
@@ -379,8 +377,6 @@ debug_pin_write(1, DEBUG_0_PIN);
 
     spi_busy = false;
     SPI_current_state 		= SPI_STATE_IDLE;
-
-    tmc_busy = true;
     busy_reset_count = 0;
     
     /* check for pending tx buffers and flush them 
