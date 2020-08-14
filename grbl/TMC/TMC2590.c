@@ -8,9 +8,15 @@
 #include "spi_to_tmc.h"
 #include <string.h>
 
+#define MINIMUM_FEED_RATE_FOR_SG_DETECTION  300
+#define SPI_CYCLE_DURATION_MS               6
+#define SG_READING_DELAY_AFTER_START_MS     500
+
 static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value);
 
+uint32_t * p_steps; /* global holding current steps per segment for each axis to work out current feed of each motor */
 uint8_t current_scale_state = CURRENT_SCALE_ACTIVE; /* global holding effective current scale */
+uint8_t skip_counter_SG_in_SPI_cycles = 0; /* global SG read skip counter to avoid reading SG in the begninning of the cycle */
 
 /* declare structures for all 5 motors */
 TMC2590TypeDef tmc2590_X1, tmc2590_X2, tmc2590_Y1, tmc2590_Y2, tmc2590_Z;
@@ -318,16 +324,42 @@ void tmc2590_schedule_read_all(void){
 void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
     /* TMC2590_RESPONSE0 #define TMC2590_GET_MSTEP(X)  (0x3FF & ((X) >> 10)) */     
     tmc2590->resp.mStepCurrenValue = TMC2590_GET_MSTEP(tmc2590->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
+    tmc2590->resp.stallGuardCurrenValue = TMC2590_GET_SG(tmc2590->config->shadowRegister[TMC2590_RESPONSE1]);
+
+    float realtime_rate = st_get_realtime_rate();
     
-    /* TMC2590_RESPONSE1 #define TMC2590_GET_SG(X)     (0x3FF & ((X) >> 10)) */
-    tmc2590->resp.stallGuardCurrenValue = TMC2590_GET_SG(tmc2590->config->shadowRegister[TMC2590_RESPONSE1]);  
-    if (tmc2590->resp.stallGuardCurrenValue < tmc2590->resp.stallGuardMinValue) {
-        tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrenValue;}
-    if (tmc2590->resp.stallGuardMinValue    < tmc2590->stallGuardAlarmValue) {
-        /* trigger alarm */
-        //printPgmString(PSTR("\n!!! SG ALARM !!!\n"));
-        //printPgmString(PSTR("--\n"));
-    }
+    /* if motor is active and feed is higher than MINIMUM_FEED_RATE_FOR_SG_DETECTION, update statistics and trigger alarm if needed */
+    if ( (current_scale_state == CURRENT_SCALE_ACTIVE) && (realtime_rate > MINIMUM_FEED_RATE_FOR_SG_DETECTION) ){
+    
+        /* do not run measure SG 1s after cycle start - it might be invalid */
+        if ( skip_counter_SG_in_SPI_cycles > 0 ) {
+            /* skip this time */
+            skip_counter_SG_in_SPI_cycles--;
+        }
+        else{
+            /* start reading SG 0.5s after start */           
+
+            if ( p_steps[tmc2590->thisAxis] > 85000 ) {  /* check stall only if feed is higher than 300mm/min */
+                if (tmc2590->resp.stallGuardCurrenValue < tmc2590->resp.stallGuardMinValue) {
+                tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrenValue;}
+                if (tmc2590->resp.stallGuardMinValue    < tmc2590->stallGuardAlarmValue) {
+                    /* trigger alarm */
+                    //printPgmString(PSTR("\n!!! SG ALARM !!!\n"));
+                    printInteger( tmc2590->thisMotor);
+                    printPgmString(PSTR("--"));
+                    printFloat_RateValue(realtime_rate);
+                    printPgmString(PSTR("--"));
+                    printInteger( p_steps[tmc2590->thisAxis]);
+                    printPgmString(PSTR("--\n"));
+                    /* execute alarm by writing 1 to the limit pin, which will trigger the ISR routine (pin has to be configured as output) */
+                    LIMIT_PORT |= (1<<Z_LIMIT_BIT);  /* set pin */
+                }
+                
+            } // if ( p_steps[tmc2590_1->thisAxis] > 85000 ) {  /* check stall only if feed is higher than 300mm/min */
+                
+        } //if ( skip_counter_SG_in_SPI_cycles > 0 ) {        
+            
+    } //if (current_scale_state == CURRENT_SCALE_ACTIVE){
 
     /* TMC2590_RESPONSE2 #define TMC2590_GET_SGU(X)    (0x1F & ((X) >> 15)) #define TMC2590_GET_SE(X)     (0x1F & ((X) >> 10))    */
     tmc2590->resp.stallGuardShortValue= TMC2590_GET_SGU(tmc2590->config->shadowRegister[TMC2590_RESPONSE2]);  
@@ -346,29 +378,57 @@ void process_status_of_dual_controller(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef
     /* TMC2590_RESPONSE1 #define TMC2590_GET_SG(X)     (0x3FF & ((X) >> 10)) */
     tmc2590_1->resp.stallGuardCurrenValue = TMC2590_GET_SG(tmc2590_1->config->shadowRegister[TMC2590_RESPONSE1]);  
     tmc2590_2->resp.stallGuardCurrenValue = TMC2590_GET_SG(tmc2590_2->config->shadowRegister[TMC2590_RESPONSE1]);  
+
+
+    float realtime_rate = st_get_realtime_rate();
     
-    /*if motor is active, update statistics and trigger alarm if needed */
-    if (current_scale_state == CURRENT_SCALE_ACTIVE){
+    /* if motor is active and feed is higher than MINIMUM_FEED_RATE_FOR_SG_DETECTION, update statistics and trigger alarm if needed */
+    if ( (current_scale_state == CURRENT_SCALE_ACTIVE) && (realtime_rate > MINIMUM_FEED_RATE_FOR_SG_DETECTION) ){
+        
+        /* do not run measure SG 1s after cycle start - it might be invalid */
+        /* start reading SG 0.5s after start */
+        if ( skip_counter_SG_in_SPI_cycles == 0 ) {            
+            
+            if ( p_steps[tmc2590_1->thisAxis] > 85000 ) {  /* check stall only if feed is higher than 300mm/min */
+                if (tmc2590_1->resp.stallGuardCurrenValue < tmc2590_1->resp.stallGuardMinValue) {
+                tmc2590_1->resp.stallGuardMinValue    = tmc2590_1->resp.stallGuardCurrenValue;}
+                if (tmc2590_1->resp.stallGuardMinValue    < tmc2590_1->stallGuardAlarmValue) {
+                    /* trigger alarm */
+                    //printPgmString(PSTR("\n!!! SG ALARM !!!\n"));
+                    printInteger( tmc2590_1->thisMotor);
+                    printPgmString(PSTR("--"));
+                    printFloat_RateValue(realtime_rate);
+                    printPgmString(PSTR("--"));
+                    printInteger( p_steps[tmc2590_1->thisAxis]);
+                    printPgmString(PSTR("--\n"));
+                    /* execute alarm by writing 1 to the limit pin, which will trigger the ISR routine (pin has to be configured as output) */
+                    if (tmc2590_2->thisAxis == X_AXIS)  LIMIT_PORT |= (1<<X_LIMIT_BIT);  /* set pin */
+                    else                                LIMIT_PORT |= (1<<Y_LIMIT_BIT);  /* set pin */
+                }            
+            } // if ( p_steps[tmc2590_1->thisAxis] > 85000 ) {  /* check stall only if feed is higher than 300mm/min */           
+            
 
-        if (tmc2590_1->resp.stallGuardCurrenValue < tmc2590_1->resp.stallGuardMinValue) {
-            tmc2590_1->resp.stallGuardMinValue    = tmc2590_1->resp.stallGuardCurrenValue;}
-        if (tmc2590_1->resp.stallGuardMinValue    < tmc2590_1->stallGuardAlarmValue) {
-            /* trigger alarm */
-            //printPgmString(PSTR("\n!!! SG ALARM !!!\n"));
-            printInteger( tmc2590_1->thisMotor);
-            printPgmString(PSTR("--\n"));
-        }        
-
-        if (tmc2590_2->resp.stallGuardCurrenValue  < tmc2590_2->resp.stallGuardMinValue) {
-            tmc2590_2->resp.stallGuardMinValue     = tmc2590_2->resp.stallGuardCurrenValue;}
-        if (tmc2590_2->resp.stallGuardMinValue     < tmc2590_2->stallGuardAlarmValue) {
-            //printPgmString(PSTR("\n!!! SG ALARM !!!\n"));
-            printInteger( tmc2590_1->thisMotor);
-            printPgmString(PSTR("--\n"));
-            /* execute alarm by writing 1 to the limit pin, which will trigger the ISR routine */
-            //mc_reset(); // Initiate system kill.
-            //system_set_exec_alarm(EXEC_ALARM_HARD_LIMIT); // Indicate hard limit critical event
-        }        
+            if ( p_steps[tmc2590_2->thisAxis] > 85000 ) {  /* check stall only if feed is higher than 300mm/min */
+                if (tmc2590_2->resp.stallGuardCurrenValue  < tmc2590_2->resp.stallGuardMinValue) {
+                    tmc2590_2->resp.stallGuardMinValue     = tmc2590_2->resp.stallGuardCurrenValue;}
+                if (tmc2590_2->resp.stallGuardMinValue     < tmc2590_2->stallGuardAlarmValue) {
+                    //printPgmString(PSTR("\n!!! SG ALARM !!!\n"));
+                    printInteger( tmc2590_2->thisMotor);
+                    printPgmString(PSTR("--"));
+                    printFloat_RateValue(realtime_rate);
+                    printPgmString(PSTR("--"));
+                    printInteger( p_steps[tmc2590_2->thisAxis]);
+                    printPgmString(PSTR("--\n"));
+                    /* execute alarm by writing 1 to the limit pin, which will trigger the ISR routine (pin has to be configured as output) */
+                    if (tmc2590_2->thisAxis == X_AXIS)  LIMIT_PORT |= (1<<X_LIMIT_BIT);  /* set pin */                    
+                    else                                LIMIT_PORT |= (1<<Y_LIMIT_BIT);  /* set pin */                    
+                    
+                    //mc_reset(); // Initiate system kill.
+                    //system_set_exec_alarm(EXEC_ALARM_HARD_LIMIT); // Indicate hard limit critical event
+                }        
+           } // if ( p_steps[tmc2590_2->thisAxis] > 85000 ) {  /* check stall only if feed is higher than 300mm/min */            
+           
+        } //if ( skip_counter_SG_in_SPI_cycles == 0 ) {
         
     } //if (current_scale_state == CURRENT_SCALE_ACTIVE){
     
@@ -438,6 +498,9 @@ void init_TMC(void){
     uint8_t channel_X = SPI_CS_X_PIN;
     uint8_t channel_Y = SPI_CS_Y_PIN;
     uint8_t channel_Z = SPI_CS_Z_PIN;
+    
+    p_steps = get_p_steps(); /* global holding current steps per segment for each axis to work out current feed of each motor */
+
 
 	tmc2590_X1.interpolationEn              = 1;
 	tmc2590_X1.microSteps                   = 4; /* 4 : set MRES  = 16*/
@@ -472,19 +535,32 @@ void init_TMC(void){
     tmc2590_Y2.thisMotor                    = TMC_Y2;
     tmc2590_Z.thisMotor                     = TMC_Z ;
     
+    tmc2590_X1.thisAxis                     = X_AXIS;
+    tmc2590_X2.thisAxis                     = X_AXIS;
+    tmc2590_Y1.thisAxis                     = Y_AXIS;
+    tmc2590_Y2.thisAxis                     = Y_AXIS;
+    tmc2590_Z.thisAxis                      = Z_AXIS;
+        
+
+    
 	tmc2590_Y1.standStillCurrentScale       = 30; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
 	tmc2590_Y2.standStillCurrentScale       = 30; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
     
 	tmc2590_X1.stallGuardThreshold          = 7;
-	tmc2590_X1.stallGuardAlarmValue         = 300; 
+	tmc2590_X1.stallGuardAlarmValue         = 400;
+	tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */    
 	tmc2590_X2.stallGuardThreshold          = 7;
-	tmc2590_X2.stallGuardAlarmValue         = 300; 
-    tmc2590_Y1.stallGuardThreshold          = 6;
+	tmc2590_X2.stallGuardAlarmValue         = 400; 
+	tmc2590_X1.currentScale                 = 29; /* 0 - 31 where 31 is max */
+    tmc2590_Y1.stallGuardThreshold          = 5;
 	tmc2590_Y1.stallGuardAlarmValue         = 300; 
-    tmc2590_Y2.stallGuardThreshold          = 6;
+	tmc2590_Y1.currentScale                 = 31; /* 0 - 31 where 31 is max */
+    tmc2590_Y2.stallGuardThreshold          = 5;
 	tmc2590_Y2.stallGuardAlarmValue         = 300; 
-    tmc2590_Z.stallGuardThreshold           = 6;
-	tmc2590_Z.stallGuardAlarmValue          = 200; 
+	tmc2590_Y2.currentScale                 = 31; /* 0 - 31 where 31 is max */
+    tmc2590_Z.stallGuardThreshold           = 7;
+	tmc2590_Z.stallGuardAlarmValue          = 300; 
+	tmc2590_Z.currentScale                  = 31; /* 0 - 31 where 31 is max */
 
     
     stall_guard_statistics_reset();    
@@ -529,7 +605,6 @@ void tmc2590_single_write_route(uint8_t controller_id, uint8_t address){
     }
 
 }
-
 
 /* fetch TMC host command from rtl serial buffer and execute */
 void execute_TMC_command(){
@@ -884,6 +959,6 @@ void tmc_standstill_off(void){
         current_scale_state = CURRENT_SCALE_ACTIVE;
         tmc_all_current_scale_apply(); /* set standstill Current scale on all motors */
     }
+    /* reset countdown counter for SG skip at start */
+    skip_counter_SG_in_SPI_cycles = SG_READING_DELAY_AFTER_START_MS / SPI_CYCLE_DURATION_MS; /* one SPI cycle is 6ms, so 80 cycles is approx 500ms */    
 }
-
-

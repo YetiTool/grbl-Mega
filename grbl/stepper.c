@@ -1210,3 +1210,8 @@ float st_get_realtime_rate()
   }
   return 0.0f;
 }
+
+/* get pointer to steps structure */
+ uint32_t * get_p_steps(void){
+   return st.steps; /* return first controller in case of a wrong parameter supplied */
+}

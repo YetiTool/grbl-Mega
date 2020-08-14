@@ -152,5 +152,7 @@ void asmcnc_start_ADC(void);        /* start ADC state machine from channel 1 */
 uint8_t char2intValidate(char);     /* convert hex char to int and validate result (return 0xFF if character is not hex byte code */
 int get_temperature (void);
 int get_spindle_load_volts(void);
+uint32_t * get_p_steps(void);       /* get pointer to steps structure */
+
 
 #endif /* ASMCNC_h */

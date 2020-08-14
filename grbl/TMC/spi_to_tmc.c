@@ -369,7 +369,7 @@ debug_pin_write(1, DEBUG_0_PIN);
 
 
     /* if for some reason the SPI was not released (HW glitch or comms loss) wait for 10 timer cycles and reset the busy flag */
-    if ( (spi_busy) && ( busy_reset_count <10 ) ){
+    if ( (spi_busy) && ( busy_reset_count < 10 ) ){
         busy_reset_count++;
         printPgmString(PSTR("\n!!! SPI BUSY !!!\n"));
         return;

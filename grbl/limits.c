@@ -71,13 +71,15 @@ void limits_init()
     #endif // DISABLE_HW_LIMITS
   #else
         //SPCR = 0;
-    LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins
+    //LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins    
+    LIMIT_DDR |= (LIMIT_MASK); // Set as output pins to allow software interrupts - to emulate the limit switch toggle by function from StallGuard detection.
+    LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Set pin high to trigger ISR
 
-    #ifdef DISABLE_LIMIT_PIN_PULL_UP
-      LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Requires external pull-down.
-    #else
-      LIMIT_PORT |= (LIMIT_MASK);  // Enable internal pull-up resistors. Normal high operation.
-    #endif
+//    #ifdef DISABLE_LIMIT_PIN_PULL_UP
+//      LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Requires external pull-down.
+//    #else
+//      LIMIT_PORT |= (LIMIT_MASK);  // Enable internal pull-up resistors. Normal high operation.
+//    #endif
 //ASM Modification to allow limit red LED's to function HARD LIMIT ENABLED check moved to interrupt
 //    if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) {
       LIMIT_PCMSK |= LIMIT_ISR_MASK; // Enable specific pins of the Pin Change Interrupt
