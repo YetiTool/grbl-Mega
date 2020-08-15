@@ -12,6 +12,9 @@
 #define SPI_CYCLE_DURATION_MS               6
 #define SG_READING_DELAY_AFTER_START_MS     500
 
+#define DEFAULT_TMC_READ_SELECT             1 /* read of the stall guard is default state of the system */
+
+
 static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value);
 
 uint32_t * p_steps;                                 /* global holding current steps per segment for each axis to work out current feed of each motor */
@@ -70,20 +73,23 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
     /* TMC2590_DRVCONF */
 	value = tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT];
     
-    value &= ~TMC2590_SET_VSENSE(-1);                       /* clear bit */           
-    value |= TMC2590_SET_VSENSE(tmc2590->vSense);          /* clear bit, 0: Full-scale sense resistor voltage is 325mV. */           
+	value &= ~TMC2590_SET_RDSEL(-1);                                    /* clear RDSEL bits */
+	value |= TMC2590_SET_RDSEL(tmc2590->respIdx);                       /* set rdsel  */
     
-    value &= ~TMC2590_SET_SHRTSENS(-1);                       /* clear bit */
-    value |= TMC2590_SET_SHRTSENS(tmc2590->overcurrentSense);          /* 0: Low sensitivity 1: High sensitivity. The high-side overcurrent detector can be set to a higher sensitivity by setting this flag. This will allow detection of wrong cabling even with higher resistive motors.*/
+    value &= ~TMC2590_SET_VSENSE(-1);                                   /* clear bit */           
+    value |= TMC2590_SET_VSENSE(tmc2590->vSense);                       /* clear bit, 0: Full-scale sense resistor voltage is 325mV. */           
+    
+    value &= ~TMC2590_SET_SHRTSENS(-1);                                 /* clear bit */
+    value |= TMC2590_SET_SHRTSENS(tmc2590->overcurrentSense);           /* 0: Low sensitivity 1: High sensitivity. The high-side overcurrent detector can be set to a higher sensitivity by setting this flag. This will allow detection of wrong cabling even with higher resistive motors.*/
 
-    value &= ~TMC2590_SET_TS2G(-1);                       /* clear bits */
-    value |= TMC2590_SET_TS2G(tmc2590->shortDetectionDelay);          /* %00: 3.2us, %01: 1.6us, %10: 1.2us, %11: 0.8us, Short detection delay for high-side and low side detectors. The short detection delay shall cover the bridge switching time. %01 will work for most applications. A higher delay makes detection less sensitive to capacitive load.*/
+    value &= ~TMC2590_SET_TS2G(-1);                                     /* clear bits */
+    value |= TMC2590_SET_TS2G(tmc2590->shortDetectionDelay);            /* %00: 3.2us, %01: 1.6us, %10: 1.2us, %11: 0.8us, Short detection delay for high-side and low side detectors. The short detection delay shall cover the bridge switching time. %01 will work for most applications. A higher delay makes detection less sensitive to capacitive load.*/
 
-    value &= ~TMC2590_SET_DISS2G(-1);                       /* clear bit */
-    value |= TMC2590_SET_DISS2G(tmc2590->disableShortToVSprotection);          /* Leave detection enabled for normal use (0). Allows to disable short to VS protection. 0/1 Leave detection enabled for normal use (0).*/
+    value &= ~TMC2590_SET_DISS2G(-1);                                   /* clear bit */
+    value |= TMC2590_SET_DISS2G(tmc2590->disableShortToVSprotection);   /* Leave detection enabled for normal use (0). Allows to disable short to VS protection. 0/1 Leave detection enabled for normal use (0).*/
 
-    value &= ~TMC2590_SET_ENS2VS(-1);                       /* clear bit */
-    value |= TMC2590_SET_ENS2VS(tmc2590->EnableProtection);          /* 0: Enable detection for normal use (1). Explicitly enable short to VS and overcurrent protection by setting this bit..*/
+    value &= ~TMC2590_SET_ENS2VS(-1);                                   /* clear bit */
+    value |= TMC2590_SET_ENS2VS(tmc2590->EnableProtection);             /* 0: Enable detection for normal use (1). Explicitly enable short to VS and overcurrent protection by setting this bit..*/
 
     tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
     
@@ -229,11 +235,11 @@ void tmc2590_read_single(TMC2590TypeDef *tmc2590_1, uint8_t rdsel){
 void tmc2590_single_read_all(TMC2590TypeDef *tmc2590)
 {    
     /*read all 4 report values */   
-    tmc2590_read_single(tmc2590, 0); /* ignore this response*/
-    tmc2590_read_single(tmc2590, 1); /* response 0 */
-    tmc2590_read_single(tmc2590, 2); /* response 1 */
-    tmc2590_read_single(tmc2590, 3); /* response 2 */
-    tmc2590_read_single(tmc2590, 0); /* response 3 */    
+    //tmc2590_read_single(tmc2590, (   DEFAULT_TMC_READ_SELECT           ) ); /* ignore this response*/
+    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 1 */
+    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 2 ) % 4 ) ); /* response 2 */
+    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 3 */
+    tmc2590_read_single(tmc2590, (   DEFAULT_TMC_READ_SELECT           ) ); /* response 0 */    
 }
 
 /************************************************ dual motors ***********************************************/
@@ -305,12 +311,11 @@ void tmc2590_dual_read_all(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
 {
 	
     /*read all 4 report values */   
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, 0); /* ignore this response*/
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, 1); /* response 0 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, 2); /* response 1 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, 3); /* response 2 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, 0); /* response 3 */
-
+    //tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT           ) ); /* ignore this response*/
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 1 */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 2 ) % 4 ) ); /* response 2 */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 3 */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 0 */
 }
 
 
@@ -550,7 +555,7 @@ void init_TMC(void){
 	tmc2590_X1.currentSEmin                 = 1; // 1: set 1/4 of full scale when CoolStep is active
 	tmc2590_X1.coolStepMin                  = 0; // default CoolStep = 0 (disable); if want to enable then set for example to trigger if SG below 7x32 = 224
 	tmc2590_X1.coolStepMax                  = 1; // set to trigger if SG above (7+1)8x32 = 256
-    tmc2590_X1.respIdx                      = 0; // very first resp index would be 0
+    tmc2590_X1.respIdx                      = DEFAULT_TMC_READ_SELECT; // very first resp index would be DEFAULT_TMC_READ_SELECT
     tmc2590_X1.SlowDecayDuration            = 5; // Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 … %1111: 2 … 15 */
     tmc2590_X1.chopperBlankTime             = 2; // Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54
 	tmc2590_X1.standStillCurrentScale       = 15; // 15: set 1/2 of full scale, 1/4th of power
