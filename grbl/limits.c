@@ -400,9 +400,9 @@ void limits_go_home(uint8_t cycle_mask)
         homing_rate = settings.homing_seek_rate;
       }
     } while (n_cycle-- > 0);
-  #else
+  #else // #ifdef DEFAULTS_RAMPS_BOARD
     uint8_t limit_state, axislock, n_active_axis;
-    do {
+    do { //} while (n_cycle-- > 0);
 
       system_convert_array_steps_to_mpos(target,sys_position);
 
@@ -451,13 +451,14 @@ void limits_go_home(uint8_t cycle_mask)
       sys.step_control = STEP_CONTROL_EXECUTE_SYS_MOTION; // Set to execute homing motion and clear existing flags.
       st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
       st_wake_up(); // Initiate motion
-      do {
+      
+      do { //} while (STEP_MASK & axislock);
         if (approach) {
           // Check limit state. Lock out cycle axes when they change.
           limit_state = limits_get_state();
-          for (idx=0; idx<N_AXIS; idx++) {
-            if (axislock & step_pin[idx]) {
-              if (limit_state & (1 << idx)) {
+          for (idx=0; idx<N_AXIS; idx++) { // cycle through each axis
+            if (axislock & step_pin[idx]) { // if axis is currently active
+              if (limit_state & (1 << idx)) { // check if pin is triggered
                 #ifdef COREXY
                   if (idx==Z_AXIS) { axislock &= ~(step_pin[Z_AXIS]); }
                   else { axislock &= ~(step_pin[A_MOTOR]|step_pin[B_MOTOR]); }
@@ -465,8 +466,8 @@ void limits_go_home(uint8_t cycle_mask)
                   axislock &= ~(step_pin[idx]);	//TODO: Add de-acceleration for homing
                 #endif
               }
-            }
-          }
+            } //if (axislock & step_pin[idx]) {
+          } //for (idx=0; idx<N_AXIS; idx++) {
           sys.homing_axis_lock = axislock;
         }
 

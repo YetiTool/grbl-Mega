@@ -184,8 +184,8 @@ typedef enum
 #define SET_SLPH            25   /* Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes */
 #define SET_TST             26   /*  */
 #define SET_IDLE_CURRENT    27   /* set the current scale applied when no pulses are detected on the given axis */
-#define SET_MOTOR_FREEWHEEL 28   /* shut off the motor completely, for example to let user move turret easier */
-#define SET_MOTOR_ENERGIZED 29   /* energize the motor  */
+#define SET_MOTOR_ENERGIZED 28   /* energize or shut off the motor completely, for example to let user move turret easier */
+#define SET_SG_ALARM        29   /* desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm */
 
 
 /*single motor*/
