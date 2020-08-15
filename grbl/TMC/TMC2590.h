@@ -150,6 +150,13 @@ typedef enum
     CURRENT_SCALE_ACTIVE
 } tmc_current_scale_enum_type_t;
 
+/* TMC controller mode. Defines homing behaviour */
+typedef enum
+{
+    TMC_MODE_IDLE,
+    TMC_MODE_HOMING
+} tmc_homing_mode_enum_type_t;
+
 
 
 
@@ -225,5 +232,12 @@ void tmc_standstill_off(void); /* bump the current through energized motors back
 void spi_process_tx_queue(void); /* flush the SPI queue starting from next SPI transfer */    
 
 void stall_guard_statistics_reset(void); /* statistics is collected for the whole period between consecutive UART polls so that lost step is not missed between. Reset the statistics on all motors */
+
+/*homing engine functions */
+void tmc_spi_queue_drain_complete(void);  /* indicate to TMC2590 loops that reading is completed (required for homing cycle) */
+void tmc_homing_mode_set(uint8_t mode);  /* set and reset TMC controllers for homing cycle */
+void tmc_read_sg_and_trigger_limits(void); /* schedule single read of stall guard, analyse response and set limits limits accordingly */ 
+void tmc_homing_reset_limits_and_counter(uint8_t active_axes); /* clear limit switch and resetting the skip_counter_SG_in_SPI_cycles counter  when pulling off */
+
 
 #endif /* TMC_IC_TMC2590_H_ */

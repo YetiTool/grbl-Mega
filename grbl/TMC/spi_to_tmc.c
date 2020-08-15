@@ -185,6 +185,9 @@ void spi_process_tx_queue(void){
         spi_busy = false;
         SPI_current_state = SPI_STATE_IDLE;
         
+        /* indicate to TMC2590 loops that reading is completed (required for homing cycle) */
+        tmc_spi_queue_drain_complete();
+        
         /* indicate to main loop to process all responses and update the current status of controller's parameters */
         system_set_exec_tmc_command_flag(TMC_SPI_PROCESS_COMMAND);
     }

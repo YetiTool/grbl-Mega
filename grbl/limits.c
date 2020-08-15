@@ -452,8 +452,13 @@ void limits_go_home(uint8_t cycle_mask)
       st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
       st_wake_up(); // Initiate motion
       
+      /* clear limit switch and resetting the skip_counter_SG_in_SPI_cycles counter at the begninng of each homing cycle */
+      tmc_homing_reset_limits_and_counter(cycle_mask);
+
       do { //} while (STEP_MASK & axislock);
         if (approach) {
+          /* BK: replace limits read with SPI actions */
+          tmc_read_sg_and_trigger_limits(); /* schedule single read of stall guard, analyse response and set limits limits accordingly */
           // Check limit state. Lock out cycle axes when they change.
           limit_state = limits_get_state();
           for (idx=0; idx<N_AXIS; idx++) { // cycle through each axis
