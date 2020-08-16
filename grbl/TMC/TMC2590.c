@@ -8,15 +8,22 @@
 #include "spi_to_tmc.h"
 #include <string.h>
 
+
+#define SPI_READ_OCR_PERIOD_US 1008 /* SPI timer period */
+#define SPI_READ_SG_PERIOD_MS  6
+#define SPI_READ_ALL_PERIOD_MS 500
+#define SPI_READ_ALL_MAX_COUNTER (SPI_READ_ALL_PERIOD_MS*1000UL/SPI_READ_OCR_PERIOD_US)
+#define SPI_READ_SG_COUNTER (SPI_READ_SG_PERIOD_MS*1000UL/SPI_READ_OCR_PERIOD_US)
+
+
 #define MINIMUM_FEED_RATE_FOR_SG_DETECTION  300
-#define SPI_CYCLE_DURATION_MS               6
 #define SG_READING_DELAY_AFTER_START_MS     500
-#define SG_HOMING_DELAY_AFTER_START_MS      200
-#define SPI_HOMING_Z_CYCLE_DURATION_US      390
-#define SPI_HOMING_XY_CYCLE_DURATION_US     650
+#define SG_HOMING_DELAY_AFTER_START_MS      300       /* need to be identified empirically, looking at realtime view of the SG values for different motors in different scenarios. Smaller motors -> longer delays */
+#define SPI_HOMING_Z_CYCLE_DURATION_US      (390+100) /*+100 for MSTEP read*/
+#define SPI_HOMING_XY_CYCLE_DURATION_US     (650+300) /*+300 for MSTEP read*/
 #define SPI_HOMING_CYCLE_DURATION_US        1000
 
-#define DEFAULT_TMC_READ_SELECT             1 /* read of the stall guard is default state of the system */
+#define DEFAULT_TMC_READ_SELECT             0 /* read of the mstep is default state of the system */
 
 
 static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value);
@@ -240,16 +247,23 @@ void tmc2590_read_single(TMC2590TypeDef *tmc2590_1, uint8_t rdsel){
 void tmc2590_single_read_all(TMC2590TypeDef *tmc2590)
 {    
     /*read all 4 report values */   
-    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 1 */
-    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 2 ) % 4 ) ); /* response 2 */
-    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 3 */
-    tmc2590_read_single(tmc2590, (   DEFAULT_TMC_READ_SELECT           ) ); /* response 0 */    
+    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 0 */
+    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 2 ) % 4 ) ); /* response 1 */
+    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 2 */
+    tmc2590_read_single(tmc2590, (   DEFAULT_TMC_READ_SELECT           ) ); /* response 3 */    
 }
 
-void tmc2590_single_read_sg(TMC2590TypeDef *tmc2590)
+void tmc2590_single_read_sg_mstep(TMC2590TypeDef *tmc2590)
 {
-    /*read stall guard report values */
+    /*read stall guard and MSTEP report values */
+    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 0 */
     tmc2590_read_single(tmc2590, (   DEFAULT_TMC_READ_SELECT           ) ); /* response 1 */
+}
+
+void tmc2590_single_read_mstep(TMC2590TypeDef *tmc2590)
+{
+    /*read only MSTEP report values */
+    tmc2590_read_single(tmc2590, (   DEFAULT_TMC_READ_SELECT           ) ); /* response 0 */
 }
 
 /************************************************ dual motors ***********************************************/
@@ -320,26 +334,58 @@ void tmc2590_dual_read_single(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590
 void tmc2590_dual_read_all(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
 {
     /*read all 4 report values */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 1 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 2 ) % 4 ) ); /* response 2 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 3 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 0 */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 0 */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 2 ) % 4 ) ); /* response 1 */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 2 */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 3 */
 }
 
-void tmc2590_dual_read_sg(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
+void tmc2590_dual_read_sg_mstep(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
 {    
-    /*read stall guard report values */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 1 */
+    /*read stall guard and MSTEP report values */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 0 */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 1 */    
+}
+
+void tmc2590_dual_read_mstep(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
+{
+    /*read only MSTEP report values */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 0 */
 }
 
 
 /************************************************ all motors ***********************************************/
 
+
 /* schedule periodic read of all values */
-void tmc2590_schedule_read_all(void){
+void tmc2590_schedule_read_all(void){    
+    
+    static uint16_t CS_and_STATUS_poll_counter = 1;	
+    if (CS_and_STATUS_poll_counter == SPI_READ_ALL_MAX_COUNTER){
+        /* skip one read immediately after long read all */
+        CS_and_STATUS_poll_counter--;
+        return;
+    }
+
+	if ( --CS_and_STATUS_poll_counter % SPI_READ_SG_COUNTER)  {
+    	/* read mstep every SPI_READ_OCR_PERIOD_US */
+    	tmc2590_dual_read_mstep(&tmc2590_X1, &tmc2590_X2);
+    	tmc2590_dual_read_mstep(&tmc2590_Y1, &tmc2590_Y2);
+    	tmc2590_single_read_mstep(&tmc2590_Z);
+	return;}
+    
+	if ( CS_and_STATUS_poll_counter )  { 
+    /* read mstep and SG every SPI_READ_SG_PERIOD_MS */
+        tmc2590_dual_read_sg_mstep(&tmc2590_X1, &tmc2590_X2);
+        tmc2590_dual_read_sg_mstep(&tmc2590_Y1, &tmc2590_Y2);
+        tmc2590_single_read_sg_mstep(&tmc2590_Z);
+	return;}
+    
+    /* read all once per 500ms */
     tmc2590_dual_read_all(&tmc2590_X1, &tmc2590_X2);
     tmc2590_dual_read_all(&tmc2590_Y1, &tmc2590_Y2);
     tmc2590_single_read_all(&tmc2590_Z);
+    CS_and_STATUS_poll_counter = SPI_READ_ALL_MAX_COUNTER; /* slow down polling CS_and_STATUS to SPI_READ_ALL_PERIOD_MS */	
 }
 
 void tmc_trigger_stall_alarm(uint8_t axis){
@@ -603,34 +649,38 @@ void init_TMC(void){
 	tmc2590_Y1.standStillCurrentScale       = 30; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
 	tmc2590_Y2.standStillCurrentScale       = 30; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
     
-    /* ZH motor */
-	tmc2590_X1.stallGuardThreshold          = 7;
-	tmc2590_X1.stallGuardAlarmValue         = 400;
-	tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */    
+    /* ZH motor (medium 23HS22) in normal conditions (56steps/mm)*/
+	//tmc2590_X1.stallGuardThreshold          = 7;
+	//tmc2590_X1.stallGuardAlarmValue         = 400;
+	//tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
+    /* ZH motor (medium 23HS22) in riggy conditions (177steps/mm)*/	
+    tmc2590_X1.stallGuardThreshold          = 7;
+	tmc2590_X1.stallGuardAlarmValue         = 200;
+	tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
     
     /* ZH motor */
 	//tmc2590_X2.stallGuardThreshold          = 7;
 	//tmc2590_X2.stallGuardAlarmValue         = 400; 
 	//tmc2590_X2.currentScale                 = 29; /* 0 - 31 where 31 is max */
-    /* riggy motor (small one) idle SG ~500, loaded ~400  at 3000mm/min on X*/
-    tmc2590_X2.stallGuardThreshold           = 22;
-    tmc2590_X2.stallGuardAlarmValue          = 200;
-    tmc2590_X2.currentScale                  = 4; /* 0 - 31 where 31 is max, 0.25A */
+    /* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400  at 3000mm/min on X with 177steps/mm*/
+    tmc2590_X2.stallGuardThreshold           = 25;
+    tmc2590_X2.stallGuardAlarmValue          = 400;
+    tmc2590_X2.currentScale                  = 5; /* 0 - 31 where 31 is max, 0.25A */
     tmc2590_X2.standStillCurrentScale        = 2; //  2: set 1/2 of full scale, 1/4th of power
     
-    tmc2590_Y1.stallGuardThreshold          = 5;
+    tmc2590_Y1.stallGuardThreshold          = 4;
 	tmc2590_Y1.stallGuardAlarmValue         = 300; 
 	tmc2590_Y1.currentScale                 = 31; /* 0 - 31 where 31 is max */
-    tmc2590_Y2.stallGuardThreshold          = 5;
+    tmc2590_Y2.stallGuardThreshold          = 4;
 	tmc2590_Y2.stallGuardAlarmValue         = 300; 
 	tmc2590_Y2.currentScale                 = 31; /* 0 - 31 where 31 is max */
     /* ZH motor */
     //tmc2590_Z.stallGuardThreshold           = 7;
     //tmc2590_Z.stallGuardAlarmValue          = 300;
     //tmc2590_Z.currentScale                  = 31; /* 0 - 31 where 31 is max */
-    /* riggy motor (small one) idle SG ~500, loaded ~400 at 500mm/min on Z*/
+    /* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400 at 2000mm/min on Z with 267steps/mm*/
     tmc2590_Z.stallGuardThreshold          = -64;
-    tmc2590_Z.stallGuardAlarmValue          = 300;
+    tmc2590_Z.stallGuardAlarmValue          = 400;
     tmc2590_Z.currentScale                  = 5; /* 0 - 31 where 31 is max, 0.25A */
     tmc2590_Z.standStillCurrentScale        = 2; //  2: set 1/2 of full scale, 1/4th of power
 
@@ -1036,7 +1086,7 @@ void tmc_standstill_off(void){
         tmc_all_current_scale_apply(); /* set standstill Current scale on all motors */
     }
     /* reset countdown counter for SG skip at start */
-    skip_counter_SG_in_SPI_cycles = SG_READING_DELAY_AFTER_START_MS / SPI_CYCLE_DURATION_MS; /* one SPI cycle is 6ms, so 80 cycles is approx 500ms */    
+    skip_counter_SG_in_SPI_cycles = SG_READING_DELAY_AFTER_START_MS*1000UL / SPI_READ_OCR_PERIOD_US; /* one SPI cycle is 6ms, so 80 cycles is approx 500ms */    
 }
 
 
@@ -1086,7 +1136,7 @@ void tmc_homing_mode_set(uint8_t mode){
 }  
 
 /* schedule single StallGuard read of all active axes */
-void tmc2590_schedule_read_sg(void){
+void tmc2590_schedule_read_sg_mstep(void){
     
     uint8_t axis;
     
@@ -1099,15 +1149,15 @@ void tmc2590_schedule_read_sg(void){
             switch (axis){
                 
                 case X_AXIS:
-                tmc2590_dual_read_sg(&tmc2590_X1, &tmc2590_X2);
+                tmc2590_dual_read_sg_mstep(&tmc2590_X1, &tmc2590_X2);
                 break;
                 
                 case Y_AXIS:
-                tmc2590_dual_read_sg(&tmc2590_Y1, &tmc2590_Y2);
+                tmc2590_dual_read_sg_mstep(&tmc2590_Y1, &tmc2590_Y2);
                 break;
                 
                 case Z_AXIS:
-                tmc2590_single_read_sg(&tmc2590_Z);
+                tmc2590_single_read_sg_mstep(&tmc2590_Z);
                 break;
                 
                 default:
@@ -1165,7 +1215,7 @@ void tmc_spi_queue_drain_complete(void){
 void tmc_read_sg_and_trigger_limits(void){
     
     /* add Stall Guard read request to the SPI queue */
-    tmc2590_schedule_read_sg();
+    tmc2590_schedule_read_sg_mstep();
     
     /* start SPI transfers flushing the queue */
     spi_process_tx_queue();

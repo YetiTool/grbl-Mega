@@ -34,15 +34,15 @@ void asmcnc_TMC_Timer2_setup(void){
 //	TCCR2B |=(1<<CS21); /* set bit */
 //	TCCR2B |=(1<<CS22); /* set bit */
 
-	///* Setup pre-scaling = 256 to ensure slowest of 240.5Hz / 4.1ms ticks */
-	////TCCR2B |=(1<<CS20); /* set bit */
-	//TCCR2B |=(1<<CS21); /* set bit */
-	//TCCR2B |=(1<<CS22); /* set bit */
-
-	/* Setup pre-scaling = 128 to ensure slowest of 581Hz / 2.05ms ticks */
-	TCCR2B |=(1<<CS20); /* set bit */
-	//TCCR2B |=(1<<CS21); /* set bit */
+	/* Setup pre-scaling = 256 to ensure slowest of 240.5Hz / 4.1ms ticks */
+	//TCCR2B |=(1<<CS20); /* set bit */
+	TCCR2B |=(1<<CS21); /* set bit */
 	TCCR2B |=(1<<CS22); /* set bit */
+
+	///* Setup pre-scaling = 128 to ensure slowest of 581Hz / 2.05ms ticks */
+	//TCCR2B |=(1<<CS20); /* set bit */
+	////TCCR2B |=(1<<CS21); /* set bit */
+	//TCCR2B |=(1<<CS22); /* set bit */
 
 
 	/* setup compare register to achieve wanted SPI polling frequency. Some example values:
@@ -55,7 +55,11 @@ void asmcnc_TMC_Timer2_setup(void){
 	 * 0x4E		197.7	5.05
 	 * */
 
-	OCR2A = 0xFF; /* 32.768ms */
+	//OCR2A = 0x9C; /* 2.512ms with prescaler 256*/
+    OCR2A = 0x3E; /* 1.008ms with prescaler 256*/
+  	//	OCR2A = 0xFF; /* 32.768ms with prescaler 1024*/
+
+
 
 	/* Zero timer 2 */
 	TCNT2=0;
@@ -131,7 +135,6 @@ uint8_t m_spi_rx_data[TX_BUF_SIZE_DUAL]; 						        /* buffer storage for Rx 
 
 // Used to avoid ISR nesting of the "TMC SPI interrupt". Should never occur though.
 static uint8_t spi_busy = false;
-static uint8_t busy_reset_count = 0;
 
 static spi_state_type_t SPI_current_state 		= SPI_STATE_IDLE; 		/* flag to distinguish SPI state */
 
@@ -361,20 +364,21 @@ ISR(TIMER2_COMPA_vect)
 debug_pin_write(1, DEBUG_0_PIN);
 #endif
     
-	/* slow down polling the drivers, 1 is 2ms , 500 is around 1s */
-    static uint8_t skip_count;
-    if (++skip_count % 3 != 0)  { /* set SPI poll interval to 6ms */
-        #ifdef DEBUG_PINS_ENABLED
-        debug_pin_write(0, DEBUG_0_PIN);
-        #endif        
-        return;}
-    skip_count = 0;
+	///* slow down polling the drivers, 1 is 2ms , 500 is around 1s */
+    //static uint8_t skip_count;
+    //if (++skip_count % 3 != 0)  { /* set SPI poll interval to 6ms */
+        //#ifdef DEBUG_PINS_ENABLED
+        //debug_pin_write(0, DEBUG_0_PIN);
+        //#endif        
+        //return;}
+    //skip_count = 0;
 
 
-    /* if for some reason the SPI was not released (HW glitch or comms loss) wait for 10 timer cycles and reset the busy flag */
-    if ( (spi_busy) && ( busy_reset_count < 10 ) ){
+    /* if for some reason the SPI was not released (HW glitch or comms loss) wait for 30 timer cycles and reset the busy flag */
+    static uint8_t busy_reset_count = 0;
+    if ( (spi_busy) && ( busy_reset_count < 30 ) ){
         busy_reset_count++;
-        printPgmString(PSTR("\n!!! SPI BUSY !!!\n"));
+        if ( busy_reset_count > 2 ) printPgmString(PSTR("\n!!! SPI BUSY !!!\n")); /* more than 3 us */
         return;
     }
 
