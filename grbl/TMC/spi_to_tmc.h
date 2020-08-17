@@ -8,6 +8,11 @@
 #include <string.h>
 #include "TMC2590.h"
 
+
+#define SPI_TIMER_CYCLE_PER_READ 0x26   /* 2.496ms with prescaler 1024*/
+//#define SPI_TIMER_CYCLE_PER_READ 0xF   /* 1.024ms with prescaler 1024*/
+//#define SPI_TIMER_CYCLE_PER_READ 0x5D   /* 6.016ms with prescaler 1024*/
+
 /* SPI_TX_BUFFER holds the outgoing SPI commands, worst case - required for single motors - in that case number initial SPI transactions
  * could be 5x5+5x5 = 50. In dual motor case it is 5x3 + 5x3 = max 30 transactions*/
 #define SPI_TX_BUFFER_MASK 						0x3F                 	/**< TX Buffer mask, must be a mask of contiguous zeroes, followed by contiguous sequence of ones: 000...111. */

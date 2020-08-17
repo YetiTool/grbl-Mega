@@ -9,12 +9,9 @@
 #include <string.h>
 
 
-#define SPI_READ_OCR_PERIOD_US 1008 /* SPI timer period */
-#define SPI_READ_SG_PERIOD_MS  6
+#define SPI_READ_OCR_PERIOD_US ((1+SPI_TIMER_CYCLE_PER_READ)<<6) /* SPI timer period, typically 2496us with prescaler 1024*/
 #define SPI_READ_ALL_PERIOD_MS 500
 #define SPI_READ_ALL_MAX_COUNTER (SPI_READ_ALL_PERIOD_MS*1000UL/SPI_READ_OCR_PERIOD_US)
-#define SPI_READ_SG_COUNTER (SPI_READ_SG_PERIOD_MS*1000UL/SPI_READ_OCR_PERIOD_US)
-
 
 #define MINIMUM_FEED_RATE_FOR_SG_DETECTION  300
 #define SG_READING_DELAY_AFTER_START_MS     500
@@ -23,8 +20,7 @@
 #define SPI_HOMING_XY_CYCLE_DURATION_US     (650+300) /*+300 for MSTEP read*/
 #define SPI_HOMING_CYCLE_DURATION_US        1000
 
-#define DEFAULT_TMC_READ_SELECT             0 /* read of the mstep is default state of the system */
-
+#define DEFAULT_TMC_READ_SELECT             1 /* read of the SG is default state of the system */
 
 static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value);
 
@@ -245,25 +241,22 @@ void tmc2590_read_single(TMC2590TypeDef *tmc2590_1, uint8_t rdsel){
 }
 
 void tmc2590_single_read_all(TMC2590TypeDef *tmc2590)
-{    
-    /*read all 4 report values */   
-    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 0 */
-    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 2 ) % 4 ) ); /* response 1 */
-    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 2 */
-    tmc2590_read_single(tmc2590, (   DEFAULT_TMC_READ_SELECT           ) ); /* response 3 */    
+{
+    /*read all 4 report values */
+    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 1 */
+    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 2 ) % 4 ) ); /* response 2 */
+    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 3 */
+    tmc2590_read_single(tmc2590, (   DEFAULT_TMC_READ_SELECT           ) ); /* response 0 */
 }
 
-void tmc2590_single_read_sg_mstep(TMC2590TypeDef *tmc2590)
+
+void tmc2590_single_read_sg(TMC2590TypeDef *tmc2590)
 {
     /*read stall guard and MSTEP report values */
-    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 0 */
-    tmc2590_read_single(tmc2590, (   DEFAULT_TMC_READ_SELECT           ) ); /* response 1 */
-}
-
-void tmc2590_single_read_mstep(TMC2590TypeDef *tmc2590)
-{
-    /*read only MSTEP report values */
-    tmc2590_read_single(tmc2590, (   DEFAULT_TMC_READ_SELECT           ) ); /* response 0 */
+#ifdef MSTEP_READING_ENABLED
+    tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 0 */
+#endif
+    tmc2590_read_single(tmc2590, (   DEFAULT_TMC_READ_SELECT           ) ); /*  response 1 (0 when reading MSTEP) */
 }
 
 /************************************************ dual motors ***********************************************/
@@ -334,24 +327,24 @@ void tmc2590_dual_read_single(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590
 void tmc2590_dual_read_all(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
 {
     /*read all 4 report values */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 0 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 2 ) % 4 ) ); /* response 1 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 2 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 3 */
-}
-
-void tmc2590_dual_read_sg_mstep(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
-{    
-    /*read stall guard and MSTEP report values */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 0 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 1 */    
-}
-
-void tmc2590_dual_read_mstep(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
-{
-    /*read only MSTEP report values */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 1 */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 2 ) % 4 ) ); /* response 2 */
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 3 */
     tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 0 */
 }
+
+
+void tmc2590_dual_read_sg(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
+{
+    /*read stall guard and MSTEP report values */
+#ifdef MSTEP_READING_ENABLED
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 1 */
+#endif
+    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 1 (0 when reading MSTEP) */
+}
+
+
+
 
 
 /************************************************ all motors ***********************************************/
@@ -367,18 +360,11 @@ void tmc2590_schedule_read_all(void){
         return;
     }
 
-	if ( --CS_and_STATUS_poll_counter % SPI_READ_SG_COUNTER)  {
-    	/* read mstep every SPI_READ_OCR_PERIOD_US */
-    	tmc2590_dual_read_mstep(&tmc2590_X1, &tmc2590_X2);
-    	tmc2590_dual_read_mstep(&tmc2590_Y1, &tmc2590_Y2);
-    	tmc2590_single_read_mstep(&tmc2590_Z);
-	return;}
-    
-	if ( CS_and_STATUS_poll_counter )  { 
-    /* read mstep and SG every SPI_READ_SG_PERIOD_MS */
-        tmc2590_dual_read_sg_mstep(&tmc2590_X1, &tmc2590_X2);
-        tmc2590_dual_read_sg_mstep(&tmc2590_Y1, &tmc2590_Y2);
-        tmc2590_single_read_sg_mstep(&tmc2590_Z);
+	if ( --CS_and_STATUS_poll_counter )  {
+        /* read mstep and SG every SPI_READ_OCR_PERIOD_US */
+        tmc2590_dual_read_sg(&tmc2590_X1, &tmc2590_X2);
+        tmc2590_dual_read_sg(&tmc2590_Y1, &tmc2590_Y2);
+        tmc2590_single_read_sg(&tmc2590_Z);
 	return;}
     
     /* read all once per 500ms */
@@ -1136,7 +1122,7 @@ void tmc_homing_mode_set(uint8_t mode){
 }  
 
 /* schedule single StallGuard read of all active axes */
-void tmc2590_schedule_read_sg_mstep(void){
+void tmc2590_schedule_read_sg(void){
     
     uint8_t axis;
     
@@ -1149,15 +1135,15 @@ void tmc2590_schedule_read_sg_mstep(void){
             switch (axis){
                 
                 case X_AXIS:
-                tmc2590_dual_read_sg_mstep(&tmc2590_X1, &tmc2590_X2);
+                tmc2590_dual_read_sg(&tmc2590_X1, &tmc2590_X2);
                 break;
                 
                 case Y_AXIS:
-                tmc2590_dual_read_sg_mstep(&tmc2590_Y1, &tmc2590_Y2);
+                tmc2590_dual_read_sg(&tmc2590_Y1, &tmc2590_Y2);
                 break;
                 
                 case Z_AXIS:
-                tmc2590_single_read_sg_mstep(&tmc2590_Z);
+                tmc2590_single_read_sg(&tmc2590_Z);
                 break;
                 
                 default:
@@ -1213,9 +1199,9 @@ void tmc_spi_queue_drain_complete(void){
 
 /* BK: function to replace limits read with SPI actions for homing*/            
 void tmc_read_sg_and_trigger_limits(void){
-    
+
     /* add Stall Guard read request to the SPI queue */
-    tmc2590_schedule_read_sg_mstep();
+    tmc2590_schedule_read_sg();
     
     /* start SPI transfers flushing the queue */
     spi_process_tx_queue();

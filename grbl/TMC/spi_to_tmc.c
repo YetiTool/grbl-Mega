@@ -29,15 +29,15 @@ void asmcnc_TMC_Timer2_setup(void){
 	TCCR2A |= (1<<WGM21); /* set bit */
 	TCCR2A |= (1<<WGM20); /* set bit */
 
-//	/* Setup pre-scaling = 1024 to ensure slowest rate of 60.5Hz / 15ms ticks */
-//	TCCR2B |=(1<<CS20); /* set bit */
-//	TCCR2B |=(1<<CS21); /* set bit */
-//	TCCR2B |=(1<<CS22); /* set bit */
-
-	/* Setup pre-scaling = 256 to ensure slowest of 240.5Hz / 4.1ms ticks */
-	//TCCR2B |=(1<<CS20); /* set bit */
+	/* Setup pre-scaling = 1024 to ensure slowest rate of 60.5Hz / 15ms ticks */
+	TCCR2B |=(1<<CS20); /* set bit */
 	TCCR2B |=(1<<CS21); /* set bit */
 	TCCR2B |=(1<<CS22); /* set bit */
+
+	///* Setup pre-scaling = 256 to ensure slowest of 240.5Hz / 4.1ms ticks */
+	////TCCR2B |=(1<<CS20); /* set bit */
+	//TCCR2B |=(1<<CS21); /* set bit */
+	//TCCR2B |=(1<<CS22); /* set bit */
 
 	///* Setup pre-scaling = 128 to ensure slowest of 581Hz / 2.05ms ticks */
 	//TCCR2B |=(1<<CS20); /* set bit */
@@ -56,9 +56,8 @@ void asmcnc_TMC_Timer2_setup(void){
 	 * */
 
 	//OCR2A = 0x9C; /* 2.512ms with prescaler 256*/
-    OCR2A = 0x3E; /* 1.008ms with prescaler 256*/
-  	//	OCR2A = 0xFF; /* 32.768ms with prescaler 1024*/
-
+    //OCR2A = 0x3E; /* 1.008ms with prescaler 256*/
+  	OCR2A = SPI_TIMER_CYCLE_PER_READ;
 
 
 	/* Zero timer 2 */

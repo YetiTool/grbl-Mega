@@ -114,6 +114,7 @@ enum rgbHexStates{
 //#define DEBUG_PINS_ENABLED // comment out to remove debug pins functionality - remove for production version
 //#define DEBUG_STEPPER_ENABLED // comment out to remove debug pins functionality - remove for production version
 //#define DEBUG_ADC_ENABLED // comment out to remove ADC debug pins functionality - remove for production version
+//#define MSTEP_READING_ENABLED // good to have a temporal view of MSTEP for debug purposes
 
 #if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED)
 #define DEBUG_DDR			DDRK
