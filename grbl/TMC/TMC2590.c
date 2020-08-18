@@ -8,11 +8,6 @@
 #include "spi_to_tmc.h"
 #include <string.h>
 
-
-#define SPI_READ_OCR_PERIOD_US ((1+SPI_TIMER_CYCLE_PER_READ)<<6) /* SPI timer period, typically 2496us with prescaler 1024*/
-#define SPI_READ_ALL_PERIOD_MS 500
-#define SPI_READ_ALL_MAX_COUNTER (SPI_READ_ALL_PERIOD_MS*1000UL/SPI_READ_OCR_PERIOD_US)
-
 #define MINIMUM_FEED_RATE_FOR_SG_DETECTION  300
 #define SG_READING_DELAY_AFTER_START_MS     500
 #define SG_HOMING_DELAY_AFTER_START_MS      300       /* need to be identified empirically, looking at realtime view of the SG values for different motors in different scenarios. Smaller motors -> longer delays */
@@ -119,11 +114,25 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
 	value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];    
     //default: 0x00091935,
     value &= ~TMC2590_SET_TOFF(-1);                       // clear
-    value |= TMC2590_SET_TOFF(tmc2590->SlowDecayDuration);// Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 … %1111: 2 … 15 */
+    value |= TMC2590_SET_TOFF(tmc2590->SlowDecayDuration);// Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 ... %1111: 2 ... 15 */
 
     value &= ~TMC2590_SET_TBL(-1);                       // clear
     value |= TMC2590_SET_TBL(tmc2590->chopperBlankTime); // Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54
+	
+	value &= ~TMC2590_SET_HSTRT(-1);                       // clear
+	value |= TMC2590_SET_HSTRT(tmc2590->HystStart);        /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be ? 15 */
+	
+	value &= ~TMC2590_SET_HEND(-1);                        // clear
+	value |= TMC2590_SET_HEND(tmc2590->HystEnd);           /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+	
+	value &= ~TMC2590_SET_HDEC(-1);                        // clear
+	value |= TMC2590_SET_HDEC(tmc2590->HystDectrement);    /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
+	
+	value &= ~TMC2590_SET_RNDTF(-1);                       // clear
+	value |= TMC2590_SET_RNDTF(tmc2590->SlowDecayRandom);  /* Enable randomizing the slow decay phase duration: 0: Chopper off time is fixed as set by bits tOFF 1: Random mode, tOFF is random modulated by dNCLK= -12 - +3 clocks */
 
+	value &= ~TMC2590_SET_CHM(-1);                         // clear
+	value |= TMC2590_SET_CHM(tmc2590->chopperMode);        // Chopper mode. This mode bit affects the interpretation of the HDEC, HEND, and HSTRT parameters shown below. 0 Standard mode (SpreadCycle)
 
     tmc2590->config->shadowRegister[TMC2590_CHOPCONF  | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
     
@@ -352,27 +361,32 @@ void tmc2590_dual_read_sg(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
 
 /* schedule periodic read of all values */
 void tmc2590_schedule_read_all(void){    
-    
-    static uint16_t CS_and_STATUS_poll_counter = 1;	
-    if (CS_and_STATUS_poll_counter == SPI_READ_ALL_MAX_COUNTER){
-        /* skip one read immediately after long read all */
-        CS_and_STATUS_poll_counter--;
-        return;
-    }
-
-	if ( --CS_and_STATUS_poll_counter )  {
-        /* read mstep and SG every SPI_READ_OCR_PERIOD_US */
-        tmc2590_dual_read_sg(&tmc2590_X1, &tmc2590_X2);
-        tmc2590_dual_read_sg(&tmc2590_Y1, &tmc2590_Y2);
-        tmc2590_single_read_sg(&tmc2590_Z);
-	return;}
-    
-    /* read all once per 500ms */
     tmc2590_dual_read_all(&tmc2590_X1, &tmc2590_X2);
     tmc2590_dual_read_all(&tmc2590_Y1, &tmc2590_Y2);
     tmc2590_single_read_all(&tmc2590_Z);
-    CS_and_STATUS_poll_counter = SPI_READ_ALL_MAX_COUNTER; /* slow down polling CS_and_STATUS to SPI_READ_ALL_PERIOD_MS */	
 }
+
+/* schedule read of SG value on given axis */
+void tmc2590_schedule_read_sg(uint8_t axis){
+    switch (axis){
+        case X_AXIS:
+        tmc2590_dual_read_sg(&tmc2590_X1, &tmc2590_X2);
+        break;
+            
+        case Y_AXIS:
+        tmc2590_dual_read_sg(&tmc2590_Y1, &tmc2590_Y2);
+        break;
+            
+        case Z_AXIS:
+        tmc2590_single_read_sg(&tmc2590_Z);
+        break;
+            
+        default:
+        break;
+            
+        } //switch (axis){
+}
+
 
 void tmc_trigger_stall_alarm(uint8_t axis){
     
@@ -602,7 +616,12 @@ void init_TMC(void){
 	tmc2590_X1.coolStepMin                  = 0; // default CoolStep = 0 (disable); if want to enable then set for example to trigger if SG below 7x32 = 224
 	tmc2590_X1.coolStepMax                  = 1; // set to trigger if SG above (7+1)8x32 = 256
     tmc2590_X1.respIdx                      = DEFAULT_TMC_READ_SELECT; // very first resp index would be DEFAULT_TMC_READ_SELECT
-    tmc2590_X1.SlowDecayDuration            = 5; // Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 … %1111: 2 … 15 */
+    tmc2590_X1.SlowDecayDuration            = 5; // Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 ... %1111: 2 ... 15 */
+    tmc2590_X1.HystStart                    = 2; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
+    tmc2590_X1.HystEnd                      = 2; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+    tmc2590_X1.HystDectrement               = 2; /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
+    tmc2590_X1.SlowDecayRandom              = 1; /* Enable randomizing the slow decay phase duration: 0: Chopper off time is fixed as set by bits tOFF 1: Random mode, tOFF is random modulated by dNCLK= -12 - +3 clocks */
+    tmc2590_X1.chopperMode                  = 0; // Chopper mode. This mode bit affects the interpretation of the HDEC, HEND, and HSTRT parameters shown below. 0 Standard mode (SpreadCycle)    
     tmc2590_X1.chopperBlankTime             = 2; // Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54
 	tmc2590_X1.standStillCurrentScale       = 15; // 15: set 1/2 of full scale, 1/4th of power
 
@@ -665,11 +684,11 @@ void init_TMC(void){
     //tmc2590_Z.stallGuardAlarmValue          = 300;
     //tmc2590_Z.currentScale                  = 31; /* 0 - 31 where 31 is max */
     /* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400 at 2000mm/min on Z with 267steps/mm*/
-    tmc2590_Z.stallGuardThreshold          = -64;
+    tmc2590_Z.HystEnd                       = 0;   /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+    tmc2590_Z.stallGuardThreshold           = -64;
     tmc2590_Z.stallGuardAlarmValue          = 400;
     tmc2590_Z.currentScale                  = 5; /* 0 - 31 where 31 is max, 0.25A */
     tmc2590_Z.standStillCurrentScale        = 2; //  2: set 1/2 of full scale, 1/4th of power
-
     
     stall_guard_statistics_reset();    
     
@@ -799,7 +818,7 @@ void execute_TMC_command(){
 				tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
 				break;
 
-			/* Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 … %1111: 2 … 15 */
+			/* Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 ... %1111: 2 ... 15 */
 			case SET_TOFF:
 				/* TMC2590_CHOPCONF */
 				register_value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];
@@ -814,20 +833,20 @@ void execute_TMC_command(){
 			case SET_HSTRT:
 				/* TMC2590_CHOPCONF */
 				register_value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];
-				tmc2590->SlowDecayDuration = value;
+				tmc2590->HystStart = value;
 				register_value &= ~TMC2590_SET_HSTRT(-1);                        // clear
-				register_value |= TMC2590_SET_HSTRT(tmc2590->SlowDecayDuration);
+				register_value |= TMC2590_SET_HSTRT(tmc2590->HystStart);
 				tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT] = register_value;
 				tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
 				break;
 
-			/* Hysteresis end (low) value; %0000 … %1111: Hysteresis is -3, -2, -1, 0, 1, …, 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+			/* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
 			case SET_HEND:
 				/* TMC2590_CHOPCONF */
 				register_value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];
-				tmc2590->SlowDecayDuration = value;
+				tmc2590->HystEnd = value;
 				register_value &= ~TMC2590_SET_HEND(-1);                        // clear
-				register_value |= TMC2590_SET_HEND(tmc2590->SlowDecayDuration);
+				register_value |= TMC2590_SET_HEND(tmc2590->HystEnd);
 				tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT] = register_value;
 				tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
 				break;
@@ -836,9 +855,9 @@ void execute_TMC_command(){
 			case SET_HDEC:
 				/* TMC2590_CHOPCONF */
 				register_value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];
-				tmc2590->SlowDecayDuration = value;
+				tmc2590->HystDectrement = value;
 				register_value &= ~TMC2590_SET_HDEC(-1);                        // clear
-				register_value |= TMC2590_SET_HDEC(tmc2590->SlowDecayDuration);
+				register_value |= TMC2590_SET_HDEC(tmc2590->HystDectrement);
 				tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT] = register_value;
 				tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
 				break;
@@ -847,9 +866,9 @@ void execute_TMC_command(){
 			case SET_RNDTF:
 				/* TMC2590_CHOPCONF */
 				register_value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];
-				tmc2590->SlowDecayDuration = value;
+				tmc2590->SlowDecayRandom = value;
 				register_value &= ~TMC2590_SET_RNDTF(-1);                        // clear
-				register_value |= TMC2590_SET_RNDTF(tmc2590->SlowDecayDuration);
+				register_value |= TMC2590_SET_RNDTF(tmc2590->SlowDecayRandom);
 				tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT] = register_value;
 				tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
 				break;
@@ -1122,7 +1141,7 @@ void tmc_homing_mode_set(uint8_t mode){
 }  
 
 /* schedule single StallGuard read of all active axes */
-void tmc2590_schedule_read_sg(void){
+void tmc2590_schedule_read_sg_homing(void){
     
     uint8_t axis;
     
@@ -1201,7 +1220,7 @@ void tmc_spi_queue_drain_complete(void){
 void tmc_read_sg_and_trigger_limits(void){
 
     /* add Stall Guard read request to the SPI queue */
-    tmc2590_schedule_read_sg();
+    tmc2590_schedule_read_sg_homing();
     
     /* start SPI transfers flushing the queue */
     spi_process_tx_queue();

@@ -125,8 +125,12 @@
 #define TMC_DISABLED                    0  // Must be zero.
 #define TMC_STANDSTILL_COMMAND          bit(0)
 #define TMC_ACTIVE_COMMAND              bit(1)
-#define TMC_SPI_GO_COMMAND              bit(2)
+#define TMC_SPI_READ_ALL_COMMAND        bit(2)
 #define TMC_SPI_PROCESS_COMMAND         bit(3)
+#define TMC_SPI_READ_SG_X_COMMAND       bit(4)
+#define TMC_SPI_READ_SG_Y_COMMAND       bit(5)
+#define TMC_SPI_READ_SG_Z_COMMAND       bit(6)
+
 
 
 

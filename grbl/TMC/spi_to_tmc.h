@@ -9,9 +9,13 @@
 #include "TMC2590.h"
 
 
-#define SPI_TIMER_CYCLE_PER_READ 0x26   /* 2.496ms with prescaler 1024*/
-//#define SPI_TIMER_CYCLE_PER_READ 0xF   /* 1.024ms with prescaler 1024*/
+//#define SPI_TIMER_CYCLE_PER_READ 0x26   /* 2.496ms with prescaler 1024*/
+//#define SPI_TIMER_CYCLE_PER_READ 0xF    /* 1.024ms with prescaler 1024*/
 //#define SPI_TIMER_CYCLE_PER_READ 0x5D   /* 6.016ms with prescaler 1024*/
+#define SPI_TIMER_CYCLE_PER_READ 0xFF   /* 16.384ms with prescaler 1024*/
+#define SPI_READ_OCR_PERIOD_US ((1+SPI_TIMER_CYCLE_PER_READ)<<6) /* SPI timer period, typically 16384us with prescaler 1024*/
+#define SPI_READ_ALL_PERIOD_MS 1000     /* how ofter SPI engine should read all valus from each controller, typically 1s */
+
 
 /* SPI_TX_BUFFER holds the outgoing SPI commands, worst case - required for single motors - in that case number initial SPI transactions
  * could be 5x5+5x5 = 50. In dual motor case it is 5x3 + 5x3 = max 30 transactions*/

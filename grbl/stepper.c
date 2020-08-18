@@ -98,6 +98,7 @@ typedef struct {
   uint32_t counter_x,        // Counter variables for the bresenham line tracer
            counter_y,
            counter_z;
+  uint8_t  step_counter[N_AXIS];        // Counter variables for firing SG read. TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled
   #ifdef STEP_PULSE_DELAY
     #ifdef DEFAULTS_RAMPS_BOARD
       uint8_t step_bits[N_AXIS];  // Stores out_bits output to complete the step pulse delay
@@ -499,6 +500,10 @@ ISR(TIMER1_COMPA_vect)
       st.counter_x -= st.exec_block->step_event_count;
       if (st.exec_block->direction_bits & (1<<X_DIRECTION_BIT)) { sys_position[X_AXIS]--; }
       else { sys_position[X_AXIS]++; }
+      /* fire SG read every SG_READ_STEP_COUNT steps */
+      if (  st.step_counter[X_AXIS]++ == SG_READ_STEP_COUNT)              {
+            st.step_counter[X_AXIS] = 0;
+            system_set_exec_tmc_command_flag(TMC_SPI_READ_SG_X_COMMAND);  }
     }
   #endif // Ramps Board
 
@@ -520,6 +525,10 @@ ISR(TIMER1_COMPA_vect)
       st.counter_y -= st.exec_block->step_event_count;
       if (st.exec_block->direction_bits & (1<<Y_DIRECTION_BIT)) { sys_position[Y_AXIS]--; }
       else { sys_position[Y_AXIS]++; }
+      /* fire SG read every SG_READ_STEP_COUNT steps */
+      if (  st.step_counter[Y_AXIS]++ == SG_READ_STEP_COUNT)            {
+            st.step_counter[Y_AXIS] = 0;
+            system_set_exec_tmc_command_flag(TMC_SPI_READ_SG_Y_COMMAND);}          
     }
   #endif // Ramps Board
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
@@ -540,6 +549,10 @@ ISR(TIMER1_COMPA_vect)
       st.counter_z -= st.exec_block->step_event_count;
       if (st.exec_block->direction_bits & (1<<Z_DIRECTION_BIT)) { sys_position[Z_AXIS]--; }
       else { sys_position[Z_AXIS]++; }
+      /* fire SG read every SG_READ_STEP_COUNT steps */
+      if (  st.step_counter[Z_AXIS]++ == SG_READ_STEP_COUNT)            {
+            st.step_counter[Z_AXIS] = 0;
+            system_set_exec_tmc_command_flag(TMC_SPI_READ_SG_Z_COMMAND);}
     }
   #endif // Ramps Board
 
@@ -715,6 +728,8 @@ void stepper_init()
   #ifdef STEP_PULSE_DELAY
     TIMSK0 |= (1<<OCIE0A); // Enable Timer0 Compare Match A interrupt
   #endif
+  
+  memset(st.step_counter, 0, N_AXIS); /* initialise step counters used to fire SG readings */
 }
 
 

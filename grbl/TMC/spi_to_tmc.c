@@ -163,39 +163,42 @@ void spi_schedule_dual_tx(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, 
 }
 
 void spi_process_tx_queue(void){
-    /* if something is waiting then send it */
-    if ( (m_spi_tx_index != m_spi_tx_insert_index) && ( spi_busy == false ) ){
-        spi_busy = true; /*prevent reentry while transaction is active*/
+    if ( spi_busy == false ){
+        /* if something is waiting then send it */
+        if (m_spi_tx_index != m_spi_tx_insert_index){
+            spi_busy = true; /*prevent reentry while transaction is active*/
         
-        /* keep log of next element - is it 3 or 5 bytes (single or dual motors) */
-        current_transfer_type = m_spi_tx_buffer[m_spi_tx_index].buf_size; //TX_BUF_SIZE_DUAL) { //or TX_BUF_SIZE_SINGLE
+            /* keep log of next element - is it 3 or 5 bytes (single or dual motors) */
+            current_transfer_type = m_spi_tx_buffer[m_spi_tx_index].buf_size; //TX_BUF_SIZE_DUAL) { //or TX_BUF_SIZE_SINGLE
         
-        /* start state 1 of the transfer: pull SSx low	write byte_x1 to the SPDR */        
-        SPI_current_state = SPI_STATE_1;
+            /* start state 1 of the transfer: pull SSx low	write byte_x1 to the SPDR */        
+            SPI_current_state = SPI_STATE_1;
         
-        /* pull CS pin down */
-        tmc_pin_write(0, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->channel);
+            /* pull CS pin down */
+            tmc_pin_write(0, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->channel);
 
-        /* initiate transfer by writing first byte to the data register */
-        SPDR = m_spi_tx_buffer[m_spi_tx_index].m_spi_tx_buf[0];
+            /* initiate transfer by writing first byte to the data register */
+            SPDR = m_spi_tx_buffer[m_spi_tx_index].m_spi_tx_buf[0];
          
-        /* next step will be handled by interrupt handler ISR_SPI_STC_vect */
+            /* next step will be handled by interrupt handler ISR_SPI_STC_vect */
         
-    } //if (m_spi_tx_index != m_spi_tx_insert_index){
-    else if (m_spi_tx_index == m_spi_tx_insert_index){
-        /*nothing else left in a queue, release busy flag */
-        spi_busy = false;
-        SPI_current_state = SPI_STATE_IDLE;
+        } //if (m_spi_tx_index != m_spi_tx_insert_index){
+        else {
+            /*nothing else left in a queue, release busy flag */
+            //spi_busy = false;
+            //SPI_current_state = SPI_STATE_IDLE;
         
-        /* indicate to TMC2590 loops that reading is completed (required for homing cycle) */
-        tmc_spi_queue_drain_complete();
+            /* indicate to TMC2590 loops that reading is completed (required for homing cycle) */
+            tmc_spi_queue_drain_complete();
         
-        /* indicate to main loop to process all responses and update the current status of controller's parameters */
-        system_set_exec_tmc_command_flag(TMC_SPI_PROCESS_COMMAND);
-    }
+            /* indicate to main loop to process all responses and update the current status of controller's parameters */
+            system_set_exec_tmc_command_flag(TMC_SPI_PROCESS_COMMAND);
+        }
+        
+    } //if ( spi_busy == false ){        
     else{
-        printPgmString(PSTR("\n--- SPI process BUSY ---\n"));
-    }    
+        //printPgmString(PSTR("\n--- SPI process BUSY ---\n"));
+    } //else if ( spi_busy == false ){           
 }
 
 
@@ -363,21 +366,24 @@ ISR(TIMER2_COMPA_vect)
 debug_pin_write(1, DEBUG_0_PIN);
 #endif
     
-	///* slow down polling the drivers, 1 is 2ms , 500 is around 1s */
-    //static uint8_t skip_count;
-    //if (++skip_count % 3 != 0)  { /* set SPI poll interval to 6ms */
-        //#ifdef DEBUG_PINS_ENABLED
-        //debug_pin_write(0, DEBUG_0_PIN);
-        //#endif        
-        //return;}
-    //skip_count = 0;
+	/* slow down polling the drivers, 1 is 16ms , 61 is around 1s */
+    static uint8_t skip_count;
+    
+    if (++skip_count % ((SPI_READ_ALL_PERIOD_MS*1000UL)/SPI_READ_OCR_PERIOD_US) != 0)  { /* set SPI poll interval to 1s */
+        #ifdef DEBUG_PINS_ENABLED
+        debug_pin_write(0, DEBUG_0_PIN);
+        #endif        
+        return;}
+    skip_count = 0;
 
+    /* schedule next SPI transfer: indicate to main loop that there is a time to prepare SPI buffer and send it */
+    system_set_exec_tmc_command_flag(TMC_SPI_READ_ALL_COMMAND);
 
     /* if for some reason the SPI was not released (HW glitch or comms loss) wait for 30 timer cycles and reset the busy flag */
     static uint8_t busy_reset_count = 0;
     if ( (spi_busy) && ( busy_reset_count < 30 ) ){
         busy_reset_count++;
-        if ( busy_reset_count > 2 ) printPgmString(PSTR("\n!!! SPI BUSY !!!\n")); /* more than 3 us */
+        if ( busy_reset_count > 1 ) printPgmString(PSTR("\n!!! SPI BUSY !!!\n")); /* spi is busy for more than 5 us */
         return;
     }
 
@@ -385,12 +391,6 @@ debug_pin_write(1, DEBUG_0_PIN);
     SPI_current_state 		= SPI_STATE_IDLE;
     busy_reset_count = 0;
     
-    /* check for pending tx buffers and flush them 
-     * otherwise collect data from all 5 motors
-     * best way to do it is to add 3 write requests to the end of the queue    */    
-    
-    /* schedule next SPI transfer: indicate to main loop that there is a time to prepare SPI buffer and send it */
-    system_set_exec_tmc_command_flag(TMC_SPI_GO_COMMAND);
     
 #ifdef DEBUG_PINS_ENABLED
     debug_pin_write(0, DEBUG_0_PIN);
