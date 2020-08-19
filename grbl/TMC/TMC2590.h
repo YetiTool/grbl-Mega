@@ -21,6 +21,12 @@
 
 #define SG_READ_STEP_COUNT 32 // TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled. UART reads could halt the readings up to 6ms, so many unfiltered samples could be missed at high speed. So for now read filtered SG twice per change.
 
+// Stepper ISR data struct. Contains the running data for the main stepper ISR.
+typedef struct {
+    uint32_t SG_period_us[N_AXIS];        // variables to hold the shaft rotational speed at the time when SG read was fired.
+} stepper_tmc_t;
+
+
 typedef struct {
 	uint16_t mStepCurrenValue;
 	uint8_t coolStepCurrenValue;

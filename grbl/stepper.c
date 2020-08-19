@@ -21,6 +21,7 @@
 
 #include "grbl.h"
 
+extern stepper_tmc_t st_tmc; // structure to hold the shaft rotational speed at the time when SG read was fired.
 
 // Some useful constants.
 #define DT_SEGMENT (1.0/(ACCELERATION_TICKS_PER_SECOND*60.0)) // min/segment
@@ -308,6 +309,32 @@ void st_go_idle()
 }
 
 
+/* Function st_tmc_fire_SG_read is the main interface between the stepper and the TMC hadware. 
+   It lets main loop know when it is time to read the SG value and also keeps track of current speed 
+   of each motor so this information could be used to apply all necessary corrections to the SG readings and analysis */
+void st_tmc_fire_SG_read(uint8_t axis, uint8_t command){ 
+    
+    if (  st.step_counter[axis]++ == SG_READ_STEP_COUNT) {
+        /* log the instantaneous rotational speed coming with this SG read, store it as a SG_period_us. Examples:
+         * Y motor - mm/min - SG_period_us - rpm 
+         * 10000 - 6800   - 177
+         * 3000  - 22600  - 53.1
+         * 500   - 135500 - 8.85
+         */
+        /* calculate SG_period_us within 32 bit */        
+        uint32_t steps = st.exec_block->steps[axis]>>8;
+        steps = steps ? steps : 1; /* catch divide by zero - for very low speeds */
+        uint32_t ratio = st.exec_block->step_event_count / steps;
+        uint32_t cycles_per_step = (st.exec_segment->cycles_per_tick * ratio)>>8;
+        st_tmc.SG_period_us[axis] = (1 + ( cycles_per_step << st.exec_segment->amass_level ) ) << 2;
+        st.step_counter[axis] = 0;
+        system_set_exec_tmc_command_flag(command);  
+    }
+
+}
+
+
+
 /* "The Stepper Driver Interrupt" - This timer interrupt is the workhorse of Grbl. Grbl employs
    the venerable Bresenham line algorithm to manage and exactly synchronize multi-axis moves.
    Unlike the popular DDA algorithm, the Bresenham algorithm is not susceptible to numerical
@@ -500,10 +527,7 @@ ISR(TIMER1_COMPA_vect)
       st.counter_x -= st.exec_block->step_event_count;
       if (st.exec_block->direction_bits & (1<<X_DIRECTION_BIT)) { sys_position[X_AXIS]--; }
       else { sys_position[X_AXIS]++; }
-      /* fire SG read every SG_READ_STEP_COUNT steps */
-      if (  st.step_counter[X_AXIS]++ == SG_READ_STEP_COUNT)              {
-            st.step_counter[X_AXIS] = 0;
-            system_set_exec_tmc_command_flag(TMC_SPI_READ_SG_X_COMMAND);  }
+      st_tmc_fire_SG_read(X_AXIS, TMC_SPI_READ_SG_X_COMMAND); /* fire SG read every SG_READ_STEP_COUNT steps */
     }
   #endif // Ramps Board
 
@@ -525,10 +549,7 @@ ISR(TIMER1_COMPA_vect)
       st.counter_y -= st.exec_block->step_event_count;
       if (st.exec_block->direction_bits & (1<<Y_DIRECTION_BIT)) { sys_position[Y_AXIS]--; }
       else { sys_position[Y_AXIS]++; }
-      /* fire SG read every SG_READ_STEP_COUNT steps */
-      if (  st.step_counter[Y_AXIS]++ == SG_READ_STEP_COUNT)            {
-            st.step_counter[Y_AXIS] = 0;
-            system_set_exec_tmc_command_flag(TMC_SPI_READ_SG_Y_COMMAND);}          
+      st_tmc_fire_SG_read(Y_AXIS, TMC_SPI_READ_SG_Y_COMMAND); /* fire SG read every SG_READ_STEP_COUNT steps */   
     }
   #endif // Ramps Board
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
@@ -549,10 +570,7 @@ ISR(TIMER1_COMPA_vect)
       st.counter_z -= st.exec_block->step_event_count;
       if (st.exec_block->direction_bits & (1<<Z_DIRECTION_BIT)) { sys_position[Z_AXIS]--; }
       else { sys_position[Z_AXIS]++; }
-      /* fire SG read every SG_READ_STEP_COUNT steps */
-      if (  st.step_counter[Z_AXIS]++ == SG_READ_STEP_COUNT)            {
-            st.step_counter[Z_AXIS] = 0;
-            system_set_exec_tmc_command_flag(TMC_SPI_READ_SG_Z_COMMAND);}
+      st_tmc_fire_SG_read(Z_AXIS, TMC_SPI_READ_SG_Z_COMMAND); /* fire SG read every SG_READ_STEP_COUNT steps */   
     }
   #endif // Ramps Board
 
@@ -1224,9 +1242,4 @@ float st_get_realtime_rate()
     return prep.current_speed;
   }
   return 0.0f;
-}
-
-/* get pointer to steps structure */
- uint32_t * get_p_steps(void){
-   return st.steps; /* return first controller in case of a wrong parameter supplied */
 }
