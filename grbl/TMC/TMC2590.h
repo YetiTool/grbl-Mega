@@ -28,10 +28,10 @@ typedef struct {
 
 
 typedef struct {
-	uint16_t mStepCurrenValue;
-	uint8_t coolStepCurrenValue;
+	uint16_t mStepCurrentValue;
+	uint8_t coolStepCurrentValue;
 	uint8_t stallGuardShortValue;
-	uint16_t stallGuardCurrenValue;
+	uint16_t stallGuardCurrentValue;
 	uint16_t stallGuardMinValue;
 	uint16_t StatusBits;
 	uint16_t DiagnosticBits;

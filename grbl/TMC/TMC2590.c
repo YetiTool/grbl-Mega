@@ -421,13 +421,13 @@ void tmc_trigger_stall_alarm(uint8_t axis){
 
 void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
     /* TMC2590_RESPONSE0 #define TMC2590_GET_MSTEP(X)  (0x3FF & ((X) >> 10)) */     
-    tmc2590->resp.mStepCurrenValue = TMC2590_GET_MSTEP(tmc2590->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
-    tmc2590->resp.stallGuardCurrenValue = TMC2590_GET_SG(tmc2590->config->shadowRegister[TMC2590_RESPONSE1]);
+    tmc2590->resp.mStepCurrentValue = TMC2590_GET_MSTEP(tmc2590->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
+    tmc2590->resp.stallGuardCurrentValue = TMC2590_GET_SG(tmc2590->config->shadowRegister[TMC2590_RESPONSE1]);
 
 
     if (!stall_alarm_enabled){
-        if (tmc2590->resp.stallGuardCurrenValue < tmc2590->resp.stallGuardMinValue) {
-        tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrenValue;}        
+        if (tmc2590->resp.stallGuardCurrentValue < tmc2590->resp.stallGuardMinValue) {
+        tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrentValue;}        
     }
     else{
         //float realtime_rate = st_get_realtime_rate();
@@ -442,9 +442,9 @@ void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
             }            
             else{ /* start reading SG if rotational speed is sufficiently high */                       
                 if ( st_tmc.SG_period_us[tmc2590->thisAxis] < max_step_period_us_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
-                    if (tmc2590->resp.stallGuardCurrenValue < tmc2590->resp.stallGuardMinValue) {
-                    tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrenValue;}
-                    if (tmc2590->resp.stallGuardCurrenValue    < tmc2590->stallGuardAlarmValue) {
+                    if (tmc2590->resp.stallGuardCurrentValue < tmc2590->resp.stallGuardMinValue) {
+                    tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrentValue;}
+                    if (tmc2590->resp.stallGuardCurrentValue    < tmc2590->stallGuardAlarmValue) {
                         /* trigger alarm */
                         //printPgmString(PSTR("\n!!! SG ALARM !!!\n"));
                         printInteger( tmc2590->thisMotor);
@@ -467,7 +467,7 @@ void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
 
     /* TMC2590_RESPONSE2 #define TMC2590_GET_SGU(X)    (0x1F & ((X) >> 15)) #define TMC2590_GET_SE(X)     (0x1F & ((X) >> 10))    */
     tmc2590->resp.stallGuardShortValue= TMC2590_GET_SGU(tmc2590->config->shadowRegister[TMC2590_RESPONSE2]);  
-    tmc2590->resp.coolStepCurrenValue= TMC2590_GET_SE(tmc2590->config->shadowRegister[TMC2590_RESPONSE2]);      
+    tmc2590->resp.coolStepCurrentValue= TMC2590_GET_SE(tmc2590->config->shadowRegister[TMC2590_RESPONSE2]);      
 
     /* TMC2590_RESPONSE3 status and diagnostic */
     tmc2590->resp.StatusBits = tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFF;   
@@ -476,16 +476,16 @@ void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
 
 void process_status_of_dual_controller(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2){
     /* TMC2590_RESPONSE0 #define TMC2590_GET_MSTEP(X)  (0x3FF & ((X) >> 10)) */     
-    tmc2590_1->resp.mStepCurrenValue = TMC2590_GET_MSTEP(tmc2590_1->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
-    tmc2590_2->resp.mStepCurrenValue = TMC2590_GET_MSTEP(tmc2590_2->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
+    tmc2590_1->resp.mStepCurrentValue = TMC2590_GET_MSTEP(tmc2590_1->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
+    tmc2590_2->resp.mStepCurrentValue = TMC2590_GET_MSTEP(tmc2590_2->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
     
     /* TMC2590_RESPONSE1 #define TMC2590_GET_SG(X)     (0x3FF & ((X) >> 10)) */
-    tmc2590_1->resp.stallGuardCurrenValue = TMC2590_GET_SG(tmc2590_1->config->shadowRegister[TMC2590_RESPONSE1]);  
-    tmc2590_2->resp.stallGuardCurrenValue = TMC2590_GET_SG(tmc2590_2->config->shadowRegister[TMC2590_RESPONSE1]);  
+    tmc2590_1->resp.stallGuardCurrentValue = TMC2590_GET_SG(tmc2590_1->config->shadowRegister[TMC2590_RESPONSE1]);  
+    tmc2590_2->resp.stallGuardCurrentValue = TMC2590_GET_SG(tmc2590_2->config->shadowRegister[TMC2590_RESPONSE1]);  
 
     if (!stall_alarm_enabled){
-        if (tmc2590_1->resp.stallGuardCurrenValue < tmc2590_1->resp.stallGuardMinValue) tmc2590_1->resp.stallGuardMinValue = tmc2590_1->resp.stallGuardCurrenValue;
-        if (tmc2590_2->resp.stallGuardCurrenValue < tmc2590_2->resp.stallGuardMinValue) tmc2590_2->resp.stallGuardMinValue = tmc2590_2->resp.stallGuardCurrenValue;        
+        if (tmc2590_1->resp.stallGuardCurrentValue < tmc2590_1->resp.stallGuardMinValue) tmc2590_1->resp.stallGuardMinValue = tmc2590_1->resp.stallGuardCurrentValue;
+        if (tmc2590_2->resp.stallGuardCurrentValue < tmc2590_2->resp.stallGuardMinValue) tmc2590_2->resp.stallGuardMinValue = tmc2590_2->resp.stallGuardCurrentValue;        
     }
     else {
 
@@ -499,9 +499,9 @@ void process_status_of_dual_controller(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef
             if ( skip_counter_SG_in_SPI_cycles == 0 ) {            
             
                 if ( st_tmc.SG_period_us[tmc2590_1->thisAxis] < max_step_period_us_to_read_SG[tmc2590_1->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
-                    if (tmc2590_1->resp.stallGuardCurrenValue < tmc2590_1->resp.stallGuardMinValue) {
-                    tmc2590_1->resp.stallGuardMinValue    = tmc2590_1->resp.stallGuardCurrenValue;}
-                    if (tmc2590_1->resp.stallGuardCurrenValue    < tmc2590_1->stallGuardAlarmValue) {
+                    if (tmc2590_1->resp.stallGuardCurrentValue < tmc2590_1->resp.stallGuardMinValue) {
+                    tmc2590_1->resp.stallGuardMinValue    = tmc2590_1->resp.stallGuardCurrentValue;}
+                    if (tmc2590_1->resp.stallGuardCurrentValue    < tmc2590_1->stallGuardAlarmValue) {
                         /* trigger alarm */
                         //printPgmString(PSTR("\n!!! SG ALARM !!!\n"));
                         printInteger( tmc2590_1->thisMotor);
@@ -517,9 +517,9 @@ void process_status_of_dual_controller(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef
             
 
                 if ( st_tmc.SG_period_us[tmc2590_2->thisAxis] < max_step_period_us_to_read_SG[tmc2590_2->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
-                    if (tmc2590_2->resp.stallGuardCurrenValue  < tmc2590_2->resp.stallGuardMinValue) {
-                        tmc2590_2->resp.stallGuardMinValue     = tmc2590_2->resp.stallGuardCurrenValue;}
-                    if (tmc2590_2->resp.stallGuardCurrenValue     < tmc2590_2->stallGuardAlarmValue) {
+                    if (tmc2590_2->resp.stallGuardCurrentValue  < tmc2590_2->resp.stallGuardMinValue) {
+                        tmc2590_2->resp.stallGuardMinValue     = tmc2590_2->resp.stallGuardCurrentValue;}
+                    if (tmc2590_2->resp.stallGuardCurrentValue     < tmc2590_2->stallGuardAlarmValue) {
                         //printPgmString(PSTR("\n!!! SG ALARM !!!\n"));
                         printInteger( tmc2590_2->thisMotor);
                         printPgmString(PSTR("--"));
@@ -540,9 +540,9 @@ void process_status_of_dual_controller(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef
 
     /* TMC2590_RESPONSE2 #define TMC2590_GET_SGU(X)    (0x1F & ((X) >> 15)) #define TMC2590_GET_SE(X)     (0x1F & ((X) >> 10))    */
     tmc2590_1->resp.stallGuardShortValue= TMC2590_GET_SGU(tmc2590_1->config->shadowRegister[TMC2590_RESPONSE2]);  
-    tmc2590_1->resp.coolStepCurrenValue= TMC2590_GET_SE(tmc2590_1->config->shadowRegister[TMC2590_RESPONSE2]);      
+    tmc2590_1->resp.coolStepCurrentValue= TMC2590_GET_SE(tmc2590_1->config->shadowRegister[TMC2590_RESPONSE2]);      
     tmc2590_2->resp.stallGuardShortValue= TMC2590_GET_SGU(tmc2590_2->config->shadowRegister[TMC2590_RESPONSE2]);  
-    tmc2590_2->resp.coolStepCurrenValue= TMC2590_GET_SE(tmc2590_2->config->shadowRegister[TMC2590_RESPONSE2]);      
+    tmc2590_2->resp.coolStepCurrentValue= TMC2590_GET_SE(tmc2590_2->config->shadowRegister[TMC2590_RESPONSE2]);      
 
     /* TMC2590_RESPONSE3 status and diagnostic */
     tmc2590_1->resp.StatusBits = tmc2590_1->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFF;   
