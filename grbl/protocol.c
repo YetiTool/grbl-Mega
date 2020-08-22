@@ -502,6 +502,8 @@ void protocol_exec_rt_system()
     /* process RTL commands arrived in the serial buffer */
     if (rt_exec & RTL_TMC_COMMAND) {
         execute_TMC_command();
+        /* start SPI transfers flushing the queue */
+        spi_process_tx_queue();
     }
     
   } //if rt_exec = sys_rt_exec_rtl_command;
