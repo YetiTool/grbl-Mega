@@ -304,7 +304,7 @@ void st_go_idle()
   #else
     //if (pin_state) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
     //else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
-    system_set_exec_tmc_command_flag(TMC_STANDSTILL_COMMAND);
+    //system_set_exec_tmc_command_flag(TMC_STANDSTILL_COMMAND);
   #endif // Ramps Board
 }
 

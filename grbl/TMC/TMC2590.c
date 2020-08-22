@@ -472,6 +472,27 @@ void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
     /* TMC2590_RESPONSE3 status and diagnostic */
     tmc2590->resp.StatusBits = tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFF;   
     tmc2590->resp.DiagnosticBits = (tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFFC00) >> 10 ;      
+    
+    /* check for all motors standstill state and request if not already applied 
+     * idle flag is triggered in TMC after 2**20 cycles of inactivity, i.e. 65.5ms with 16MHz XTAL
+     * on top of that whatever delay is applied due to regular data poll (currently every second) */    
+    if (current_scale_state != CURRENT_SCALE_STANDSTILL){ /* check only if not already standstill */
+        if ((sys.state == STATE_IDLE) || (sys.state & STATE_SLEEP)){ /* check only if system is in idle state */
+            uint8_t controller_id;
+            TMC2590TypeDef *tmc2590_standstill;
+            uint8_t all_motors_standstill = 0;
+            /* check idle state of each TMC controller and sum them up */
+            for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+                tmc2590_standstill = get_TMC_controller(controller_id);
+                all_motors_standstill += ( ( tmc2590_standstill->resp.StatusBits >> 7 ) & 1 ); /* Status bit_7 STST - Idle: */
+            }            
+            /* if all motors are idle apply current reduction */
+            if (all_motors_standstill == TOTAL_TMCS)
+            {
+                system_set_exec_tmc_command_flag(TMC_STANDSTILL_COMMAND);
+            }
+        } //if (sys.state & (STATE_IDLE | STATE_SLEEP)){
+    } // if (current_scale_state != CURRENT_SCALE_STANDSTILL){
 }
 
 void process_status_of_dual_controller(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2){
