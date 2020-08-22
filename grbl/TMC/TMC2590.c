@@ -96,6 +96,19 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
     value &= ~TMC2590_SET_ENS2VS(-1);                                   /* clear bit */
     value |= TMC2590_SET_ENS2VS(tmc2590->EnableProtection);             /* 0: Enable detection for normal use (1). Explicitly enable short to VS and overcurrent protection by setting this bit..*/
 
+	value &= ~TMC2590_SET_SLPL(-1);                                     /* clear bit */
+	value |= TMC2590_SET_SLPL(tmc2590->slopeCtrlLow);
+	/* hadle MSB */
+	value &= ~TMC2590_SET_SLP2(-1);                                     /* clear bit */
+	value |= TMC2590_SET_SLP2((tmc2590->slopeCtrlLow)>>2);
+                
+	value &= ~TMC2590_SET_SLPH(-1);                                     /* clear bit */
+	value |= TMC2590_SET_SLPH(tmc2590->slopeCtrlHigh);
+	/* handle MSB */
+	value &= ~TMC2590_SET_SLP2(-1);                                     /* clear bit */
+	value |= TMC2590_SET_SLP2((tmc2590->slopeCtrlHigh)>>2);
+
+
     tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
     
     
@@ -651,6 +664,10 @@ void init_TMC(void){
     tmc2590_X1.chopperMode                  = 0; // Chopper mode. This mode bit affects the interpretation of the HDEC, HEND, and HSTRT parameters shown below. 0 Standard mode (SpreadCycle)    
     tmc2590_X1.chopperBlankTime             = 2; // Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54
 	tmc2590_X1.standStillCurrentScale       = 15; // 15: set 1/2 of full scale, 1/4th of power
+    tmc2590_X1.slopeCtrlHigh                = 3;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    tmc2590_X1.slopeCtrlLow                 = 3;  // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+
+
 
     /* control protection */
     tmc2590_X1.overcurrentSense             = 0; //0/1 0: Low sensitivity 1: High sensitivity. The high-side overcurrent detector can be set to a higher sensitivity by setting this flag. This will allow detection of wrong cabling even with higher resistive motors.
@@ -691,21 +708,37 @@ void init_TMC(void){
 	tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
     
     /* ZH motor */
-	//tmc2590_X2.stallGuardThreshold          = 7;
-	//tmc2590_X2.stallGuardAlarmValue         = 400; 
-	//tmc2590_X2.currentScale                 = 29; /* 0 - 31 where 31 is max */
+	tmc2590_X2.stallGuardThreshold          = 7;
+	tmc2590_X2.stallGuardAlarmValue         = 400; 
+	tmc2590_X2.currentScale                 = 31; /* 0 - 31 where 31 is max */
     /* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400  at 3000mm/min on X with 177steps/mm*/
-    tmc2590_X2.stallGuardThreshold           = 15;
-    tmc2590_X2.stallGuardAlarmValue          = 600;
-    tmc2590_X2.currentScale                  = 5; /* 0 - 31 where 31 is max, 0.25A */
-    tmc2590_X2.standStillCurrentScale        = 2; //  2: set 1/2 of full scale, 1/4th of power
+    //tmc2590_X2.stallGuardThreshold           = 15;
+    //tmc2590_X2.stallGuardAlarmValue          = 600;
+    //tmc2590_X2.currentScale                  = 5; /* 0 - 31 where 31 is max, 0.25A */
+    //tmc2590_X2.standStillCurrentScale        = 2; //  2: set 1/2 of full scale, 1/4th of power
     
-    tmc2590_Y1.stallGuardThreshold          = 4;
+    tmc2590_Y1.stallGuardThreshold          = 3;
 	tmc2590_Y1.stallGuardAlarmValue         = 300; 
 	tmc2590_Y1.currentScale                 = 31; /* 0 - 31 where 31 is max */
-    tmc2590_Y2.stallGuardThreshold          = 4;
+    tmc2590_Y1.SlowDecayDuration            = 4;
+    tmc2590_Y1.HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
+    tmc2590_Y1.HystEnd                      = 5; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+    tmc2590_Y1.HystDectrement               = 2; /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */    
+    tmc2590_Y1.slopeCtrlLow                 = 3;  // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    tmc2590_Y1.slopeCtrlHigh                = 3;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    
+    
+    tmc2590_Y2.stallGuardThreshold          = 3;
 	tmc2590_Y2.stallGuardAlarmValue         = 300; 
 	tmc2590_Y2.currentScale                 = 31; /* 0 - 31 where 31 is max */
+    tmc2590_Y2.SlowDecayDuration            = 4;
+    tmc2590_Y2.HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
+    tmc2590_Y2.HystEnd                      = 5; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+    tmc2590_Y2.HystDectrement               = 2; /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
+    tmc2590_Y2.slopeCtrlLow                 = 3;  // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    tmc2590_Y2.slopeCtrlHigh                = 3;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    
+    
     /* ZH motor */
     //tmc2590_Z.stallGuardThreshold           = 7;
     //tmc2590_Z.stallGuardAlarmValue          = 300;
