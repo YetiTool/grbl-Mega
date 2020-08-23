@@ -99,7 +99,6 @@ typedef struct {
   uint32_t counter_x,        // Counter variables for the bresenham line tracer
            counter_y,
            counter_z;
-  uint8_t  step_counter[N_AXIS];        // Counter variables for firing SG read. TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled
   #ifdef STEP_PULSE_DELAY
     #ifdef DEFAULTS_RAMPS_BOARD
       uint8_t step_bits[N_AXIS];  // Stores out_bits output to complete the step pulse delay
@@ -314,12 +313,19 @@ void st_go_idle()
    of each motor so this information could be used to apply all necessary corrections to the SG readings and analysis */
 void st_tmc_fire_SG_read(uint8_t axis, uint8_t command){ 
     
-    if (  st.step_counter[axis]++ == SG_READ_STEP_COUNT) {
-        /* log the instantaneous rotational speed coming with this SG read, store it as a SG_period_us. Examples:
+    if (  st_tmc.step_counter[axis]++ >= SG_READ_STEP_COUNT) {
+        /* log the instantaneous rotational speed that was effective during this SG read, store it as a SG_period_us. 
+         * SG_period_us = Pulse duration * 64      - TMC with SG averaging reports SG every 4 full steps which is 64 microsteps (16 x 4)
+         * where:
+         * Pulse duration in us = ( 1 + number of timer cycles per step pulse ) / 16Mhz
+         * number of timer cycles per step pulse =  number of ticks per step pulse * cycles_per_tick
+         * number of ticks per step pulse = st.exec_block->step_event_count / st.steps[_AXIS]
+         * 
+         * Examples:
          * Y motor - mm/min - SG_period_us - rpm 
-         * 10000 - 6800   - 177
-         * 3000  - 22600  - 53.1
-         * 500   - 135500 - 8.85
+         *           10000  - 6800         - 177
+         *           3000   - 22600        - 53.1
+         *           500    - 135500       - 8.85
          */
         /* calculate SG_period_us within 32 bit */        
         uint32_t steps = st.exec_block->steps[axis]>>8;
@@ -327,7 +333,7 @@ void st_tmc_fire_SG_read(uint8_t axis, uint8_t command){
         uint32_t ratio = st.exec_block->step_event_count / steps;
         uint32_t cycles_per_step = (st.exec_segment->cycles_per_tick * ratio)>>8;
         st_tmc.SG_period_us[axis] = (1 + ( cycles_per_step << st.exec_segment->amass_level ) ) << 2;
-        st.step_counter[axis] = 0;
+        st_tmc.step_counter[axis] = 0;
         system_set_exec_tmc_command_flag(command);  
     }
 
@@ -746,8 +752,6 @@ void stepper_init()
   #ifdef STEP_PULSE_DELAY
     TIMSK0 |= (1<<OCIE0A); // Enable Timer0 Compare Match A interrupt
   #endif
-  
-  memset(st.step_counter, 0, N_AXIS); /* initialise step counters used to fire SG readings */
 }
 
 

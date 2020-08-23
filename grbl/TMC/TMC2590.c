@@ -8,15 +8,27 @@
 #include "spi_to_tmc.h"
 #include <string.h>
 
+//#define RIGGY
+#ifdef RIGGY
+#define SG_MAX_VALID_PERIOD_X_US            120000    /* 10rpm (565mm/min feed). for riggy: X motor 17HS15-0404S - 100 rpm */
+#define SG_MAX_VALID_PERIOD_Y_US            120000    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+#define SG_MAX_VALID_PERIOD_Z_US            60000     /* 20rpm (60mm/min feed). Z motor 17HS19-2004S1 - 150rpm */
+#else
+#define SG_MAX_VALID_PERIOD_X_US            120000    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+#define SG_MAX_VALID_PERIOD_Y_US            120000    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+#define SG_MAX_VALID_PERIOD_Z_US            60000     /* 20rpm (60mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+#endif
+
+#define SG_READING_SKIPS_AFTER_SLOW_FEED    5         /* Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis */
 #define SG_READING_DELAY_AFTER_START_MS     500
 #define SG_HOMING_DELAY_AFTER_START_MS      300       /* need to be identified empirically, looking at realtime view of the SG values for different motors in different scenarios. Smaller motors -> longer delays */
 #define SPI_HOMING_Z_CYCLE_DURATION_US      (390+100) /*+100 for MSTEP read*/
 #define SPI_HOMING_XY_CYCLE_DURATION_US     (650+300) /*+300 for MSTEP read*/
 #define SPI_HOMING_CYCLE_DURATION_US        1000
 
-//const uint32_t max_step_period_us_to_read_SG[] = { 67700, 67700, 14400 }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 83rpm,   */
-const uint32_t max_step_period_us_to_read_SG[] = { 18000, 67700, 18000 }; /* for riggy: X motor 17HS15-0404S - rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 150rpm,   */
-stepper_tmc_t st_tmc; /* global holding stall guard counters and current speed */
+const uint32_t max_step_period_us_to_read_SG[] = { SG_MAX_VALID_PERIOD_X_US, SG_MAX_VALID_PERIOD_Y_US, SG_MAX_VALID_PERIOD_Z_US }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
+
+stepper_tmc_t st_tmc; /* global structure holding stall guard counters and current speed */
 
 #define DEFAULT_TMC_READ_SELECT             1 /* read of the SG is default state of the system */
 
@@ -432,18 +444,26 @@ void tmc_trigger_stall_alarm(uint8_t axis){
         
 }
 
-void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
+
+void process_controller_status(TMC2590TypeDef *tmc2590){
+    
     /* TMC2590_RESPONSE0 #define TMC2590_GET_MSTEP(X)  (0x3FF & ((X) >> 10)) */     
     tmc2590->resp.mStepCurrentValue = TMC2590_GET_MSTEP(tmc2590->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
     tmc2590->resp.stallGuardCurrentValue = TMC2590_GET_SG(tmc2590->config->shadowRegister[TMC2590_RESPONSE1]);
 
+    /* TMC2590_RESPONSE2 #define TMC2590_GET_SGU(X)    (0x1F & ((X) >> 15)) #define TMC2590_GET_SE(X)     (0x1F & ((X) >> 10))    */
+    tmc2590->resp.stallGuardShortValue= TMC2590_GET_SGU(tmc2590->config->shadowRegister[TMC2590_RESPONSE2]);
+    tmc2590->resp.coolStepCurrentValue= TMC2590_GET_SE(tmc2590->config->shadowRegister[TMC2590_RESPONSE2]);
+
+    /* TMC2590_RESPONSE3 status and diagnostic */
+    tmc2590->resp.StatusBits = tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFF;
+    tmc2590->resp.DiagnosticBits = (tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFFC00) >> 10 ;
 
     if (!stall_alarm_enabled){
         if (tmc2590->resp.stallGuardCurrentValue < tmc2590->resp.stallGuardMinValue) {
         tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrentValue;}        
     }
     else{
-        //float realtime_rate = st_get_realtime_rate();
     
         /* if motor is active update statistics and trigger alarm if needed */
         if ( current_scale_state == CURRENT_SCALE_ACTIVE ) {
@@ -454,38 +474,52 @@ void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
                 skip_counter_SG_in_SPI_cycles--;
             }            
             else{ /* start reading SG if rotational speed is sufficiently high */                       
+                /* feed speed validation. If feed was slow then SG_skips_counter gets reset, then decrement till reaches 0, only after that SG analysis for stall detection is allowed */
                 if ( st_tmc.SG_period_us[tmc2590->thisAxis] < max_step_period_us_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
-                    if (tmc2590->resp.stallGuardCurrentValue < tmc2590->resp.stallGuardMinValue) {
-                    tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrentValue;}
-                    if (tmc2590->resp.stallGuardCurrentValue    < tmc2590->stallGuardAlarmValue) {
-                        /* trigger alarm */
-                        //printPgmString(PSTR("\n!!! SG ALARM !!!\n"));
-                        printInteger( tmc2590->thisMotor);
-                        printPgmString(PSTR("--"));
-                        //printFloat_RateValue(realtime_rate);
-                        //printPgmString(PSTR("--"));
-                        printInteger( st_tmc.SG_period_us[tmc2590->thisAxis]);
-                        printPgmString(PSTR("--\n"));
-                        /* execute alarm */
-                        tmc_trigger_stall_alarm(tmc2590->thisAxis);
+                    /* feed is fast, increment SG_skips_counter until 0 then analyse SG for stall */
+                    if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] < SG_READING_SKIPS_AFTER_SLOW_FEED )
+                    {
+                        /* skip this time as slow feed was too recent and SG might be invalid */
+                        st_tmc.SG_skips_counter[tmc2590->thisAxis]++;
+                    }
+                    else 
+                    {
+                        /* feed rate is high enough and started more than SG_READING_SKIPS_AFTER_SLOW_FEED ago, lets analyse the stall */
+                        if (tmc2590->resp.stallGuardCurrentValue < tmc2590->resp.stallGuardMinValue) {
+                        tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrentValue;}
+                        if (tmc2590->resp.stallGuardCurrentValue    < tmc2590->stallGuardAlarmValue) {
+                            /* trigger alarm */
+                            tmc_trigger_stall_alarm(tmc2590->thisAxis);
+                            /* reset SG period to max as alarm will immediately stop the stepper and period will remain as it was at the point of trigger */
+                            st_tmc.SG_period_us[tmc2590->thisAxis] = 0xFFFFFFFF;
+                            printPgmString(PSTR("\nSG ALARM, motor "));
+                            printInteger( tmc2590->thisMotor);
+                            printPgmString(PSTR(", SG: "));
+                            printInteger( tmc2590->resp.stallGuardCurrentValue);
+                            printPgmString(PSTR("\n"));
+                        }
+   
                     }
                 
-                } // if ( p_stepper[tmc2590_1->thisAxis] > 85000 ) {  /* check stall only if feed is higher than 300mm/min */
+                } // ( st_tmc.SG_period_us[tmc2590->thisAxis] < max_step_period_us_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
+                else {
+                        /* feed is slow, reset SG_skips_counter */
+                        st_tmc.SG_skips_counter[tmc2590->thisAxis] = 0;
+                }
                 
             } //if ( skip_counter_SG_in_SPI_cycles > 0 ) {        
             
         } //if (current_scale_state == CURRENT_SCALE_ACTIVE){
             
     } //else if (stall_alarm_enabled){
-
-    /* TMC2590_RESPONSE2 #define TMC2590_GET_SGU(X)    (0x1F & ((X) >> 15)) #define TMC2590_GET_SE(X)     (0x1F & ((X) >> 10))    */
-    tmc2590->resp.stallGuardShortValue= TMC2590_GET_SGU(tmc2590->config->shadowRegister[TMC2590_RESPONSE2]);  
-    tmc2590->resp.coolStepCurrentValue= TMC2590_GET_SE(tmc2590->config->shadowRegister[TMC2590_RESPONSE2]);      
-
-    /* TMC2590_RESPONSE3 status and diagnostic */
-    tmc2590->resp.StatusBits = tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFF;   
-    tmc2590->resp.DiagnosticBits = (tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFFC00) >> 10 ;      
     
+}
+
+
+void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
+    
+    process_controller_status(tmc2590);
+
     /* check for all motors standstill state and request if not already applied 
      * idle flag is triggered in TMC after 2**20 cycles of inactivity, i.e. 65.5ms with 16MHz XTAL
      * on top of that whatever delay is applied due to regular data poll (currently every second) */    
@@ -509,80 +543,10 @@ void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
 }
 
 void process_status_of_dual_controller(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2){
-    /* TMC2590_RESPONSE0 #define TMC2590_GET_MSTEP(X)  (0x3FF & ((X) >> 10)) */     
-    tmc2590_1->resp.mStepCurrentValue = TMC2590_GET_MSTEP(tmc2590_1->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
-    tmc2590_2->resp.mStepCurrentValue = TMC2590_GET_MSTEP(tmc2590_2->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
     
-    /* TMC2590_RESPONSE1 #define TMC2590_GET_SG(X)     (0x3FF & ((X) >> 10)) */
-    tmc2590_1->resp.stallGuardCurrentValue = TMC2590_GET_SG(tmc2590_1->config->shadowRegister[TMC2590_RESPONSE1]);  
-    tmc2590_2->resp.stallGuardCurrentValue = TMC2590_GET_SG(tmc2590_2->config->shadowRegister[TMC2590_RESPONSE1]);  
-
-    if (!stall_alarm_enabled){
-        if (tmc2590_1->resp.stallGuardCurrentValue < tmc2590_1->resp.stallGuardMinValue) tmc2590_1->resp.stallGuardMinValue = tmc2590_1->resp.stallGuardCurrentValue;
-        if (tmc2590_2->resp.stallGuardCurrentValue < tmc2590_2->resp.stallGuardMinValue) tmc2590_2->resp.stallGuardMinValue = tmc2590_2->resp.stallGuardCurrentValue;        
-    }
-    else {
-
-        //float realtime_rate = st_get_realtime_rate();
-    
-        /* if motor is active update statistics and trigger alarm if needed */
-        if ( current_scale_state == CURRENT_SCALE_ACTIVE ){
-        
-            /* HOMING check: do not run measure SG 1s after cycle start - it might be invalid */
-            /* start reading SG 0.5s after start */
-            if ( skip_counter_SG_in_SPI_cycles == 0 ) {            
-            
-                if ( st_tmc.SG_period_us[tmc2590_1->thisAxis] < max_step_period_us_to_read_SG[tmc2590_1->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
-                    if (tmc2590_1->resp.stallGuardCurrentValue < tmc2590_1->resp.stallGuardMinValue) {
-                    tmc2590_1->resp.stallGuardMinValue    = tmc2590_1->resp.stallGuardCurrentValue;}
-                    if (tmc2590_1->resp.stallGuardCurrentValue    < tmc2590_1->stallGuardAlarmValue) {
-                        /* trigger alarm */
-                        //printPgmString(PSTR("\n!!! SG ALARM !!!\n"));
-                        printInteger( tmc2590_1->thisMotor);
-                        printPgmString(PSTR("--"));
-                        //printFloat_RateValue(realtime_rate);
-                        //printPgmString(PSTR("--"));
-                        printInteger( st_tmc.SG_period_us[tmc2590_1->thisAxis]);
-                        printPgmString(PSTR("--\n"));
-                        /* execute alarm */
-                        tmc_trigger_stall_alarm(tmc2590_1->thisAxis);
-                    }            
-                } // if ( p_stepper[tmc2590_1->thisAxis] > 85000 ) {  /* check stall only if feed is higher than 300mm/min */           
-            
-
-                if ( st_tmc.SG_period_us[tmc2590_2->thisAxis] < max_step_period_us_to_read_SG[tmc2590_2->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
-                    if (tmc2590_2->resp.stallGuardCurrentValue  < tmc2590_2->resp.stallGuardMinValue) {
-                        tmc2590_2->resp.stallGuardMinValue     = tmc2590_2->resp.stallGuardCurrentValue;}
-                    if (tmc2590_2->resp.stallGuardCurrentValue     < tmc2590_2->stallGuardAlarmValue) {
-                        //printPgmString(PSTR("\n!!! SG ALARM !!!\n"));
-                        printInteger( tmc2590_2->thisMotor);
-                        printPgmString(PSTR("--"));
-                        //printFloat_RateValue(realtime_rate);
-                        //printPgmString(PSTR("--"));
-                        printInteger( st_tmc.SG_period_us[tmc2590_2->thisAxis]);
-                        printPgmString(PSTR("--\n"));
-                        /* execute alarm */
-                        tmc_trigger_stall_alarm(tmc2590_2->thisAxis);
-                    }        
-               } // if ( p_stepper[tmc2590_2->thisAxis] > 85000 ) {  /* check stall only if feed is higher than 300mm/min */            
-           
-            } //if ( skip_counter_SG_in_SPI_cycles == 0 ) {
-        
-        } //if (current_scale_state == CURRENT_SCALE_ACTIVE){
-    
-    } //else if (stall_alarm_enabled){
-
-    /* TMC2590_RESPONSE2 #define TMC2590_GET_SGU(X)    (0x1F & ((X) >> 15)) #define TMC2590_GET_SE(X)     (0x1F & ((X) >> 10))    */
-    tmc2590_1->resp.stallGuardShortValue= TMC2590_GET_SGU(tmc2590_1->config->shadowRegister[TMC2590_RESPONSE2]);  
-    tmc2590_1->resp.coolStepCurrentValue= TMC2590_GET_SE(tmc2590_1->config->shadowRegister[TMC2590_RESPONSE2]);      
-    tmc2590_2->resp.stallGuardShortValue= TMC2590_GET_SGU(tmc2590_2->config->shadowRegister[TMC2590_RESPONSE2]);  
-    tmc2590_2->resp.coolStepCurrentValue= TMC2590_GET_SE(tmc2590_2->config->shadowRegister[TMC2590_RESPONSE2]);      
-
-    /* TMC2590_RESPONSE3 status and diagnostic */
-    tmc2590_1->resp.StatusBits = tmc2590_1->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFF;   
-    tmc2590_1->resp.DiagnosticBits = (tmc2590_1->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFFC00) >> 10 ;  
-    tmc2590_2->resp.StatusBits = tmc2590_2->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFF;   
-    tmc2590_2->resp.DiagnosticBits = (tmc2590_2->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFFC00) >> 10 ;
+    process_controller_status(tmc2590_1);
+    process_controller_status(tmc2590_2);
+ 
 }
 
 /* statistics is collected for the whole period between consecutive UART polls so that lost step is not missed between */
@@ -638,11 +602,20 @@ void init_TMC(void){
     uint8_t channel_Y = SPI_CS_Y_PIN;
     uint8_t channel_Z = SPI_CS_Z_PIN;
     
-    //p_stepper = get_stepper_pointer(); /* global holding stepper structure*/
     
+    /* initialise stepper TMC interface structure */
+    /* initialise SG periods to max values (slowest feed) */
     st_tmc.SG_period_us[X_AXIS] = 0xFFFFFFFF;
     st_tmc.SG_period_us[Y_AXIS] = 0xFFFFFFFF;    
-    st_tmc.SG_period_us[Z_AXIS] = 0xFFFFFFFF;    
+    st_tmc.SG_period_us[Z_AXIS] = 0xFFFFFFFF;
+    /* initialise SG skip counters used to analyse stall based on SG readings */
+    st_tmc.SG_skips_counter[X_AXIS] = 0;
+    st_tmc.SG_skips_counter[Y_AXIS] = 0;
+    st_tmc.SG_skips_counter[Z_AXIS] = 0;
+    /* initialise step counters used to fire SG readings */    
+    st_tmc.step_counter[X_AXIS] = 0;
+    st_tmc.step_counter[Y_AXIS] = 0;
+    st_tmc.step_counter[Z_AXIS] = 0;
 
 
 	tmc2590_X1.interpolationEn              = 1;
@@ -699,16 +672,16 @@ void init_TMC(void){
 	tmc2590_Y2.standStillCurrentScale       = 30; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
     
     /* ZH motor (medium 23HS22) in normal conditions (56steps/mm)*/
-	//tmc2590_X1.stallGuardThreshold          = 7;
-	//tmc2590_X1.stallGuardAlarmValue         = 400;
-	//tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
-    /* ZH motor (medium 23HS22) in riggy conditions (177steps/mm)*/	
-    tmc2590_X1.stallGuardThreshold          = 7;
-	tmc2590_X1.stallGuardAlarmValue         = 200;
+	tmc2590_X1.stallGuardThreshold          = 6;
+	tmc2590_X1.stallGuardAlarmValue         = 400;
 	tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
+    /* ZH motor (medium 23HS22) in riggy conditions (177steps/mm)*/	
+    //tmc2590_X1.stallGuardThreshold          = 7;
+	//tmc2590_X1.stallGuardAlarmValue         = 200;
+	//tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
     
-    /* ZH motor */
-	tmc2590_X2.stallGuardThreshold          = 7;
+    /* ZH motor (medium 23HS22) in normal conditions (56steps/mm)*/
+	tmc2590_X2.stallGuardThreshold          = 6;
 	tmc2590_X2.stallGuardAlarmValue         = 400; 
 	tmc2590_X2.currentScale                 = 31; /* 0 - 31 where 31 is max */
     /* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400  at 3000mm/min on X with 177steps/mm*/
@@ -718,7 +691,7 @@ void init_TMC(void){
     //tmc2590_X2.standStillCurrentScale        = 2; //  2: set 1/2 of full scale, 1/4th of power
     
     tmc2590_Y1.stallGuardThreshold          = 3;
-	tmc2590_Y1.stallGuardAlarmValue         = 300; 
+	tmc2590_Y1.stallGuardAlarmValue         = 400; 
 	tmc2590_Y1.currentScale                 = 31; /* 0 - 31 where 31 is max */
     tmc2590_Y1.SlowDecayDuration            = 4;
     tmc2590_Y1.HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
@@ -729,7 +702,7 @@ void init_TMC(void){
     
     
     tmc2590_Y2.stallGuardThreshold          = 3;
-	tmc2590_Y2.stallGuardAlarmValue         = 300; 
+	tmc2590_Y2.stallGuardAlarmValue         = 400; 
 	tmc2590_Y2.currentScale                 = 31; /* 0 - 31 where 31 is max */
     tmc2590_Y2.SlowDecayDuration            = 4;
     tmc2590_Y2.HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
@@ -740,15 +713,15 @@ void init_TMC(void){
     
     
     /* ZH motor */
-    //tmc2590_Z.stallGuardThreshold           = 7;
-    //tmc2590_Z.stallGuardAlarmValue          = 300;
-    //tmc2590_Z.currentScale                  = 31; /* 0 - 31 where 31 is max */
+    tmc2590_Z.stallGuardThreshold           = 6;
+    tmc2590_Z.stallGuardAlarmValue          = 300;
+    tmc2590_Z.currentScale                  = 31; /* 0 - 31 where 31 is max */
     /* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400 at 2000mm/min on Z with 267steps/mm*/
-    tmc2590_Z.HystEnd                       = 0;   /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
-    tmc2590_Z.stallGuardThreshold           = 15;
-    tmc2590_Z.stallGuardAlarmValue          = 600;
-    tmc2590_Z.currentScale                  = 5; /* 0 - 31 where 31 is max, 0.25A */
-    tmc2590_Z.standStillCurrentScale        = 2; //  2: set 1/2 of full scale, 1/4th of power
+    //tmc2590_Z.HystEnd                       = 0;   /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+    //tmc2590_Z.stallGuardThreshold           = 15;
+    //tmc2590_Z.stallGuardAlarmValue          = 600;
+    //tmc2590_Z.currentScale                  = 5; /* 0 - 31 where 31 is max, 0.25A */
+    //tmc2590_Z.standStillCurrentScale        = 2; //  2: set 1/2 of full scale, 1/4th of power
     
     stall_guard_statistics_reset();    
     
