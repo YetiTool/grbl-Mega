@@ -174,6 +174,10 @@ uint8_t serial_rtl_data_available()
 	}
 }
 
+uint8_t serial_rtl_data_available_length(void){
+    return (uint8_t)(serial_rx_rtl_buffer_head - serial_rx_rtl_buffer_tail);
+}
+
 
 
 ISR(SERIAL_RX)
@@ -221,7 +225,7 @@ ISR(SERIAL_RX)
 			//serial_rx_rgb_state = RGB_HEX_RTL_ERR; /* if not hex code then exit with error */
 			serial_rx_rtl_state = RTL_IDLE;
 			serial_rx_rtl_count = 0;
-			report_status_message(ASMCNC_STATUS_INVALID_STATEMENT);
+			report_status_message(ASMCNC_INVALID_HEX_CODE);
 			break; /* break the switch and proceed as normal */
 		}
 		return; /* exit the ISR - this line is where serial bypass actually happens */

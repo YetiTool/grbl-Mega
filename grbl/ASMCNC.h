@@ -11,7 +11,11 @@
 #define ASMCNC_VERSION			"2.0.6"
 #define ASMCNC_VERSION_BUILD	"20200906"
 
+/* proprietary error codes */
 #define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
+#define ASMCNC_INVALID_MOTOR_ID	        40 //ASM Error code 40. TMC command received for wrong motor
+#define ASMCNC_CRC8_ERROR	            41 //ASM Error code 41. TMC command received but crc8 does not match
+#define ASMCNC_INVALID_HEX_CODE         42 //ASM Error code 42. Non "hex code" character received
 
 // Z-head PCB has two options for spindle control:
 // 1) FET and resistive divider based filter (non-linear and power hungry)

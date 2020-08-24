@@ -8,7 +8,7 @@
 #include "spi_to_tmc.h"
 #include <string.h>
 
-//#define RIGGY
+#define RIGGY
 #ifdef RIGGY
 #define SG_MAX_VALID_PERIOD_X_US            120000    /* 10rpm (565mm/min feed). for riggy: X motor 17HS15-0404S - 100 rpm */
 #define SG_MAX_VALID_PERIOD_Y_US            120000    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
@@ -671,39 +671,76 @@ void init_TMC(void){
 	tmc2590_Y1.standStillCurrentScale       = 30; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
 	tmc2590_Y2.standStillCurrentScale       = 30; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
     
-    /* ZH motor (medium 23HS22) in normal conditions (56steps/mm)*/
-	tmc2590_X1.stallGuardThreshold          = 6;
-	tmc2590_X1.stallGuardAlarmValue         = 400;
-	tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
-    /* ZH motor (medium 23HS22) in riggy conditions (177steps/mm)*/	
+#ifdef RIGGY
+    /* no motor */
+    tmc2590_X1.stallGuardThreshold          = 63;
+    tmc2590_X1.stallGuardAlarmValue         = 0;
+    tmc2590_X1.currentScale                 = 0; /* 0 - 31 where 31 is max */
+	tmc2590_X1.standStillCurrentScale       = 0; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
+    /* ZH motor (medium 23HS22) in riggy conditions (177steps/mm)*/
     //tmc2590_X1.stallGuardThreshold          = 7;
-	//tmc2590_X1.stallGuardAlarmValue         = 200;
-	//tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
+    //tmc2590_X1.stallGuardAlarmValue         = 200;
+    //tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
     
-    /* ZH motor (medium 23HS22) in normal conditions (56steps/mm)*/
-	tmc2590_X2.stallGuardThreshold          = 6;
-	tmc2590_X2.stallGuardAlarmValue         = 400; 
-	tmc2590_X2.currentScale                 = 31; /* 0 - 31 where 31 is max */
     /* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400  at 3000mm/min on X with 177steps/mm*/
-    //tmc2590_X2.stallGuardThreshold           = 15;
-    //tmc2590_X2.stallGuardAlarmValue          = 600;
-    //tmc2590_X2.currentScale                  = 5; /* 0 - 31 where 31 is max, 0.25A */
-    //tmc2590_X2.standStillCurrentScale        = 2; //  2: set 1/2 of full scale, 1/4th of power
+    tmc2590_X2.stallGuardThreshold           = 5;
+    tmc2590_X2.stallGuardAlarmValue          = 600;
+    tmc2590_X2.currentScale                  = 1; /* 0 - 31 where 31 is max, 0.25A */
+    tmc2590_X2.standStillCurrentScale        = 0; //  2: set 1/2 of full scale, 1/4th of power
+    tmc2590_X2.vSense                       = 1; /* 0: Full-scale sense resistor voltage is 325mV. */
     
     tmc2590_Y1.stallGuardThreshold          = 3;
-	tmc2590_Y1.stallGuardAlarmValue         = 400; 
-	tmc2590_Y1.currentScale                 = 31; /* 0 - 31 where 31 is max */
+    tmc2590_Y1.stallGuardAlarmValue         = 400;
+    tmc2590_Y1.currentScale                 = 31; /* 0 - 31 where 31 is max */
     tmc2590_Y1.SlowDecayDuration            = 4;
     tmc2590_Y1.HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
     tmc2590_Y1.HystEnd                      = 5; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
-    tmc2590_Y1.HystDectrement               = 2; /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */    
+    tmc2590_Y1.HystDectrement               = 2; /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
     tmc2590_Y1.slopeCtrlLow                 = 3;  // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
     tmc2590_Y1.slopeCtrlHigh                = 3;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
     
+    tmc2590_Y2.stallGuardThreshold          = 3;
+    tmc2590_Y2.stallGuardAlarmValue         = 400;
+    tmc2590_Y2.currentScale                 = 31; /* 0 - 31 where 31 is max */
+    tmc2590_Y2.SlowDecayDuration            = 4;
+    tmc2590_Y2.HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
+    tmc2590_Y2.HystEnd                      = 5; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+    tmc2590_Y2.HystDectrement               = 2; /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
+    tmc2590_Y2.slopeCtrlLow                 = 3;  // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    tmc2590_Y2.slopeCtrlHigh                = 3;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    
+    /* ZH motor */
+    /* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400 at 2000mm/min on Z with 267steps/mm*/
+    tmc2590_Z.HystEnd                       = 0;   /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+    tmc2590_Z.stallGuardThreshold           = 4;
+    tmc2590_Z.stallGuardAlarmValue          = 200;
+    tmc2590_Z.currentScale                  = 1; /* 0 - 31 where 31 is max, 0.25A */
+    tmc2590_Z.standStillCurrentScale        = 0; //  2: set 1/2 of full scale, 1/4th of power
+
+#else
+    /* ZH motor (medium 23HS22) in normal conditions (56steps/mm)*/
+    tmc2590_X1.stallGuardThreshold          = 6;
+    tmc2590_X1.stallGuardAlarmValue         = 400;
+    tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
+    
+    /* ZH motor (medium 23HS22) in normal conditions (56steps/mm)*/
+    tmc2590_X2.stallGuardThreshold          = 6;
+    tmc2590_X2.stallGuardAlarmValue         = 400;
+    tmc2590_X2.currentScale                 = 31; /* 0 - 31 where 31 is max */
+    
+    tmc2590_Y1.stallGuardThreshold          = 3;
+    tmc2590_Y1.stallGuardAlarmValue         = 400;
+    tmc2590_Y1.currentScale                 = 31; /* 0 - 31 where 31 is max */
+    tmc2590_Y1.SlowDecayDuration            = 4;
+    tmc2590_Y1.HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
+    tmc2590_Y1.HystEnd                      = 5; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+    tmc2590_Y1.HystDectrement               = 2; /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
+    tmc2590_Y1.slopeCtrlLow                 = 3;  // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    tmc2590_Y1.slopeCtrlHigh                = 3;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
     
     tmc2590_Y2.stallGuardThreshold          = 3;
-	tmc2590_Y2.stallGuardAlarmValue         = 400; 
-	tmc2590_Y2.currentScale                 = 31; /* 0 - 31 where 31 is max */
+    tmc2590_Y2.stallGuardAlarmValue         = 400;
+    tmc2590_Y2.currentScale                 = 31; /* 0 - 31 where 31 is max */
     tmc2590_Y2.SlowDecayDuration            = 4;
     tmc2590_Y2.HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
     tmc2590_Y2.HystEnd                      = 5; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
@@ -716,12 +753,10 @@ void init_TMC(void){
     tmc2590_Z.stallGuardThreshold           = 6;
     tmc2590_Z.stallGuardAlarmValue          = 300;
     tmc2590_Z.currentScale                  = 31; /* 0 - 31 where 31 is max */
-    /* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400 at 2000mm/min on Z with 267steps/mm*/
-    //tmc2590_Z.HystEnd                       = 0;   /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
-    //tmc2590_Z.stallGuardThreshold           = 15;
-    //tmc2590_Z.stallGuardAlarmValue          = 600;
-    //tmc2590_Z.currentScale                  = 5; /* 0 - 31 where 31 is max, 0.25A */
-    //tmc2590_Z.standStillCurrentScale        = 2; //  2: set 1/2 of full scale, 1/4th of power
+
+#endif    
+    
+    
     
     stall_guard_statistics_reset();    
     
@@ -783,8 +818,12 @@ void execute_TMC_command(){
 		/* check if more data is available from rtl_serial buffer */
 		rtl_data_available = serial_rtl_data_available();
 		if (rtl_data_available != SERIAL_NO_DATA) {
-			/* schedule next TMC execute: indicate to main loop that there is a TMC command to process */
-			system_set_exec_rtl_command_flag(RTL_TMC_COMMAND);		
+            /* check if all 3 bytes are received yet */
+            rtl_data_available = serial_rtl_data_available_length();
+            if (rtl_data_available >= RTL_TMC_COMMAND_SIZE){
+			    /* schedule next TMC execute: indicate to main loop that there is a TMC command to process */
+			    system_set_exec_rtl_command_flag(RTL_TMC_COMMAND);		                
+            }            
 		};
 
 
@@ -801,7 +840,7 @@ void execute_TMC_command(){
 				tmc2590 = get_TMC_controller(controller_id);
 			}
 			else{
-				report_status_message(ASMCNC_STATUS_INVALID_STATEMENT);
+				report_status_message(ASMCNC_INVALID_MOTOR_ID);                
 				return;
 			}
 
@@ -1057,7 +1096,7 @@ void execute_TMC_command(){
 		} // if (crc_in == tmc_command[RTL_TMC_COMMAND_SIZE-1]){
             
 		else{ /* crc error */
-			report_status_message(ASMCNC_STATUS_INVALID_STATEMENT);
+			report_status_message(ASMCNC_CRC8_ERROR);
 		} //else{ /* crc error */
 
 	} // if rtl_data_available != SERIAL_NO_DATA {

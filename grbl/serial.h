@@ -46,6 +46,7 @@ void serial_write(uint8_t data);
 uint8_t serial_read();
 uint8_t serial_read_rtl();
 uint8_t serial_rtl_data_available();
+uint8_t serial_rtl_data_available_length();
 
 // Reset and empty data in read buffer. Used by e-stop and reset.
 void serial_reset_read_buffer();
