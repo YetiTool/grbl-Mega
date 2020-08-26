@@ -10,13 +10,13 @@
 
 #define RIGGY
 #ifdef RIGGY
-#define SG_MAX_VALID_PERIOD_X_US            120000    /* 10rpm (565mm/min feed). for riggy: X motor 17HS15-0404S - 100 rpm */
-#define SG_MAX_VALID_PERIOD_Y_US            120000    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
-#define SG_MAX_VALID_PERIOD_Z_US            60000     /* 20rpm (60mm/min feed). Z motor 17HS19-2004S1*/
+#define SG_MAX_VALID_PERIOD_X_US            1875    /* 10rpm (565mm/min feed). for riggy: X motor 17HS15-0404S - 100 rpm */
+#define SG_MAX_VALID_PERIOD_Y_US            1875    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+#define SG_MAX_VALID_PERIOD_Z_US            938     /* 20rpm (60mm/min feed). Z motor 17HS19-2004S1*/
 #else
-#define SG_MAX_VALID_PERIOD_X_US            120000    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
-#define SG_MAX_VALID_PERIOD_Y_US            120000    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
-#define SG_MAX_VALID_PERIOD_Z_US            60000     /* 20rpm (60mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+#define SG_MAX_VALID_PERIOD_X_US            1875    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+#define SG_MAX_VALID_PERIOD_Y_US            1875    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+#define SG_MAX_VALID_PERIOD_Z_US            938     /* 20rpm (60mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 #endif
 
 #define SG_READING_SKIPS_AFTER_SLOW_FEED    6        /* Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis. Actually means 5 reads for dual axis and 10 for single */
@@ -25,9 +25,7 @@
 #define SPI_HOMING_XY_CYCLE_DURATION_US     (650+300) /*+300 for MSTEP read*/
 #define SPI_HOMING_CYCLE_DURATION_US        1000
 
-const uint32_t max_step_period_us_to_read_SG[] = { SG_MAX_VALID_PERIOD_X_US, SG_MAX_VALID_PERIOD_Y_US, SG_MAX_VALID_PERIOD_Z_US }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
-const uint32_t max_pulse_period_us_to_read_SG[] = { SG_MAX_VALID_PERIOD_X_US/64, SG_MAX_VALID_PERIOD_Y_US/64, SG_MAX_VALID_PERIOD_Z_US/64 }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
-
+const uint16_t max_step_period_us_to_read_SG[] = { SG_MAX_VALID_PERIOD_X_US, SG_MAX_VALID_PERIOD_Y_US, SG_MAX_VALID_PERIOD_Z_US }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
 
 stepper_tmc_t st_tmc; /* global structure holding stall guard counters and current speed */
 
@@ -398,7 +396,7 @@ void tmc2590_schedule_read_all(void){
 void tmc2590_schedule_read_sg(uint8_t axis){
     if ( st_tmc.SG_skips_counter[axis] < SG_READING_SKIPS_AFTER_SLOW_FEED )
     {
-        /* skip this time as slow feed was too recent and SG might be invalid */
+        /* increment skip counter used to skip readings at slow feed - if slow feed was too recent SG might be invalid */
         st_tmc.SG_skips_counter[axis]++;
         #ifdef SG_SKIP_DEBUG_ENABLED
         debug_pin_write(1, DEBUG_2_PIN);
@@ -487,22 +485,10 @@ debug_pin_write(1, DEBUG_1_PIN);
                 
                 /* start reading SG if rotational speed is sufficiently high */                       
                 /* feed speed validation. If feed was slow then SG_skips_counter gets reset, then decrement till reaches 0, only after that SG analysis for stall detection is allowed */
-                st_tmc.SG_denominiator[tmc2590->thisAxis] = st_tmc.SG_denominiator[tmc2590->thisAxis] ? st_tmc.SG_denominiator[tmc2590->thisAxis] : 1; /* catch divide by zero - for very low speeds */
-                //st_tmc.SG_numerator[tmc2590->thisAxis] = st_tmc.SG_numerator[tmc2590->thisAxis] * st_tmc.SG_cycles_per_tick[tmc2590->thisAxis];
-                st_tmc.SG_period_us[tmc2590->thisAxis] = ((uint32_t)st_tmc.SG_numerator[tmc2590->thisAxis] * (uint32_t) st_tmc.SG_cycles_per_tick[tmc2590->thisAxis]) / st_tmc.SG_denominiator[tmc2590->thisAxis] ;
-                if ( st_tmc.SG_period_us[tmc2590->thisAxis] < max_step_period_us_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
+                if ( st_tmc.step_period_us[tmc2590->thisAxis] < max_step_period_us_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
+                    
                     /* feed is fast, increment SG_skips_counter until 0 then analyse SG for stall */
-                    if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] < SG_READING_SKIPS_AFTER_SLOW_FEED )
-                    {
-                        ///* skip this time as slow feed was too recent and SG might be invalid */
-                        //st_tmc.SG_skips_counter[tmc2590->thisAxis]++;
-//#ifdef SG_SKIP_DEBUG_ENABLED
-//debug_pin_write(1, DEBUG_2_PIN);
-//debug_pin_write(0, DEBUG_2_PIN);
-//#endif
-                        
-                    }
-                    else 
+                    if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )
                     {
                         /* feed rate is high enough and started more than SG_READING_SKIPS_AFTER_SLOW_FEED ago, lets analyse the stall */
                         if (tmc2590->resp.stallGuardCurrentValue < tmc2590->resp.stallGuardMinValue) {
@@ -511,17 +497,17 @@ debug_pin_write(1, DEBUG_1_PIN);
                             /* trigger alarm */
                             tmc_trigger_stall_alarm(tmc2590->thisAxis);
                             /* reset SG period to max as alarm will immediately stop the stepper and period will remain as it was at the point of trigger */
-                            st_tmc.SG_period_us[tmc2590->thisAxis] = 0xFFFFFFFF;
+                            st_tmc.step_period_us[tmc2590->thisAxis] = 0xFFFF;
                             printPgmString(PSTR("\nSG ALARM, motor "));
                             printInteger( tmc2590->thisMotor);
                             printPgmString(PSTR(", SG: "));
                             printInteger( tmc2590->resp.stallGuardCurrentValue);
                             printPgmString(PSTR("\n"));
-                        }
+                        } //if (tmc2590->resp.stallGuardCurrentValue    < tmc2590->stallGuardAlarmValue) {
    
-                    }
+                    } //if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )
                 
-                } // ( st_tmc.SG_period_us[tmc2590->thisAxis] < max_step_period_us_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
+                } // if ( st_tmc.step_period_us[tmc2590->thisAxis] < max_step_period_us_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
                 else {
                         /* feed is slow, reset SG_skips_counter */
                         st_tmc.SG_skips_counter[tmc2590->thisAxis] = 0;
@@ -591,9 +577,9 @@ void tmc_globals_reset(void)
 
     /* initialise stepper TMC interface structure */
     /* initialise SG periods to max values (slowest feed) */
-    st_tmc.SG_period_us[X_AXIS] = 0xFFFFFFFF;
-    st_tmc.SG_period_us[Y_AXIS] = 0xFFFFFFFF;
-    st_tmc.SG_period_us[Z_AXIS] = 0xFFFFFFFF;
+    st_tmc.step_period_us[X_AXIS] = 0xFFFF;
+    st_tmc.step_period_us[Y_AXIS] = 0xFFFF;
+    st_tmc.step_period_us[Z_AXIS] = 0xFFFF;
     /* initialise SG skip counters used to analyse stall based on SG readings */
     st_tmc.SG_skips_counter[X_AXIS] = 0;
     st_tmc.SG_skips_counter[Y_AXIS] = 0;

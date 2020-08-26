@@ -23,10 +23,7 @@
 
 // Stepper ISR data struct. Contains the running data for the main stepper ISR.
 typedef struct {
-    uint16_t SG_numerator[N_AXIS];        // SG period calculation variable to move heavy lifting from under the ISR.
-    uint16_t SG_denominiator[N_AXIS];     // SG period calculation variable to move heavy lifting from under the ISR
-    uint16_t SG_cycles_per_tick[N_AXIS];  // SG period calculation variable to move heavy lifting from under the ISR
-    uint32_t SG_period_us[N_AXIS];        // variables to hold the shaft rotational speed at the time when SG read was fired.
+    uint16_t step_period_us[N_AXIS];      // variables to hold the step period which is direct reflection of shaft rotational speed at the time when SG read was fired.
     uint8_t  step_counter[N_AXIS];        // Counter variables for firing SG read. TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled
     uint8_t  SG_skips_counter[N_AXIS];    // Counter variables for blocking stall analysis due to preceding slow speed. Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis */
 } stepper_tmc_t;
@@ -257,7 +254,7 @@ void tmc_homing_mode_set(uint8_t mode);  /* set and reset TMC controllers for ho
 void tmc_read_sg_and_trigger_limits(void); /* schedule single read of stall guard, analyse response and set limits limits accordingly */ 
 void tmc_homing_reset_limits_and_counter(uint8_t active_axes, bool approach); /* clear limit switch and resetting the homing_SG_reads_skip_counter counter  when pulling off */
 void tmc_globals_reset(void); /* reset all tmc global variables to known init state */
-extern const uint32_t max_pulse_period_us_to_read_SG[];
+extern const uint16_t max_step_period_us_to_read_SG[];
 
 
 #endif /* TMC_IC_TMC2590_H_ */
