@@ -12,21 +12,22 @@
 #ifdef RIGGY
 #define SG_MAX_VALID_PERIOD_X_US            120000    /* 10rpm (565mm/min feed). for riggy: X motor 17HS15-0404S - 100 rpm */
 #define SG_MAX_VALID_PERIOD_Y_US            120000    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
-#define SG_MAX_VALID_PERIOD_Z_US            60000     /* 20rpm (60mm/min feed). Z motor 17HS19-2004S1 - 150rpm */
+#define SG_MAX_VALID_PERIOD_Z_US            60000     /* 20rpm (60mm/min feed). Z motor 17HS19-2004S1*/
 #else
 #define SG_MAX_VALID_PERIOD_X_US            120000    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 #define SG_MAX_VALID_PERIOD_Y_US            120000    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 #define SG_MAX_VALID_PERIOD_Z_US            60000     /* 20rpm (60mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 #endif
 
-#define SG_READING_SKIPS_AFTER_SLOW_FEED    5         /* Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis */
-#define SG_READING_DELAY_AFTER_START_MS     500
+#define SG_READING_SKIPS_AFTER_SLOW_FEED    6        /* Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis. Actually means 5 reads for dual axis and 10 for single */
 #define SG_HOMING_DELAY_AFTER_START_MS      300       /* need to be identified empirically, looking at realtime view of the SG values for different motors in different scenarios. Smaller motors -> longer delays */
 #define SPI_HOMING_Z_CYCLE_DURATION_US      (390+100) /*+100 for MSTEP read*/
 #define SPI_HOMING_XY_CYCLE_DURATION_US     (650+300) /*+300 for MSTEP read*/
 #define SPI_HOMING_CYCLE_DURATION_US        1000
 
 const uint32_t max_step_period_us_to_read_SG[] = { SG_MAX_VALID_PERIOD_X_US, SG_MAX_VALID_PERIOD_Y_US, SG_MAX_VALID_PERIOD_Z_US }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
+const uint32_t max_pulse_period_us_to_read_SG[] = { SG_MAX_VALID_PERIOD_X_US/64, SG_MAX_VALID_PERIOD_Y_US/64, SG_MAX_VALID_PERIOD_Z_US/64 }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
+
 
 stepper_tmc_t st_tmc; /* global structure holding stall guard counters and current speed */
 
@@ -35,9 +36,9 @@ stepper_tmc_t st_tmc; /* global structure holding stall guard counters and curre
 static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value);
 
 uint8_t current_scale_state = CURRENT_SCALE_ACTIVE; /* global holding effective current scale */
-uint32_t skip_counter_SG_in_SPI_cycles = 0;          /* global SG read skip counter to avoid reading SG in the begninning of the cycle */
+uint32_t homing_SG_reads_skip_counter = 0;         /* global SG read skip counter to avoid reading SG in the begninning of the cycle */
 uint8_t stall_alarm_enabled = true;                 /* global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm */
-uint8_t homing_sg_read_ongoing = false;                    /* global flag indicating stall guard read process is ongoing */ 
+uint8_t homing_sg_read_ongoing = false;             /* global flag indicating stall guard read process is ongoing */ 
 uint8_t sg_read_active_axes = 0;                    /* global variable to hold current axis that is being homed */
 
 /* declare structures for all 5 motors */
@@ -395,6 +396,16 @@ void tmc2590_schedule_read_all(void){
 
 /* schedule read of SG value on given axis */
 void tmc2590_schedule_read_sg(uint8_t axis){
+    if ( st_tmc.SG_skips_counter[axis] < SG_READING_SKIPS_AFTER_SLOW_FEED )
+    {
+        /* skip this time as slow feed was too recent and SG might be invalid */
+        st_tmc.SG_skips_counter[axis]++;
+        #ifdef SG_SKIP_DEBUG_ENABLED
+        debug_pin_write(1, DEBUG_2_PIN);
+        debug_pin_write(0, DEBUG_2_PIN);
+        #endif
+    }
+    
     switch (axis){
         case X_AXIS:
         tmc2590_dual_read_sg(&tmc2590_X1, &tmc2590_X2);
@@ -446,6 +457,10 @@ void tmc_trigger_stall_alarm(uint8_t axis){
 
 
 void process_controller_status(TMC2590TypeDef *tmc2590){
+
+#ifdef SG_SKIP_DEBUG_ENABLED
+debug_pin_write(1, DEBUG_1_PIN);
+#endif
     
     /* TMC2590_RESPONSE0 #define TMC2590_GET_MSTEP(X)  (0x3FF & ((X) >> 10)) */     
     tmc2590->resp.mStepCurrentValue = TMC2590_GET_MSTEP(tmc2590->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
@@ -466,21 +481,26 @@ void process_controller_status(TMC2590TypeDef *tmc2590){
     else{
     
         /* if motor is active update statistics and trigger alarm if needed */
-        if ( current_scale_state == CURRENT_SCALE_ACTIVE ) {
-    
-            /* HOMING check: do not run measure SG 1s after cycle start - it might be invalid */
-            if ( skip_counter_SG_in_SPI_cycles > 0 ) {
-                /* skip this time */
-                skip_counter_SG_in_SPI_cycles--;
-            }            
-            else{ /* start reading SG if rotational speed is sufficiently high */                       
+        if ( current_scale_state == CURRENT_SCALE_ACTIVE ) {    
+            
+            if ( homing_SG_reads_skip_counter == 0 ) { /* HOMING check: do not run measure SG SG_HOMING_DELAY_AFTER_START_MS after cycle start - it might be invalid */
+                
+                /* start reading SG if rotational speed is sufficiently high */                       
                 /* feed speed validation. If feed was slow then SG_skips_counter gets reset, then decrement till reaches 0, only after that SG analysis for stall detection is allowed */
+                st_tmc.SG_denominiator[tmc2590->thisAxis] = st_tmc.SG_denominiator[tmc2590->thisAxis] ? st_tmc.SG_denominiator[tmc2590->thisAxis] : 1; /* catch divide by zero - for very low speeds */
+                //st_tmc.SG_numerator[tmc2590->thisAxis] = st_tmc.SG_numerator[tmc2590->thisAxis] * st_tmc.SG_cycles_per_tick[tmc2590->thisAxis];
+                st_tmc.SG_period_us[tmc2590->thisAxis] = ((uint32_t)st_tmc.SG_numerator[tmc2590->thisAxis] * (uint32_t) st_tmc.SG_cycles_per_tick[tmc2590->thisAxis]) / st_tmc.SG_denominiator[tmc2590->thisAxis] ;
                 if ( st_tmc.SG_period_us[tmc2590->thisAxis] < max_step_period_us_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
                     /* feed is fast, increment SG_skips_counter until 0 then analyse SG for stall */
                     if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] < SG_READING_SKIPS_AFTER_SLOW_FEED )
                     {
-                        /* skip this time as slow feed was too recent and SG might be invalid */
-                        st_tmc.SG_skips_counter[tmc2590->thisAxis]++;
+                        ///* skip this time as slow feed was too recent and SG might be invalid */
+                        //st_tmc.SG_skips_counter[tmc2590->thisAxis]++;
+//#ifdef SG_SKIP_DEBUG_ENABLED
+//debug_pin_write(1, DEBUG_2_PIN);
+//debug_pin_write(0, DEBUG_2_PIN);
+//#endif
+                        
                     }
                     else 
                     {
@@ -507,11 +527,15 @@ void process_controller_status(TMC2590TypeDef *tmc2590){
                         st_tmc.SG_skips_counter[tmc2590->thisAxis] = 0;
                 }
                 
-            } //if ( skip_counter_SG_in_SPI_cycles > 0 ) {        
+            } //if ( homing_SG_reads_skip_counter == 0 ) {        
             
         } //if (current_scale_state == CURRENT_SCALE_ACTIVE){
             
     } //else if (stall_alarm_enabled){
+
+#ifdef SG_SKIP_DEBUG_ENABLED
+debug_pin_write(0, DEBUG_1_PIN);
+#endif
     
 }
 
@@ -561,12 +585,40 @@ void stall_guard_statistics_reset(void ){
     }
 }
 
+/* reset all global variables to known init state */
+void tmc_globals_reset(void)
+{
 
+    /* initialise stepper TMC interface structure */
+    /* initialise SG periods to max values (slowest feed) */
+    st_tmc.SG_period_us[X_AXIS] = 0xFFFFFFFF;
+    st_tmc.SG_period_us[Y_AXIS] = 0xFFFFFFFF;
+    st_tmc.SG_period_us[Z_AXIS] = 0xFFFFFFFF;
+    /* initialise SG skip counters used to analyse stall based on SG readings */
+    st_tmc.SG_skips_counter[X_AXIS] = 0;
+    st_tmc.SG_skips_counter[Y_AXIS] = 0;
+    st_tmc.SG_skips_counter[Z_AXIS] = 0;
+    /* initialise step counters used to fire SG readings */
+    st_tmc.step_counter[X_AXIS] = 0;
+    st_tmc.step_counter[Y_AXIS] = 0;
+    st_tmc.step_counter[Z_AXIS] = 0;
+
+    current_scale_state = CURRENT_SCALE_ACTIVE; /* global holding effective current scale */
+    homing_SG_reads_skip_counter = 0;           /* global SG read skip counter to avoid reading SG in the begninning of the cycle */
+    homing_sg_read_ongoing = false;             /* global flag indicating stall guard read process is ongoing */
+    sg_read_active_axes = 0;                    /* global variable to hold current axis that is being homed */
+    
+}    
+    
 
 
 
 void process_status_of_all_controllers(void){
     /* process all responses and update the current status of controller's parameters */
+//#ifdef SG_SKIP_DEBUG_ENABLED
+//debug_pin_write(1, DEBUG_0_PIN);
+//debug_pin_write(0, DEBUG_0_PIN);
+//#endif    
     process_status_of_dual_controller(&tmc2590_X1, &tmc2590_X2);
     process_status_of_dual_controller(&tmc2590_Y1, &tmc2590_Y2);
     process_status_of_single_controller(&tmc2590_Z);    
@@ -602,21 +654,7 @@ void init_TMC(void){
     uint8_t channel_Y = SPI_CS_Y_PIN;
     uint8_t channel_Z = SPI_CS_Z_PIN;
     
-    
-    /* initialise stepper TMC interface structure */
-    /* initialise SG periods to max values (slowest feed) */
-    st_tmc.SG_period_us[X_AXIS] = 0xFFFFFFFF;
-    st_tmc.SG_period_us[Y_AXIS] = 0xFFFFFFFF;    
-    st_tmc.SG_period_us[Z_AXIS] = 0xFFFFFFFF;
-    /* initialise SG skip counters used to analyse stall based on SG readings */
-    st_tmc.SG_skips_counter[X_AXIS] = 0;
-    st_tmc.SG_skips_counter[Y_AXIS] = 0;
-    st_tmc.SG_skips_counter[Z_AXIS] = 0;
-    /* initialise step counters used to fire SG readings */    
-    st_tmc.step_counter[X_AXIS] = 0;
-    st_tmc.step_counter[Y_AXIS] = 0;
-    st_tmc.step_counter[Z_AXIS] = 0;
-
+    tmc_globals_reset();
 
 	tmc2590_X1.interpolationEn              = 1;
 	tmc2590_X1.microSteps                   = 4; /* 4 : set MRES  = 16*/
@@ -624,7 +662,7 @@ void init_TMC(void){
 	tmc2590_X1.stallGuardFilter             = 1; // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
 	tmc2590_X1.stallGuardThreshold          = 6; 
 	tmc2590_X1.stallGuardAlarmValue         = 100; /* when current SG reading is lower than this value corresponded axis alarm will be triggered */
-	tmc2590_X1.vSense                       = 0; /* 0: Full-scale sense resistor voltage is 325mV. */
+	tmc2590_X1.vSense                       = 0; /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV. */
 	tmc2590_X1.currentSEmin                 = 1; // 1: set 1/4 of full scale when CoolStep is active
 	tmc2590_X1.coolStepMin                  = 0; // default CoolStep = 0 (disable); if want to enable then set for example to trigger if SG below 7x32 = 224
 	tmc2590_X1.coolStepMax                  = 1; // set to trigger if SG above (7+1)8x32 = 256
@@ -684,10 +722,10 @@ void init_TMC(void){
     
     /* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400  at 3000mm/min on X with 177steps/mm*/
     tmc2590_X2.stallGuardThreshold           = 5;
-    tmc2590_X2.stallGuardAlarmValue          = 600;
+    tmc2590_X2.stallGuardAlarmValue          = 400;
     tmc2590_X2.currentScale                  = 1; /* 0 - 31 where 31 is max, 0.25A */
     tmc2590_X2.standStillCurrentScale        = 0; //  2: set 1/2 of full scale, 1/4th of power
-    tmc2590_X2.vSense                       = 1; /* 0: Full-scale sense resistor voltage is 325mV. */
+    tmc2590_X2.vSense                       = 1; /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV.*/
     
     tmc2590_Y1.stallGuardThreshold          = 3;
     tmc2590_Y1.stallGuardAlarmValue         = 400;
@@ -712,10 +750,11 @@ void init_TMC(void){
     /* ZH motor */
     /* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400 at 2000mm/min on Z with 267steps/mm*/
     tmc2590_Z.HystEnd                       = 0;   /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
-    tmc2590_Z.stallGuardThreshold           = 4;
+    tmc2590_Z.stallGuardThreshold           = 5;
     tmc2590_Z.stallGuardAlarmValue          = 200;
     tmc2590_Z.currentScale                  = 1; /* 0 - 31 where 31 is max, 0.25A */
     tmc2590_Z.standStillCurrentScale        = 0; //  2: set 1/2 of full scale, 1/4th of power
+    tmc2590_X2.vSense                       = 1; /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV.*/
 
 #else
     /* ZH motor (medium 23HS22) in normal conditions (56steps/mm)*/
@@ -1162,16 +1201,14 @@ void tmc_standstill_off(void){
         current_scale_state = CURRENT_SCALE_ACTIVE;
         tmc_all_current_scale_apply(); /* set standstill Current scale on all motors */
     }
-    /* reset countdown counter for SG skip at start */
-    skip_counter_SG_in_SPI_cycles = SG_READING_DELAY_AFTER_START_MS*1000UL / SPI_READ_OCR_PERIOD_US; /* one SPI cycle is 6ms, so 80 cycles is approx 500ms */    
 }
 
 
 
 /* ------------------------------ homing engine functions -----------------------------------*/
 
-/* clear limit switch and reset the skip_counter_SG_in_SPI_cycles counter */
-void tmc_homing_reset_limits_and_counter(uint8_t cycle_mask){
+/* clear limit switch and reset the homing_SG_reads_skip_counter counter */
+void tmc_homing_reset_limits_and_counter(uint8_t cycle_mask, bool approach){
     
     /* store current active axes in global variable */
     sg_read_active_axes = cycle_mask; 
@@ -1181,9 +1218,13 @@ void tmc_homing_reset_limits_and_counter(uint8_t cycle_mask){
     /* clear limit switch */
     LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Set pin high to trigger ISR
     
-    /* reset the skip_counter_SG_in_SPI_cycles counter */
-    /* reset countdown counter for SG skip at start */       
-    skip_counter_SG_in_SPI_cycles = (SG_HOMING_DELAY_AFTER_START_MS * 1000UL) / SPI_HOMING_CYCLE_DURATION_US; /* one stall guard SPI cycle is 200us, so 1000 cycles is approx 200ms */                            
+    /* reset the homing_SG_reads_skip_counter counter: reset countdown counter for SG skip at start. Do so only on approach of limit switch */
+    if (approach) {
+        homing_SG_reads_skip_counter = (SG_HOMING_DELAY_AFTER_START_MS * 1000UL) / SPI_HOMING_CYCLE_DURATION_US; /* one stall guard SPI cycle is 200us, so 1000 cycles is approx 200ms */                            
+    }
+    
+    
+    
     
 }
 
@@ -1227,14 +1268,17 @@ void tmc2590_schedule_read_sg_homing(void){
                 
                 case X_AXIS:
                 tmc2590_dual_read_sg(&tmc2590_X1, &tmc2590_X2);
+                if ( st_tmc.SG_skips_counter[axis] < SG_READING_SKIPS_AFTER_SLOW_FEED )    {        st_tmc.SG_skips_counter[axis]++;    }            /* skip this time as slow feed was too recent and SG might be invalid */
                 break;
                 
                 case Y_AXIS:
                 tmc2590_dual_read_sg(&tmc2590_Y1, &tmc2590_Y2);
+                if ( st_tmc.SG_skips_counter[axis] < SG_READING_SKIPS_AFTER_SLOW_FEED )    {        st_tmc.SG_skips_counter[axis]++;    }            /* skip this time as slow feed was too recent and SG might be invalid */
                 break;
                 
                 case Z_AXIS:
                 tmc2590_single_read_sg(&tmc2590_Z);
+                if ( st_tmc.SG_skips_counter[axis] < SG_READING_SKIPS_AFTER_SLOW_FEED )    {        st_tmc.SG_skips_counter[axis]++;    }            /* skip this time as slow feed was too recent and SG might be invalid */
                 break;
                 
                 default:
@@ -1252,9 +1296,10 @@ void tmc_spi_queue_drain_complete(void){
     /* in homing mode this indication shall lead to processing the SG values and releasing the homing loop */
     if ( homing_sg_read_ongoing ) {
         
+        if ( homing_SG_reads_skip_counter > 0 )  homing_SG_reads_skip_counter--; /* Z axis is the only one including this counter increment */
+        
         if (sg_read_active_axes == HOMING_CYCLE_1) /*  HOMING_CYCLE_1 ((1<<X_AXIS)|(1<<Y_AXIS))  // OPTIONAL: Then move X,Y at the same time. */
             { 
-                if ( skip_counter_SG_in_SPI_cycles > 0 )  skip_counter_SG_in_SPI_cycles--; /* Z axis is the only one including this counter increment */                    
                 delay_us(SPI_HOMING_CYCLE_DURATION_US - SPI_HOMING_XY_CYCLE_DURATION_US);  /* delay to align total read cycle to 1ms (SPI_HOMING_CYCLE_DURATION_US)*/                
             }
         else{ /* Z axis */
@@ -1288,7 +1333,16 @@ void tmc_spi_queue_drain_complete(void){
     }
 }
 
-/* BK: function to replace limits read with SPI actions for homing*/            
+/* BK: function to replace limits read with SPI actions for homing
+ * new homing principle: read SG in a loop until limit is reached and limit can be triggered
+ * homing is done in plain loop outside of main core loop - so usual main signals and indicators cannot be used here, 
+ * therefore dumb while loop is used here to wait for completion of SPI read and SG analysis
+ * main loop in limits.c "do { //} while (STEP_MASK & axislock);" handles the periodic reads of SG through tmc_read_sg_and_trigger_limits()
+ * tmc_read_sg_and_trigger_limits() schedules the read and initiates it while setting "homing_sg_read_ongoing" variable to "True"
+ * then while loop stays forever in this function until tmc_spi_queue_drain_complete() is called from last SPI interrupt and SG data is processed
+ * tmc_spi_queue_drain_complete() releases the flag "homing_sg_read_ongoing" and homing continues
+ * function process_status_of_single_controller() looks for SG trigger point and sets the limit port to corresponding state it alarm need to be triggered
+*/            
 void tmc_read_sg_and_trigger_limits(void){
 
     /* add Stall Guard read request to the SPI queue */

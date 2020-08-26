@@ -432,7 +432,7 @@ int get_spindle_load_volts(void){
     return spindle_load_volts;
 }
 
-#if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED)
+#ifdef ANY_DEBUG_PINS_ENABLED 
 /* function including jumps in out takes 5 cycles = 310ns */
 void debug_pin_write(uint32_t level, uint32_t pin){
 	if (level==0) DEBUG_PORT &=~(1<<pin); /* clear pin */

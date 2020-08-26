@@ -312,14 +312,18 @@ void st_go_idle()
    It lets main loop know when it is time to read the SG value and also keeps track of current speed 
    of each motor so this information could be used to apply all necessary corrections to the SG readings and analysis */
 void st_tmc_fire_SG_read(uint8_t axis, uint8_t command){ 
+
+#ifdef SG_SKIP_DEBUG_ENABLED
+debug_pin_write(1, DEBUG_0_PIN);
+#endif
     
     if (  st_tmc.step_counter[axis]++ >= SG_READ_STEP_COUNT) {
         /* log the instantaneous rotational speed that was effective during this SG read, store it as a SG_period_us. 
          * SG_period_us = Pulse duration * 64      - TMC with SG averaging reports SG every 4 full steps which is 64 microsteps (16 x 4)
          * where:
          * Pulse duration in us = ( 1 + number of timer cycles per step pulse ) / 16Mhz
-         * number of timer cycles per step pulse =  number of ticks per step pulse * cycles_per_tick
-         * number of ticks per step pulse = st.exec_block->step_event_count / st.steps[_AXIS]
+         * number of timer cycles per step pulse =  number of ticks per step pulse * cycles_per_tick       number of 16M timer cycles per step pulse
+         * number of ticks per step pulse = st.exec_block->step_event_count / st.steps[_AXIS]              number of timer fire events (ticks) per step pulse
          * 
          * Examples:
          * Y motor - mm/min - SG_period_us - rpm 
@@ -327,15 +331,20 @@ void st_tmc_fire_SG_read(uint8_t axis, uint8_t command){
          *           3000   - 22600        - 53.1
          *           500    - 135500       - 8.85
          */
-        /* calculate SG_period_us within 32 bit */        
-        uint32_t steps = st.exec_block->steps[axis]>>8;
-        steps = steps ? steps : 1; /* catch divide by zero - for very low speeds */
-        uint32_t ratio = st.exec_block->step_event_count / steps;
-        uint32_t cycles_per_step = (st.exec_segment->cycles_per_tick * ratio)>>8;
-        st_tmc.SG_period_us[axis] = (1 + ( cycles_per_step << st.exec_segment->amass_level ) ) << 2;
+        
+        /* calculate SG_period_us within 32 bit */
+        /* do so that division will be done outside of this ISR to minimise CPU cycles used here and avoid stepping inconsitencies */
+        st_tmc.SG_numerator[axis] = (uint32_t)st.exec_block->step_event_count >> 16;
+        st_tmc.SG_numerator[axis] = st_tmc.SG_numerator[axis] << st.exec_segment->amass_level;
+        st_tmc.SG_numerator[axis] = st_tmc.SG_numerator[axis] << 2;
+        st_tmc.SG_cycles_per_tick[axis] = st.exec_segment->cycles_per_tick;        
+        st_tmc.SG_denominiator[axis] = (uint32_t)st.exec_block->steps[axis] >> 16;
         st_tmc.step_counter[axis] = 0;
         system_set_exec_tmc_command_flag(command);  
     }
+#ifdef SG_SKIP_DEBUG_ENABLED
+debug_pin_write(0, DEBUG_0_PIN);
+#endif
 
 }
 
