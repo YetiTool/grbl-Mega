@@ -453,7 +453,7 @@ void limits_go_home(uint8_t cycle_mask)
       st_wake_up(); // Initiate motion
       
       /* clear limit switch at the beginning of each homing cycle */
-      tmc_homing_reset_limits(cycle_mask);
+      tmc_homing_reset_limits();
 
       do { //} while (STEP_MASK & axislock);
         if (approach) {

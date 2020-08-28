@@ -336,7 +336,7 @@ void tmc2590_schedule_read_all(void){
     tmc2590_single_read_all(&tmc2590_Z);
 }
 
-/* schedule read of SG value on given axis */
+/* schedule read of SG value on axis passed as parameter */
 void tmc2590_schedule_read_sg(uint8_t axis){
     if ( st_tmc.SG_skips_counter[axis] < SG_READING_SKIPS_AFTER_SLOW_FEED )
     {
@@ -347,6 +347,8 @@ void tmc2590_schedule_read_sg(uint8_t axis){
         debug_pin_write(0, DEBUG_2_PIN);
         #endif
     }
+    /* update sg_read_active_axes with axis to be processed */
+    sg_read_active_axes |= ( 1 << axis );
     
     switch (axis){
         case X_AXIS:
@@ -530,21 +532,6 @@ void tmc_globals_reset(void)
     
 }    
     
-
-
-
-void process_status_of_all_controllers(void){
-    /* process all responses and update the current status of controller's parameters */
-//#ifdef SG_SKIP_DEBUG_ENABLED
-//debug_pin_write(1, DEBUG_0_PIN);
-//debug_pin_write(0, DEBUG_0_PIN);
-//#endif    
-    process_status_of_dual_controller(&tmc2590_X1, &tmc2590_X2);
-    process_status_of_dual_controller(&tmc2590_Y1, &tmc2590_Y2);
-    process_status_of_single_controller(&tmc2590_Z);    
-}
-
-
 /* get pointer to required contoller */
 TMC2590TypeDef * get_TMC_controller(uint8_t controller){
     switch (controller){
@@ -1128,10 +1115,7 @@ void tmc_standstill_off(void){
 /* ------------------------------ homing engine functions -----------------------------------*/
 
 /* clear limit switch after homing cycle found the end stop*/
-void tmc_homing_reset_limits(uint8_t cycle_mask){
-    
-    /* store current active axes in global variable */
-    sg_read_active_axes = cycle_mask; 
+void tmc_homing_reset_limits(void){
     
     stall_alarm_enabled = true; /* enable the alarm in case it was disabled */
     
@@ -1164,33 +1148,45 @@ void tmc_homing_mode_set(uint8_t mode){
   
 }  
 
-void tmc_spi_queue_drain_complete(void){
-    /* in homing mode this indication shall lead to processing the SG values and releasing the homing loop */
-    if ( homing_sg_read_ongoing ) {
+void process_status_of_all_controllers(void){
+    /* process all responses and update the current status of controller's parameters */
+    //#ifdef SG_SKIP_DEBUG_ENABLED
+    //debug_pin_write(1, DEBUG_0_PIN);
+    //debug_pin_write(0, DEBUG_0_PIN);
+    //#endif
 
-        uint8_t axis;        
-        for (axis=0; axis<N_AXIS; axis++) {
-            if (bit_istrue(sg_read_active_axes,bit(axis))) {
-                switch (axis){
-                    case X_AXIS:                        
-                        process_status_of_dual_controller(&tmc2590_X1, &tmc2590_X2);                        
-                    break;
-                            
-                    case Y_AXIS:
-                        process_status_of_dual_controller(&tmc2590_Y1, &tmc2590_Y2);                        
-                    break;
-                            
-                    case Z_AXIS:
-                        process_status_of_single_controller(&tmc2590_Z);
-                    break;
-                            
-                    default:
-                    break;
-                            
-                } //switch (axis){
-            }
-        } //for (idx=0; idx<N_AXIS; idx++) {
-                        
+    /* only process those axes that has been scheduled through spi read queue */
+    uint8_t axis;
+    for (axis=0; axis<N_AXIS; axis++) {
+        if (bit_istrue(sg_read_active_axes,bit(axis))) {
+            switch (axis){
+                case X_AXIS:
+                process_status_of_dual_controller(&tmc2590_X1, &tmc2590_X2);
+                break;
+                
+                case Y_AXIS:
+                process_status_of_dual_controller(&tmc2590_Y1, &tmc2590_Y2);
+                break;
+                
+                case Z_AXIS:
+                process_status_of_single_controller(&tmc2590_Z);
+                break;
+                
+                default:
+                break;
+            } //switch (axis){
+                
+            sg_read_active_axes &= ~( 1 << axis ); /* mark this axis as read */
+
+        }//if (bit_istrue(sg_read_active_axes,bit(axis))) {
+    } //for (idx=0; idx<N_AXIS; idx++) {
+}
+
+
+void tmc_spi_queue_drain_complete(void){
+    /* in homing mode homing_sg_read_ongoing flag shall lead to processing the SG values and releasing the homing while loop in the end of tmc_read_sg_and_trigger_limits()*/
+    if ( homing_sg_read_ongoing ) {
+        process_status_of_all_controllers();
         homing_sg_read_ongoing = false;
     }
 }

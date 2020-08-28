@@ -248,7 +248,7 @@ void tmc2590_schedule_read_sg(uint8_t axis); /* read Stall Guard on axis. Steppe
 void tmc_spi_queue_drain_complete(void);  /* indicate to TMC2590 loops that reading is completed (required for homing cycle) */
 void tmc_homing_mode_set(uint8_t mode);  /* set and reset TMC controllers for homing cycle */
 void tmc_read_sg_and_trigger_limits(void); /* schedule single read of stall guard, analyse response and set limits limits accordingly */ 
-void tmc_homing_reset_limits(uint8_t active_axes); /* clear limit switch when pulling off */
+void tmc_homing_reset_limits(void); /* clear limit switch when pulling off */
 void tmc_globals_reset(void); /* reset all tmc global variables to known init state */
 extern const uint16_t max_step_period_us_to_read_SG[];
 
