@@ -452,8 +452,8 @@ void limits_go_home(uint8_t cycle_mask)
       st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
       st_wake_up(); // Initiate motion
       
-      /* clear limit switch and resetting the homing_SG_reads_skip_counter counter at the begninng of each homing cycle */
-      tmc_homing_reset_limits_and_counter(cycle_mask, approach);
+      /* clear limit switch at the beginning of each homing cycle */
+      tmc_homing_reset_limits(cycle_mask);
 
       do { //} while (STEP_MASK & axislock);
         if (approach) {

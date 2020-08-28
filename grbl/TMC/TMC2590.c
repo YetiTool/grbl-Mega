@@ -20,55 +20,20 @@
 #endif
 
 #define SG_READING_SKIPS_AFTER_SLOW_FEED    6        /* Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis. Actually means 5 reads for dual axis and 10 for single */
-#define SG_HOMING_DELAY_AFTER_START_MS      300       /* need to be identified empirically, looking at realtime view of the SG values for different motors in different scenarios. Smaller motors -> longer delays */
-#define SPI_HOMING_Z_CYCLE_DURATION_US      (390+100) /*+100 for MSTEP read*/
-#define SPI_HOMING_XY_CYCLE_DURATION_US     (650+300) /*+300 for MSTEP read*/
-#define SPI_HOMING_CYCLE_DURATION_US        1000
-
-const uint16_t max_step_period_us_to_read_SG[] = { SG_MAX_VALID_PERIOD_X_US, SG_MAX_VALID_PERIOD_Y_US, SG_MAX_VALID_PERIOD_Z_US }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
-
-stepper_tmc_t st_tmc; /* global structure holding stall guard counters and current speed */
 
 #define DEFAULT_TMC_READ_SELECT             1 /* read of the SG is default state of the system */
 
-static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value);
+const uint16_t max_step_period_us_to_read_SG[] = { SG_MAX_VALID_PERIOD_X_US, SG_MAX_VALID_PERIOD_Y_US, SG_MAX_VALID_PERIOD_Z_US }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
 
+stepper_tmc_t st_tmc;                               /* global structure holding stall guard counters and current speed */
 uint8_t current_scale_state = CURRENT_SCALE_ACTIVE; /* global holding effective current scale */
-uint32_t homing_SG_reads_skip_counter = 0;         /* global SG read skip counter to avoid reading SG in the begninning of the cycle */
 uint8_t stall_alarm_enabled = true;                 /* global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm */
 uint8_t homing_sg_read_ongoing = false;             /* global flag indicating stall guard read process is ongoing */ 
-uint8_t sg_read_active_axes = 0;                    /* global variable to hold current axis that is being homed */
+uint8_t sg_read_active_axes = 0;             /* global variable to hold current axis that is being homed */
 
 /* declare structures for all 5 motors */
 TMC2590TypeDef tmc2590_X1, tmc2590_X2, tmc2590_Y1, tmc2590_Y2, tmc2590_Z;
 ConfigurationTypeDef tmc2590_config_X1, tmc2590_config_X2, tmc2590_config_Y1, tmc2590_config_Y2, tmc2590_config_Z;
-
-static void readWrite(TMC2590TypeDef *tmc2590, uint32_t value)
-{	// sending data (value) via spi to TMC262, coping written and received data to shadow register
-	static uint8_t rdsel = 0; // number of expected read response
-
-	uint8_t data[] = { BYTE(value, 2), BYTE(value, 1), BYTE(value, 0) };
-
-	//tmc2590_readWriteArray(tmc2590->config->channel, &data[0], 3);
-
-	tmc2590->config->shadowRegister[rdsel] = _8_32(data[0], data[1], data[2], 0) >> 12;
-	tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] = tmc2590->config->shadowRegister[rdsel];
-
-// set virtual read address for next reply given by RDSEL, can only change by setting RDSEL in DRVCONF
-	if(TMC2590_GET_ADDRESS(value) == TMC2590_DRVCONF)
-		rdsel = TMC2590_GET_RDSEL(value);
-
-// write store written value to shadow register
-	tmc2590->config->shadowRegister[TMC2590_GET_ADDRESS(value)] = value;
-}
-
-
-void tmc2590_writeInt(TMC2590TypeDef *tmc2590, uint8_t address, int32_t value)
-{
-	value = TMC2590_VALUE(value);
-	tmc2590->config->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT] = value;
-	readWrite(tmc2590, value);
-}
 
 void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef *tmc2590_config, const int32_t *registerResetState)
 {
@@ -198,27 +163,6 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
 
 }
 
-uint8_t tmc2590_reset(TMC2590TypeDef *tmc2590)
-{
-	tmc2590_writeInt(tmc2590, TMC2590_DRVCONF,  tmc2590->registerResetState[TMC2590_DRVCONF]);
-	tmc2590_writeInt(tmc2590, TMC2590_DRVCTRL,  tmc2590->registerResetState[TMC2590_DRVCTRL]);
-	tmc2590_writeInt(tmc2590, TMC2590_CHOPCONF, tmc2590->registerResetState[TMC2590_CHOPCONF]);
-	tmc2590_writeInt(tmc2590, TMC2590_SMARTEN,  tmc2590->registerResetState[TMC2590_SMARTEN]);
-	tmc2590_writeInt(tmc2590, TMC2590_SGCSCONF, tmc2590->registerResetState[TMC2590_SGCSCONF]);
-
-	return 1;
-}
-
-uint8_t tmc2590_restore(TMC2590TypeDef *tmc2590)
-{
-	tmc2590_writeInt(tmc2590, TMC2590_DRVCONF,  tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT]);
-	tmc2590_writeInt(tmc2590, TMC2590_DRVCTRL,  tmc2590->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT]);
-	tmc2590_writeInt(tmc2590, TMC2590_CHOPCONF, tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT]);
-	tmc2590_writeInt(tmc2590, TMC2590_SMARTEN,  tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT]);
-	tmc2590_writeInt(tmc2590, TMC2590_SGCSCONF, tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT]);
-
-	return 1;
-}
 
 /************************************************ single motor ***********************************************/
 
@@ -472,52 +416,43 @@ debug_pin_write(1, DEBUG_1_PIN);
     tmc2590->resp.StatusBits = tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFF;
     tmc2590->resp.DiagnosticBits = (tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFFC00) >> 10 ;
 
-    if (!stall_alarm_enabled){
-        if (tmc2590->resp.stallGuardCurrentValue < tmc2590->resp.stallGuardMinValue) {
-        tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrentValue;}        
-    }
-    else{
-    
-        /* if motor is active update statistics and trigger alarm if needed */
-        if ( current_scale_state == CURRENT_SCALE_ACTIVE ) {    
-            
-            if ( homing_SG_reads_skip_counter == 0 ) { /* HOMING check: do not run measure SG SG_HOMING_DELAY_AFTER_START_MS after cycle start - it might be invalid */
-                
-                /* start reading SG if rotational speed is sufficiently high */                       
-                /* feed speed validation. If feed was slow then SG_skips_counter gets reset, then decrement till reaches 0, only after that SG analysis for stall detection is allowed */
-                if ( st_tmc.step_period_us[tmc2590->thisAxis] < max_step_period_us_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
+    if ( ( stall_alarm_enabled ) && ( current_scale_state == CURRENT_SCALE_ACTIVE ) ){
+        
+        /* start reading SG if rotational speed is sufficiently high */                       
+        /* feed speed validation. If feed was slow then SG_skips_counter gets reset, then decrement till reaches 0, only after that SG analysis for stall detection is allowed */
+        if ( st_tmc.step_period_us[tmc2590->thisAxis] < max_step_period_us_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
                     
-                    /* feed is fast, increment SG_skips_counter until 0 then analyse SG for stall */
-                    if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )
-                    {
-                        /* feed rate is high enough and started more than SG_READING_SKIPS_AFTER_SLOW_FEED ago, lets analyse the stall */
-                        if (tmc2590->resp.stallGuardCurrentValue < tmc2590->resp.stallGuardMinValue) {
-                        tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrentValue;}
-                        if (tmc2590->resp.stallGuardCurrentValue    < tmc2590->stallGuardAlarmValue) {
-                            /* trigger alarm */
-                            tmc_trigger_stall_alarm(tmc2590->thisAxis);
-                            /* reset SG period to max as alarm will immediately stop the stepper and period will remain as it was at the point of trigger */
-                            st_tmc.step_period_us[tmc2590->thisAxis] = 0xFFFF;
-                            printPgmString(PSTR("\nSG ALARM, motor "));
-                            printInteger( tmc2590->thisMotor);
-                            printPgmString(PSTR(", SG: "));
-                            printInteger( tmc2590->resp.stallGuardCurrentValue);
-                            printPgmString(PSTR("\n"));
-                        } //if (tmc2590->resp.stallGuardCurrentValue    < tmc2590->stallGuardAlarmValue) {
+            /* feed is fast, increment SG_skips_counter until 0 then analyse SG for stall */
+            if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )
+            {
+                /* feed rate is high enough and started more than SG_READING_SKIPS_AFTER_SLOW_FEED ago, lets analyse the stall */
+                if (tmc2590->resp.stallGuardCurrentValue < tmc2590->resp.stallGuardMinValue) {
+                tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrentValue;}
+                if (tmc2590->resp.stallGuardCurrentValue    < tmc2590->stallGuardAlarmValue) {
+                    /* trigger alarm */
+                    tmc_trigger_stall_alarm(tmc2590->thisAxis);
+                    /* reset SG period to max as alarm will immediately stop the stepper and period will remain as it was at the point of trigger */
+                    st_tmc.step_period_us[tmc2590->thisAxis] = 0xFFFF;
+                    printPgmString(PSTR("\nSG ALARM, motor "));
+                    printInteger( tmc2590->thisMotor);
+                    printPgmString(PSTR(", SG: "));
+                    printInteger( tmc2590->resp.stallGuardCurrentValue);
+                    printPgmString(PSTR("\n"));
+                } //if (tmc2590->resp.stallGuardCurrentValue    < tmc2590->stallGuardAlarmValue) {
    
-                    } //if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )
+            } //if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )
                 
-                } // if ( st_tmc.step_period_us[tmc2590->thisAxis] < max_step_period_us_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
-                else {
-                        /* feed is slow, reset SG_skips_counter */
-                        st_tmc.SG_skips_counter[tmc2590->thisAxis] = 0;
-                }
-                
-            } //if ( homing_SG_reads_skip_counter == 0 ) {        
-            
-        } //if (current_scale_state == CURRENT_SCALE_ACTIVE){
+        } // if ( st_tmc.step_period_us[tmc2590->thisAxis] < max_step_period_us_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
+        else {
+                /* feed is slow, reset SG_skips_counter */
+                st_tmc.SG_skips_counter[tmc2590->thisAxis] = 0;
+        }
             
     } //else if (stall_alarm_enabled){
+    else{
+        if (tmc2590->resp.stallGuardCurrentValue < tmc2590->resp.stallGuardMinValue) {
+        tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrentValue;}
+    }
 
 #ifdef SG_SKIP_DEBUG_ENABLED
 debug_pin_write(0, DEBUG_1_PIN);
@@ -590,7 +525,6 @@ void tmc_globals_reset(void)
     st_tmc.step_counter[Z_AXIS] = 0;
 
     current_scale_state = CURRENT_SCALE_ACTIVE; /* global holding effective current scale */
-    homing_SG_reads_skip_counter = 0;           /* global SG read skip counter to avoid reading SG in the begninning of the cycle */
     homing_sg_read_ongoing = false;             /* global flag indicating stall guard read process is ongoing */
     sg_read_active_axes = 0;                    /* global variable to hold current axis that is being homed */
     
@@ -1193,8 +1127,8 @@ void tmc_standstill_off(void){
 
 /* ------------------------------ homing engine functions -----------------------------------*/
 
-/* clear limit switch and reset the homing_SG_reads_skip_counter counter */
-void tmc_homing_reset_limits_and_counter(uint8_t cycle_mask, bool approach){
+/* clear limit switch after homing cycle found the end stop*/
+void tmc_homing_reset_limits(uint8_t cycle_mask){
     
     /* store current active axes in global variable */
     sg_read_active_axes = cycle_mask; 
@@ -1204,21 +1138,12 @@ void tmc_homing_reset_limits_and_counter(uint8_t cycle_mask, bool approach){
     /* clear limit switch */
     LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Set pin high to trigger ISR
     
-    /* reset the homing_SG_reads_skip_counter counter: reset countdown counter for SG skip at start. Do so only on approach of limit switch */
-    if (approach) {
-        homing_SG_reads_skip_counter = (SG_HOMING_DELAY_AFTER_START_MS * 1000UL) / SPI_HOMING_CYCLE_DURATION_US; /* one stall guard SPI cycle is 200us, so 1000 cycles is approx 200ms */                            
-    }
-    
-    
-    
-    
 }
 
 
 /* prepare for homing 
 - disable SPI regular interrupts
 - set current scale to working level
-- update the SPI skip variable due faster SPI polls
 */
 void tmc_homing_mode_set(uint8_t mode){
     if (mode == TMC_MODE_HOMING){
@@ -1239,59 +1164,10 @@ void tmc_homing_mode_set(uint8_t mode){
   
 }  
 
-/* schedule single StallGuard read of all active axes */
-void tmc2590_schedule_read_sg_homing(void){
-    
-    uint8_t axis;
-    
-    homing_sg_read_ongoing = true;
-    
-    for (axis=0; axis<N_AXIS; axis++) {
-        
-        if (bit_istrue(sg_read_active_axes,bit(axis))) {
-            
-            switch (axis){
-                
-                case X_AXIS:
-                tmc2590_dual_read_sg(&tmc2590_X1, &tmc2590_X2);
-                if ( st_tmc.SG_skips_counter[axis] < SG_READING_SKIPS_AFTER_SLOW_FEED )    {        st_tmc.SG_skips_counter[axis]++;    }            /* skip this time as slow feed was too recent and SG might be invalid */
-                break;
-                
-                case Y_AXIS:
-                tmc2590_dual_read_sg(&tmc2590_Y1, &tmc2590_Y2);
-                if ( st_tmc.SG_skips_counter[axis] < SG_READING_SKIPS_AFTER_SLOW_FEED )    {        st_tmc.SG_skips_counter[axis]++;    }            /* skip this time as slow feed was too recent and SG might be invalid */
-                break;
-                
-                case Z_AXIS:
-                tmc2590_single_read_sg(&tmc2590_Z);
-                if ( st_tmc.SG_skips_counter[axis] < SG_READING_SKIPS_AFTER_SLOW_FEED )    {        st_tmc.SG_skips_counter[axis]++;    }            /* skip this time as slow feed was too recent and SG might be invalid */
-                break;
-                
-                default:
-                break;
-                
-            } //switch (axis){
-                
-        } //if (bit_istrue(sg_read_active_axes,bit(axis))) {
-            
-    } //for (idx=0; idx<N_AXIS; idx++) {
-        
-}
-
 void tmc_spi_queue_drain_complete(void){
     /* in homing mode this indication shall lead to processing the SG values and releasing the homing loop */
     if ( homing_sg_read_ongoing ) {
-        
-        if ( homing_SG_reads_skip_counter > 0 )  homing_SG_reads_skip_counter--; /* Z axis is the only one including this counter increment */
-        
-        if (sg_read_active_axes == HOMING_CYCLE_1) /*  HOMING_CYCLE_1 ((1<<X_AXIS)|(1<<Y_AXIS))  // OPTIONAL: Then move X,Y at the same time. */
-            { 
-                delay_us(SPI_HOMING_CYCLE_DURATION_US - SPI_HOMING_XY_CYCLE_DURATION_US);  /* delay to align total read cycle to 1ms (SPI_HOMING_CYCLE_DURATION_US)*/                
-            }
-        else{ /* Z axis */
-                delay_us(SPI_HOMING_CYCLE_DURATION_US - SPI_HOMING_Z_CYCLE_DURATION_US);   /* delay to align total read cycle to 1ms (SPI_HOMING_CYCLE_DURATION_US)*/                
-            }
-        
+
         uint8_t axis;        
         for (axis=0; axis<N_AXIS; axis++) {
             if (bit_istrue(sg_read_active_axes,bit(axis))) {
@@ -1320,7 +1196,9 @@ void tmc_spi_queue_drain_complete(void){
 }
 
 /* BK: function to replace limits read with SPI actions for homing
- * new homing principle: read SG in a loop until limit is reached and limit can be triggered
+ * new homing principle - use StallGuard readings to detect the end stop by increasing the load on the motor: 
+ * wait for stepper function st_tmc_fire_SG_read() to raise flag in system_set_exec_tmc_command_flag(command);
+ * when sys_rt_exec_tmc_command raised - immediately read SG.
  * homing is done in plain loop outside of main core loop - so usual main signals and indicators cannot be used here, 
  * therefore dumb while loop is used here to wait for completion of SPI read and SG analysis
  * main loop in limits.c "do { //} while (STEP_MASK & axislock);" handles the periodic reads of SG through tmc_read_sg_and_trigger_limits()
@@ -1328,16 +1206,44 @@ void tmc_spi_queue_drain_complete(void){
  * then while loop stays forever in this function until tmc_spi_queue_drain_complete() is called from last SPI interrupt and SG data is processed
  * tmc_spi_queue_drain_complete() releases the flag "homing_sg_read_ongoing" and homing continues
  * function process_status_of_single_controller() looks for SG trigger point and sets the limit port to corresponding state it alarm need to be triggered
+ 
 */            
 void tmc_read_sg_and_trigger_limits(void){
-
-    /* add Stall Guard read request to the SPI queue */
-    tmc2590_schedule_read_sg_homing();
     
-    /* start SPI transfers flushing the queue */
-    spi_process_tx_queue();
-            
-    /* wait for stall guard read complete. Delay in a loop is required to let other (ISR) threads to continue */
+  uint8_t rt_exec; // Temp variable to avoid calling volatile multiple times.
+  
+  rt_exec = sys_rt_exec_tmc_command;
+  
+  if (rt_exec) {
+      system_clear_exec_tmc_flags(); // Clear all accessory flags. Shall be done after last command in the buffer is processed
+   
+      /* schedule next SPI read Stall Guard from X motor controllers */
+      if (rt_exec & TMC_SPI_READ_SG_X_COMMAND) {
+          tmc2590_schedule_read_sg(X_AXIS);
+          /* start SPI transfers flushing the queue */
+          spi_process_tx_queue();
+          homing_sg_read_ongoing = true;
+      }
+      
+      /* schedule next SPI read Stall Guard from Y motor controllers */
+      if (rt_exec & TMC_SPI_READ_SG_Y_COMMAND) {
+          tmc2590_schedule_read_sg(Y_AXIS);
+          /* start SPI transfers flushing the queue */
+          spi_process_tx_queue();
+          homing_sg_read_ongoing = true;          
+      }
+      
+      /* schedule next SPI read Stall Guard from Z motor controllers */
+      if (rt_exec & TMC_SPI_READ_SG_Z_COMMAND) {
+          tmc2590_schedule_read_sg(Z_AXIS);
+          /* start SPI transfers flushing the queue */
+          spi_process_tx_queue();
+          homing_sg_read_ongoing = true;
+      }
+
+  }//if (rt_exec) {
+
+    /* wait for current stall guard read complete. Delay in a loop is required to let other (ISR) threads to continue */
     while (homing_sg_read_ongoing) delay_us(1); 
 }
 
