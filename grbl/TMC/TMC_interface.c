@@ -25,6 +25,8 @@ void tmc2590_schedule_read_all(void){
     tmc2590_dual_read_all(&tmc2590_X1, &tmc2590_X2);
     tmc2590_dual_read_all(&tmc2590_Y1, &tmc2590_Y2);
     tmc2590_single_read_all(&tmc2590_Z);
+    /* update st_tmc.sg_read_active_axes with all axes to be processed */
+    st_tmc.sg_read_active_axes |= ( ( 1 << X_AXIS ) | ( 1 << Y_AXIS ) | ( 1 << Z_AXIS ) );
     /* start SPI transfers flushing the queue */
     tmc_kick_spi_processing();
 }
