@@ -62,7 +62,7 @@
 #include "jog.h"
 #include "sleep.h"
 #include "ASMCNC.h"
-#include "TMC2590.h"
+#include "TMC_interface.h"
 
 
 // ---------------------------------------------------------------------------------------

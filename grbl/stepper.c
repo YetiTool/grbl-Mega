@@ -21,8 +21,6 @@
 
 #include "grbl.h"
 
-extern stepper_tmc_t st_tmc; // structure to hold the shaft rotational speed at the time when SG read was fired.
-
 // Some useful constants.
 #define DT_SEGMENT (1.0/(ACCELERATION_TICKS_PER_SECOND*60.0)) // min/segment
 #define REQ_MM_INCREMENT_SCALAR 1.25

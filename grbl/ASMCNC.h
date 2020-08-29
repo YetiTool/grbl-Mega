@@ -149,7 +149,6 @@ void asmcnc_RGB_off(void);
 void asmcnc_RGB_white(void);
 void asmcnc_RGB_red_flash(void);
 void asmcnc_RGB_setup(void);
-void asmcnc_TMC_Timer2_setup(void);
 uint8_t asmcnc_execute_line(char *line);
 
 uint8_t crc8x_fast(uint8_t crc, uint8_t *mem, size_t len); /* fast crc8 calculator */

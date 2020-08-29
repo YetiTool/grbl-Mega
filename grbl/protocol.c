@@ -502,8 +502,6 @@ void protocol_exec_rt_system()
     /* process RTL commands arrived in the serial buffer */
     if (rt_exec & RTL_TMC_COMMAND) {
         execute_TMC_command();
-        /* start SPI transfers flushing the queue */
-        spi_process_tx_queue();
     }
     
   } //if rt_exec = sys_rt_exec_rtl_command;
@@ -527,29 +525,21 @@ void protocol_exec_rt_system()
       if (rt_exec & TMC_SPI_READ_ALL_COMMAND) {
           /* BK profiling: SPI prepare: 900us  + actual SPI reads: 1.2-2.0 ms */
           tmc2590_schedule_read_all();          
-          /* start SPI transfers flushing the queue */
-          spi_process_tx_queue();
       }
       
       /* schedule next SPI read Stall Guard from X motor controllers */
       if (rt_exec & TMC_SPI_READ_SG_X_COMMAND) {
           tmc2590_schedule_read_sg(X_AXIS);          
-          /* start SPI transfers flushing the queue */
-          spi_process_tx_queue();
       }
       
       /* schedule next SPI read Stall Guard from Y motor controllers */
       if (rt_exec & TMC_SPI_READ_SG_Y_COMMAND) {
           tmc2590_schedule_read_sg(Y_AXIS);          
-          /* start SPI transfers flushing the queue */
-          spi_process_tx_queue();
       }
       
       /* schedule next SPI read Stall Guard from Z motor controllers */
       if (rt_exec & TMC_SPI_READ_SG_Z_COMMAND) {
           tmc2590_schedule_read_sg(Z_AXIS);          
-          /* start SPI transfers flushing the queue */
-          spi_process_tx_queue();
       }
 
 
