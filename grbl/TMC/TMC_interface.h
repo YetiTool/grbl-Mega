@@ -40,13 +40,14 @@ typedef enum
     TMC_MODE_HOMING
 } tmc_homing_mode_enum_type_t;
 
+
 #define RIGGY
 #define SG_READ_STEP_COUNT 32 // TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled. UART reads could halt the readings up to 6ms, so many unfiltered samples could be missed at high speed. So for now read filtered SG twice per change.
 #define SG_READING_SKIPS_AFTER_SLOW_FEED    6        /* Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis. Actually means 5 reads for dual axis and 10 for single */
 #define DEFAULT_TMC_READ_SELECT             1 /* read of the SG is default state of the system */
 
 #ifdef RIGGY
-#define SG_MAX_VALID_PERIOD_X_US            1875    /* 10rpm (565mm/min feed). for riggy: X motor 17HS15-0404S - 100 rpm */
+#define SG_MAX_VALID_PERIOD_X_US            3750    /* 5rpm (290mm/min feed). for riggy: X motor 17HS15-0404S - 100 rpm */
 #define SG_MAX_VALID_PERIOD_Y_US            1875    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 #define SG_MAX_VALID_PERIOD_Z_US            938     /* 20rpm (60mm/min feed). Z motor 17HS19-2004S1*/
 #else
@@ -63,6 +64,7 @@ typedef struct {
     uint8_t  current_scale_state;         // global holding effective current scale 
     uint8_t  sg_read_active_axes;         // global variable to hold list of axes that is being read
     uint8_t  stall_alarm_enabled;         // global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm
+    uint8_t  calibration_enabled;         // SG calibration ongoing
 } stepper_tmc_t;
 
 
@@ -91,7 +93,8 @@ typedef struct {
 	uint8_t standStillCurrentScale; /* standstill current - to reduce energy consumption while job is idle */
 	uint8_t stallGuardFilter;   // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
 	uint8_t stallGuardThreshold;
-	uint16_t stallGuardAlarmValue;
+	uint16_t stallGuardAlarmValue;      /* when current SG reading is lower than this value corresponded axis alarm will be triggered */
+	uint16_t stallGuardAlarmThreshold;  /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
     
 	uint8_t vSense;             /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV. */   
     uint8_t currentSEmin;       /* set 1/4 of full scale */
@@ -166,7 +169,7 @@ typedef struct {
 #define SET_IDLE_CURRENT    27   /* set the current scale applied when no pulses are detected on the given axis */
 #define SET_MOTOR_ENERGIZED 28   /* energize or shut off the motor completely, for example to let user move turret easier */
 #define SET_SG_ALARM        29   /* desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm */
-
+#define SET_CALIBR_MODE     30   /* 1: reset all calibrations and prepare for new one, 2: complete calibration, compute, 3: print calibration coefficients  */
 
 
 
@@ -189,6 +192,12 @@ void tmc_homing_mode_set(uint8_t mode);  /* set and reset TMC controllers for ho
 void tmc_read_sg_and_trigger_limits(void); /* schedule single read of stall guard, analyse response and set limits limits accordingly */
 void tmc_homing_reset_limits(void); /* clear limit switch when pulling off */
 void tmc_globals_reset(void); /* reset all tmc global variables to known init state */
+
+/* calibration functions */
+void tmc_calibration_init(void); /* clear calibration matrix and get ready for data collection */
+void tmc_compute_and_apply_calibration(void); /* stop calibration and compute coefficients based on accumulated data */
+void tmc_report_calibration(void); /* print out calibration data */
+
 
 TMC2590TypeDef * get_TMC_controller(uint8_t controller); /* get pointer to required contoller */
 

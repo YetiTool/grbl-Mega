@@ -131,6 +131,13 @@
 #define TMC_SPI_READ_SG_Y_COMMAND       bit(5)
 #define TMC_SPI_READ_SG_Z_COMMAND       bit(6)
 
+// Define TMC calibration flags
+#define TMC_DISABLED                    0  // Must be zero.
+#define TMC_CALIBRATION_INIT            bit(0)       /* 1: reset all calibrations and prepare for new one,               */
+#define TMC_CALIBRATION_COMPUTE         bit(1)       /* 2: complete calibration, compute cal tables and apply correction,*/
+#define TMC_CALIBRATION_REPORT          bit(2)       /* 4: print calibration coefficients                                */
+
+
 
 
 
@@ -171,6 +178,8 @@ extern volatile uint8_t sys_rt_exec_motion_override; // Global realtime executor
 extern volatile uint8_t sys_rt_exec_accessory_override; // Global realtime executor bitflag variable for spindle/coolant overrides.
 extern volatile uint8_t sys_rt_exec_rtl_command; // Global realtime executor bitflag variable for Yeti commands: real-time commands arrived from UART buffer (RGB, TMC etc).
 extern volatile uint8_t sys_rt_exec_tmc_command; // Global realtime executor bitflag variable for Yeti commands: internal SPI - TMC flags to pass execution from SPI ISRs to main loop.
+extern volatile uint8_t sys_rt_exec_tmc_cal_command; // Global realtime executor bitflag variable for Yeti commands: internal SPI - TMC flags to pass execution of TMC calibration commands.
+
 
 #ifdef DEBUG
   #define EXEC_DEBUG_REPORT  bit(0)
@@ -223,6 +232,8 @@ void system_set_exec_rtl_command_flag(uint8_t mask);
 void system_clear_exec_rtl_flags();
 void system_set_exec_tmc_command_flag(uint8_t mask);
 void system_clear_exec_tmc_flags();
+void system_set_exec_tmc_cal_command_flag(uint8_t mask);
+void system_clear_exec_tmc_cal_flags();
 
 
 #endif

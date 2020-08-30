@@ -103,7 +103,8 @@ void init_TMC(void){
 	tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
 	tmc2590_X1.stallGuardFilter             = 1; // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
 	tmc2590_X1.stallGuardThreshold          = 6; 
-	tmc2590_X1.stallGuardAlarmValue         = 100; /* when current SG reading is lower than this value corresponded axis alarm will be triggered */
+	tmc2590_X1.stallGuardAlarmValue         = 100; /* when current SG reading is lower than this value corresponded axis alarm will be triggered */    
+	tmc2590_X1.stallGuardAlarmThreshold     = 200; /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
 	tmc2590_X1.vSense                       = 0; /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV. */
 	tmc2590_X1.currentSEmin                 = 1; // 1: set 1/4 of full scale when CoolStep is active
 	tmc2590_X1.coolStepMin                  = 0; // default CoolStep = 0 (disable); if want to enable then set for example to trigger if SG below 7x32 = 224
@@ -151,26 +152,32 @@ void init_TMC(void){
 	tmc2590_Y1.standStillCurrentScale       = 30; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
 	tmc2590_Y2.standStillCurrentScale       = 30; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
     
+    
+    
 #ifdef RIGGY
     /* no motor */
-    tmc2590_X1.stallGuardThreshold          = 63;
-    tmc2590_X1.stallGuardAlarmValue         = 0;
-    tmc2590_X1.currentScale                 = 0; /* 0 - 31 where 31 is max */
+    tmc2590_X1.stallGuardThreshold          = 6;
+    tmc2590_X1.stallGuardAlarmValue         = 300;
+    tmc2590_X1.stallGuardAlarmThreshold     = 200;
+    tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
 	tmc2590_X1.standStillCurrentScale       = 0; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
     /* ZH motor (medium 23HS22) in riggy conditions (177steps/mm)*/
     //tmc2590_X1.stallGuardThreshold          = 7;
     //tmc2590_X1.stallGuardAlarmValue         = 200;
+    //tmc2590_X1.stallGuardAlarmThreshold         = 200;
     //tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
     
     /* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400  at 3000mm/min on X with 177steps/mm*/
-    tmc2590_X2.stallGuardThreshold           = 5;
-    tmc2590_X2.stallGuardAlarmValue          = 400;
-    tmc2590_X2.currentScale                  = 1; /* 0 - 31 where 31 is max, 0.25A */
-    tmc2590_X2.standStillCurrentScale        = 0; //  2: set 1/2 of full scale, 1/4th of power
+    tmc2590_X2.stallGuardThreshold          = 5;
+    tmc2590_X2.stallGuardAlarmValue         = 400;
+    tmc2590_X2.stallGuardAlarmThreshold     = 200;
+    tmc2590_X2.currentScale                 = 1; /* 0 - 31 where 31 is max, 0.25A */
+    tmc2590_X2.standStillCurrentScale       = 0; //  2: set 1/2 of full scale, 1/4th of power
     tmc2590_X2.vSense                       = 1; /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV.*/
     
     tmc2590_Y1.stallGuardThreshold          = 3;
     tmc2590_Y1.stallGuardAlarmValue         = 400;
+    tmc2590_Y1.stallGuardAlarmThreshold     = 200;
     tmc2590_Y1.currentScale                 = 31; /* 0 - 31 where 31 is max */
     tmc2590_Y1.SlowDecayDuration            = 4;
     tmc2590_Y1.HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
@@ -181,6 +188,7 @@ void init_TMC(void){
     
     tmc2590_Y2.stallGuardThreshold          = 3;
     tmc2590_Y2.stallGuardAlarmValue         = 400;
+    tmc2590_Y2.stallGuardAlarmThreshold     = 200;
     tmc2590_Y2.currentScale                 = 31; /* 0 - 31 where 31 is max */
     tmc2590_Y2.SlowDecayDuration            = 4;
     tmc2590_Y2.HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
@@ -194,6 +202,7 @@ void init_TMC(void){
     tmc2590_Z.HystEnd                       = 0;   /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
     tmc2590_Z.stallGuardThreshold           = 5;
     tmc2590_Z.stallGuardAlarmValue          = 200;
+    tmc2590_Z.stallGuardAlarmThreshold      = 200;
     tmc2590_Z.currentScale                  = 1; /* 0 - 31 where 31 is max, 0.25A */
     tmc2590_Z.standStillCurrentScale        = 0; //  2: set 1/2 of full scale, 1/4th of power
     tmc2590_X2.vSense                       = 1; /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV.*/
@@ -202,15 +211,18 @@ void init_TMC(void){
     /* ZH motor (medium 23HS22) in normal conditions (56steps/mm)*/
     tmc2590_X1.stallGuardThreshold          = 6;
     tmc2590_X1.stallGuardAlarmValue         = 400;
+    tmc2590_X1.stallGuardAlarmThreshold     = 200;
     tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
     
     /* ZH motor (medium 23HS22) in normal conditions (56steps/mm)*/
     tmc2590_X2.stallGuardThreshold          = 6;
     tmc2590_X2.stallGuardAlarmValue         = 400;
+    tmc2590_X2.stallGuardAlarmThreshold     = 200;
     tmc2590_X2.currentScale                 = 31; /* 0 - 31 where 31 is max */
     
     tmc2590_Y1.stallGuardThreshold          = 3;
-    tmc2590_Y1.stallGuardAlarmValue         = 400;
+    tmc2590_Y2.stallGuardAlarmValue         = 400;
+    tmc2590_Y1.stallGuardAlarmThreshold     = 200;
     tmc2590_Y1.currentScale                 = 31; /* 0 - 31 where 31 is max */
     tmc2590_Y1.SlowDecayDuration            = 4;
     tmc2590_Y1.HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
@@ -221,6 +233,7 @@ void init_TMC(void){
     
     tmc2590_Y2.stallGuardThreshold          = 3;
     tmc2590_Y2.stallGuardAlarmValue         = 400;
+    tmc2590_Y2.stallGuardAlarmThreshold     = 200;
     tmc2590_Y2.currentScale                 = 31; /* 0 - 31 where 31 is max */
     tmc2590_Y2.SlowDecayDuration            = 4;
     tmc2590_Y2.HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
@@ -232,11 +245,14 @@ void init_TMC(void){
     
     /* ZH motor */
     tmc2590_Z.stallGuardThreshold           = 6;
-    tmc2590_Z.stallGuardAlarmValue          = 300;
+    tmc2590_Z.stallGuardAlarmValue          = 200;
+    tmc2590_Z.stallGuardAlarmThreshold      = 200;
     tmc2590_Z.currentScale                  = 31; /* 0 - 31 where 31 is max */
 
 #endif    
     
+    stall_guard_calibration_load();
+
     
     stall_guard_statistics_reset();    
     
@@ -575,6 +591,18 @@ void execute_TMC_command(){
 
 			/* energize or shut off the motor completely, for example to let user move turret easier */
 			case SET_MOTOR_ENERGIZED:
+            {
+                uint8_t SlowDecayDuration = tmc2590->SlowDecayDuration;
+                if (value == 0){
+                    SlowDecayDuration = 0;
+                }
+				/* TMC2590_CHOPCONF */
+				register_value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];				
+				register_value &= ~TMC2590_SET_TOFF(-1);                        // clear
+				register_value |= TMC2590_SET_TOFF(SlowDecayDuration);
+				tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT] = register_value;
+				tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
+            }			            
 			break;
 
 			/* desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm */
@@ -582,6 +610,16 @@ void execute_TMC_command(){
                 st_tmc.stall_alarm_enabled = value;
 			break;
 
+			/* 1: reset all calibrations and prepare for new one, 2: complete calibration, compute cal tables and apply correction, 4: print calibration coefficients */
+			case SET_CALIBR_MODE:
+                if ( (value == TMC_CALIBRATION_INIT) || (value == TMC_CALIBRATION_COMPUTE) || (value == TMC_CALIBRATION_REPORT) )
+                    {
+                        system_set_exec_tmc_cal_command_flag(value);                
+                    }
+                    else{
+                        report_status_message(ASMCNC_PARAM_ERROR);
+                    }                                         
+			break;
 
 			default:
 				break;
@@ -776,6 +814,7 @@ void tmc_globals_reset(void)
     homing_sg_read_ongoing      = false;                 /* global flag indicating stall guard read process is ongoing */
     st_tmc.sg_read_active_axes  = 0;                     /* global variable to hold current axis that is being homed */
     st_tmc.stall_alarm_enabled  = true;                  /* global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm      */
+    st_tmc.calibration_enabled  = false;
     
 }
 

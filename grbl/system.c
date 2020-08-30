@@ -420,3 +420,11 @@ void system_clear_exec_tmc_flags() {
     sys_rt_exec_tmc_command = 0;
 }
 
+void system_set_exec_tmc_cal_command_flag(uint8_t mask) {
+    sys_rt_exec_tmc_cal_command |= (mask);
+}
+
+void system_clear_exec_tmc_cal_flags() {
+    sys_rt_exec_tmc_cal_command = 0;
+}
+

@@ -610,38 +610,6 @@ debug_pin_write(0, DEBUG_2_PIN);
       printPgmString(PSTR("|T:"));
       for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
 	      tmc2590 = get_TMC_controller(controller_id);
-    //
-    //	    switch (controller_id){
-    //	        case TMC_X1:
-    //				  printPgmString(PSTR("|X1:"));
-    //				break;
-    //	        case TMC_X2:
-    //		      	  printPgmString(PSTR("|X2:"));
-    //		      	break;
-    //	        case TMC_Y1:
-    //		      	  printPgmString(PSTR("|Y1:"));
-    //		      	break;
-    //	        case TMC_Y2:
-    //		      	  printPgmString(PSTR("|Y2:"));
-    //		      	break;
-    //	        case TMC_Z:
-    //		      	  printPgmString(PSTR("|Z:"));
-    //		      	break;
-    //	        default:
-    //	            break;
-    //	    } //switch (controller){
-    //	  printInteger( tmc2590->resp.stallGuardCurrentValue );
-    //	  printPgmString(PSTR(","));
-    //	  printInteger( tmc2590->resp.stallGuardShortValue );
-    //	  printPgmString(PSTR(","));
-    //	  printInteger( tmc2590->resp.coolStepCurrentValue );
-    //	  printPgmString(PSTR(","));
-    //	  printInteger( tmc2590->resp.StatusBits );
-    //	  printPgmString(PSTR(","));
-    //	  printInteger( tmc2590->resp.DiagnosticBits );
-    //	  printPgmString(PSTR(","));
-    //	  printInteger( tmc2590->resp.mStepCurrentValue );
-    //	  printPgmString(PSTR(">"));
 
 	      /* pack values to hex string
 	      * motor                       param                   range, bits bytes   hex bytes

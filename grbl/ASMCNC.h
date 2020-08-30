@@ -16,6 +16,8 @@
 #define ASMCNC_INVALID_MOTOR_ID	        40 //ASM Error code 40. TMC command received for wrong motor
 #define ASMCNC_CRC8_ERROR	            41 //ASM Error code 41. TMC command received but crc8 does not match
 #define ASMCNC_INVALID_HEX_CODE         42 //ASM Error code 42. Non "hex code" character received
+#define ASMCNC_PARAM_ERROR              43 //ASM Error code 43. Parameter supplied to the function is outside wanted range
+
 
 // Z-head PCB has two options for spindle control:
 // 1) FET and resistive divider based filter (non-linear and power hungry)
@@ -120,8 +122,9 @@ enum rgbHexStates{
 //#define DEBUG_ADC_ENABLED // comment out to remove ADC debug pins functionality - remove for production version
 //#define MSTEP_READING_ENABLED // good to have a temporal view of MSTEP for debug purposes
 //#define SG_SKIP_DEBUG_ENABLED // enable to debug stall guard masking engine
+#define SG_CAL_DEBUG_ENABLED // enable to debug stall guard calibration engine
 
-#if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED)
+#if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED) || defined(SG_CAL_DEBUG_ENABLED)
 #define ANY_DEBUG_PINS_ENABLED // 
 #endif
 

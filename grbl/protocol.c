@@ -553,6 +553,31 @@ void protocol_exec_rt_system()
   } //if rt_exec = sys_rt_exec_tmc_command;
 
 
+  // Execute TMC calibration functions
+  rt_exec = sys_rt_exec_tmc_cal_command;
+  if (rt_exec) {
+      system_clear_exec_tmc_cal_flags(); // Clear all flags. Shall be done after last command in the buffer is processed
+      
+      /* clear calibration matrix and get ready for data collection */
+      if (rt_exec & TMC_CALIBRATION_INIT) {
+          tmc_calibration_init(); 
+      }
+      
+      /* stop calibration and compute coefficients based on accumulated data */
+      if (rt_exec & TMC_CALIBRATION_COMPUTE) {
+          tmc_compute_and_apply_calibration(); 
+      }
+      
+      /* print out calibration data */
+      if (rt_exec & TMC_CALIBRATION_REPORT) {
+          tmc_report_calibration(); 
+      }
+      
+  } //if rt_exec = sys_rt_exec_tmc_cal_command;
+
+
+
+
   #ifdef DEBUG
     if (sys_rt_exec_debug) {
       report_realtime_debug();

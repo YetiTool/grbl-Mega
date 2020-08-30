@@ -61,6 +61,14 @@ static const int32_t tmc2590_defaultRegisterResetState[TMC2590_REGISTER_COUNT] =
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^//
 */
 
+#define TMC_SG_PROFILE_POINTS 128
+#define TMC_SG_MAX_AVERAGE    64    /* max number of SG reads into one matrix cell. SG is 10 bit, matrix is 16 bits, so only 2^(16-10) = 64 values could fit safely */
+/* structure to hold live SG profile to track the load and alarm on stall detection*/
+typedef struct {
+    uint8_t  SG_read_cnt[TOTAL_TMCS][TMC_SG_PROFILE_POINTS];  // counter for averaging of SG values at calibration
+    uint16_t SG_read[TOTAL_TMCS][TMC_SG_PROFILE_POINTS];      // SG reads for each motor
+} stall_guard_tmc_matrix_t;
+
 
 void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef *tmc2590_config, const int32_t *registerResetState);
 
@@ -79,5 +87,7 @@ void process_status_of_single_controller(TMC2590TypeDef *tmc2590);
 void tmc2590_single_write_route(uint8_t controller_id, uint8_t address);
 void tmc_hw_init(void);
 void tmc_kick_spi_processing(void); /* flush the SPI queue starting from next SPI transfer */
+void stall_guard_calibration_load(void);
+
 
 #endif /* TMC_IC_TMC2590_H_ */
