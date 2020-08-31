@@ -310,7 +310,7 @@ void st_go_idle()
 /* Function st_tmc_fire_SG_read is the main interface between the stepper and the TMC hardware. 
    It lets main loop know when it is time to read the SG value and also keeps track of current speed 
    of each motor so this information could be used to apply all necessary corrections to the SG readings and analysis 
-   * function overhead is 5us, 7us when SG read is scheduled. this includes debug pin toggle which is ~1us
+   * function overhead is 6.5us, 9us when SG read is scheduled. this includes debug pin toggle which is ~1us
    */
 void st_tmc_fire_SG_read(uint8_t axis, uint8_t command){ 
 
@@ -318,10 +318,9 @@ void st_tmc_fire_SG_read(uint8_t axis, uint8_t command){
 debug_pin_write(1, DEBUG_0_PIN);
 #endif
     /* if feed is too slow reset SG counter the moment the step is too long */
-    if ( st.exec_segment->step_period_us[axis] > max_step_period_us_to_read_SG[axis] ) 
-    {
-         st_tmc.SG_skips_counter[axis] = 0; 
-    } 
+    if ( st.exec_segment->step_period_us[X_AXIS] > max_step_period_us_to_read_SG[X_AXIS] )     {         st_tmc.SG_skips_counter[X_AXIS] = 0;     }
+    if ( st.exec_segment->step_period_us[Y_AXIS] > max_step_period_us_to_read_SG[Y_AXIS] )     {         st_tmc.SG_skips_counter[Y_AXIS] = 0;     }
+    if ( st.exec_segment->step_period_us[Z_AXIS] > max_step_period_us_to_read_SG[Z_AXIS] )     {         st_tmc.SG_skips_counter[Z_AXIS] = 0;     }
     
     /* schedule SG read every SG_READ_STEP_COUNT steps */
     if (st_tmc.step_counter[axis]++ >= SG_READ_STEP_COUNT) 
@@ -1209,19 +1208,26 @@ void st_prep_buffer()
         *           3000   - 353            - 53.1
         *           500    - 2117           - 8.85
         */        
-    /* calculate step_period_us within 32 bit. For loop below takes 200-300us due to 32bit division */    
-    
+        
+    #ifdef SG_CAL_DEBUG_ENABLED
+    debug_pin_write(1, DEBUG_2_PIN);
+    #endif    
+    /* calculate step_period_us using float logic. For loop below takes 300-400us due to float division */
     for (uint8_t idx=0; idx<N_AXIS; idx++) { 
-        uint32_t steps, ratio, us_per_step;
-        steps = st_prep_block->steps[idx] >> 8; /* byte shift to not lose precision, as ratio can be in the region of fractions*/
+        uint32_t us_per_step;
+        float steps, ratio;
+        steps = st_prep_block->steps[idx];
         steps = steps ? steps : 1; /* catch divide by zero - for very low speeds */
         ratio = st_prep_block->step_event_count / steps;    /* all this ratio business is to keep calculation within 32 bit*/     
-        ratio = ratio << prep_segment->amass_level;        
+        ratio = ratio * (1 << prep_segment->amass_level);        
         us_per_step = (prep_segment->cycles_per_tick * ratio) / 16 ; /* timer cycles per step divided by timer speed (16M) */
-        us_per_step = us_per_step >> 8; /* revert the byte shift done in the beginning */
         if (us_per_step < (1UL << 16)) { prep_segment->step_period_us[idx] = us_per_step; } // < 65536: 64ms which is 1s per full step or 1rev per 200s (0.3rpm), slowest speed for SG detection is 1rpm, so should be good enough for London 
-        else { prep_segment->step_period_us[idx] = 0xffff; } // Just set the mas period possible                
+        else { prep_segment->step_period_us[idx] = 0xffff; } // Just set the max period possible                
     } //for (uint8_t idx=0; idx<N_AXIS; idx++) { 
+    #ifdef SG_CAL_DEBUG_ENABLED
+    debug_pin_write(0, DEBUG_2_PIN);
+    #endif
+
 
     // Segment complete! Increment segment buffer indices, so stepper ISR can immediately execute it.
     segment_buffer_head = segment_next_head;

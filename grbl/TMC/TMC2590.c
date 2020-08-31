@@ -499,6 +499,14 @@ debug_pin_write(0, DEBUG_1_PIN);
 void tmc_calibration_init(void){
     st_tmc.calibration_enabled = 1;
     st_tmc.stall_alarm_enabled  = false;                  /* global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm      */    
+    /* disable timer2 Interrupt for calibration cycle duration*/
+    TIMSK2 &=~(1<<OCIE2A); //Timer/Counter2 Output Compare Match A Interrupt    
+
+    /* lower the max step period for calibration purposes */    
+    max_step_period_us_to_read_SG[X_AXIS] = SG_MAX_CALIBR_PERIOD_X_US ;
+    max_step_period_us_to_read_SG[Y_AXIS] = SG_MAX_CALIBR_PERIOD_Y_US ;
+    max_step_period_us_to_read_SG[Z_AXIS] = SG_MAX_CALIBR_PERIOD_Z_US ;
+    
     memset(&SG_calibration_table, 0, sizeof(stall_guard_tmc_matrix_t));
 }
 
@@ -536,6 +544,14 @@ void tmc_compute_and_apply_calibration(void){
     }             
     /*reenable alarm */
     st_tmc.stall_alarm_enabled  = true;                  /* global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm      */
+    
+    /* restore the max step period for calibration purposes */
+    max_step_period_us_to_read_SG[X_AXIS] = SG_MAX_VALID_PERIOD_X_US ;
+    max_step_period_us_to_read_SG[Y_AXIS] = SG_MAX_VALID_PERIOD_Y_US ;
+    max_step_period_us_to_read_SG[Z_AXIS] = SG_MAX_VALID_PERIOD_Z_US ;
+    
+    /* reenable SPI engine timer : Enable timer2 Interrupt */
+    TIMSK2 |= (1<<OCIE2A); //Timer/Counter2 Output Compare Match A Interrupt Enable    
 }
 
 /* print out calibration data */

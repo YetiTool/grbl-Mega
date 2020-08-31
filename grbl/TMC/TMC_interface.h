@@ -58,6 +58,12 @@ typedef enum
 #define SG_MAX_VALID_PERIOD_Z_US            938     /* 20rpm (60mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 #endif
 
+/* max step period for calibration purposes */
+#define SG_MAX_CALIBR_PERIOD_X_US           8000    /* 2.3rpm (132mm/min feed). for riggy: X motor 17HS15-0404S - 100 rpm */
+#define SG_MAX_CALIBR_PERIOD_Y_US           8000    /* 2.3rpm (132mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+#define SG_MAX_CALIBR_PERIOD_Z_US           8000    /* 2.3rpm (6 mm/min feed). Z motor 17HS19-2004S1*/
+
+
 // Stepper ISR data struct. Contains the running data for the main stepper ISR.
 typedef struct {
     uint16_t step_period_us[N_AXIS];      // variables to hold the step period which is direct reflection of shaft rotational speed at the time when SG read was fired.
