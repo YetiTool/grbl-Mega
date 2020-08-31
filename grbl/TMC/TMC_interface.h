@@ -46,10 +46,12 @@ typedef enum
 #define SG_READING_SKIPS_AFTER_SLOW_FEED    6        /* Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis. Actually means 5 reads for dual axis and 10 for single */
 #define DEFAULT_TMC_READ_SELECT             1 /* read of the SG is default state of the system */
 
+
+/* max valid periods are limited by acceleration: Z motor with acc=200 starts with 930us pulses and ends with 1600us pulses. X and Y motors with acc=130 starts with 9530us and ends with 12500us */
 #ifdef RIGGY
-#define SG_MAX_VALID_PERIOD_X_US            3750    /* 5rpm (290mm/min feed). for riggy: X motor 17HS15-0404S - 100 rpm */
-#define SG_MAX_VALID_PERIOD_Y_US            1875    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
-#define SG_MAX_VALID_PERIOD_Z_US            938     /* 20rpm (60mm/min feed). Z motor 17HS19-2004S1*/
+#define SG_MAX_VALID_PERIOD_X_US            8000    /* 2.3rpm (132mm/min feed). for riggy: X motor 17HS15-0404S - 100 rpm */
+#define SG_MAX_VALID_PERIOD_Y_US            8000    /* 2.3rpm (132mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+#define SG_MAX_VALID_PERIOD_Z_US            1500    /* 12.5rpm (37.5mm/min feed). Z motor 17HS19-2004S1*/
 #else
 #define SG_MAX_VALID_PERIOD_X_US            1875    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 #define SG_MAX_VALID_PERIOD_Y_US            1875    /* 10rpm (565mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
@@ -201,7 +203,7 @@ void tmc_report_calibration(void); /* print out calibration data */
 
 TMC2590TypeDef * get_TMC_controller(uint8_t controller); /* get pointer to required contoller */
 
-extern const uint16_t max_step_period_us_to_read_SG[];
+extern uint16_t max_step_period_us_to_read_SG[];
 extern stepper_tmc_t st_tmc; // structure to hold the shaft rotational speed at the time when SG read was fired.
 
 #endif /* TMC_INTERFACE_H_ */

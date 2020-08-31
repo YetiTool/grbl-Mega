@@ -9,7 +9,7 @@
 
 #include <string.h>
 
-const uint16_t max_step_period_us_to_read_SG[] = { SG_MAX_VALID_PERIOD_X_US, SG_MAX_VALID_PERIOD_Y_US, SG_MAX_VALID_PERIOD_Z_US }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
+uint16_t max_step_period_us_to_read_SG[] = { SG_MAX_VALID_PERIOD_X_US, SG_MAX_VALID_PERIOD_Y_US, SG_MAX_VALID_PERIOD_Z_US }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
 
 void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef *tmc2590_config, const int32_t *registerResetState)
 {
@@ -339,134 +339,134 @@ stall_guard_tmc_matrix_t SG_calibration_table;
 
 const uint16_t SG_step_periods_us[] PROGMEM =   /* must be size of TMC_SG_PROFILE_POINTS, can be put in PROGMEM  */
 {
-    3750, /* entry 1, speed=5.0rpm, feed=282.4mm/min */
-    3646, /* entry 2, speed=5.1rpm, feed=290.4mm/min */
-    3544, /* entry 3, speed=5.3rpm, feed=298.7mm/min */
-    3446, /* entry 4, speed=5.4rpm, feed=307.3mm/min */
-    3350, /* entry 5, speed=5.6rpm, feed=316.1mm/min */
-    3257, /* entry 6, speed=5.8rpm, feed=325.1mm/min */
-    3166, /* entry 7, speed=5.9rpm, feed=334.4mm/min */
-    3078, /* entry 8, speed=6.1rpm, feed=344.0mm/min */
-    2992, /* entry 9, speed=6.3rpm, feed=353.9mm/min */
-    2909, /* entry 10, speed=6.4rpm, feed=364.0mm/min */
-    2828, /* entry 11, speed=6.6rpm, feed=374.4mm/min */
-    2749, /* entry 12, speed=6.8rpm, feed=385.1mm/min */
-    2673, /* entry 13, speed=7.0rpm, feed=396.1mm/min */
-    2599, /* entry 14, speed=7.2rpm, feed=407.5mm/min */
-    2526, /* entry 15, speed=7.4rpm, feed=419.1mm/min */
-    2456, /* entry 16, speed=7.6rpm, feed=431.1mm/min */
-    2388, /* entry 17, speed=7.9rpm, feed=443.5mm/min */
-    2321, /* entry 18, speed=8.1rpm, feed=456.2mm/min */
-    2257, /* entry 19, speed=8.3rpm, feed=469.2mm/min */
-    2194, /* entry 20, speed=8.5rpm, feed=482.6mm/min */
-    2133, /* entry 21, speed=8.8rpm, feed=496.5mm/min */
-    2073, /* entry 22, speed=9.0rpm, feed=510.7mm/min */
-    2016, /* entry 23, speed=9.3rpm, feed=525.3mm/min */
-    1960, /* entry 24, speed=9.6rpm, feed=540.3mm/min */
-    1905, /* entry 25, speed=9.8rpm, feed=555.8mm/min */
-    1852, /* entry 26, speed=10.1rpm, feed=571.7mm/min */
-    1801, /* entry 27, speed=10.4rpm, feed=588.0mm/min */
-    1751, /* entry 28, speed=10.7rpm, feed=604.9mm/min */
-    1702, /* entry 29, speed=11.0rpm, feed=622.2mm/min */
-    1654, /* entry 30, speed=11.3rpm, feed=640.0mm/min */
-    1608, /* entry 31, speed=11.7rpm, feed=658.3mm/min */
-    1564, /* entry 32, speed=12.0rpm, feed=677.1mm/min */
-    1520, /* entry 33, speed=12.3rpm, feed=696.5mm/min */
-    1478, /* entry 34, speed=12.7rpm, feed=716.4mm/min */
-    1437, /* entry 35, speed=13.1rpm, feed=737.0mm/min */
-    1397, /* entry 36, speed=13.4rpm, feed=758.0mm/min */
-    1358, /* entry 37, speed=13.8rpm, feed=779.7mm/min */
-    1320, /* entry 38, speed=14.2rpm, feed=802.1mm/min */
-    1283, /* entry 39, speed=14.6rpm, feed=825.0mm/min */
-    1248, /* entry 40, speed=15.0rpm, feed=848.6mm/min */
-    1213, /* entry 41, speed=15.5rpm, feed=872.9mm/min */
-    1179, /* entry 42, speed=15.9rpm, feed=897.9mm/min */
-    1146, /* entry 43, speed=16.4rpm, feed=923.6mm/min */
-    1115, /* entry 44, speed=16.8rpm, feed=950.0mm/min */
-    1084, /* entry 45, speed=17.3rpm, feed=977.2mm/min */
-    1053, /* entry 46, speed=17.8rpm, feed=1005.2mm/min */
-    1024, /* entry 47, speed=18.3rpm, feed=1033.9mm/min */
-    996, /* entry 48, speed=18.8rpm, feed=1063.5mm/min */
-    968, /* entry 49, speed=19.4rpm, feed=1094.0mm/min */
-    941, /* entry 50, speed=19.9rpm, feed=1125.3mm/min */
-    915, /* entry 51, speed=20.5rpm, feed=1157.5mm/min */
-    889, /* entry 52, speed=21.1rpm, feed=1190.6mm/min */
-    865, /* entry 53, speed=21.7rpm, feed=1224.7mm/min */
-    841, /* entry 54, speed=22.3rpm, feed=1259.7mm/min */
-    817, /* entry 55, speed=22.9rpm, feed=1295.8mm/min */
-    794, /* entry 56, speed=23.6rpm, feed=1332.9mm/min */
-    772, /* entry 57, speed=24.3rpm, feed=1371.0mm/min */
-    751, /* entry 58, speed=25.0rpm, feed=1410.2mm/min */
-    730, /* entry 59, speed=25.7rpm, feed=1450.6mm/min */
-    710, /* entry 60, speed=26.4rpm, feed=1492.1mm/min */
-    690, /* entry 61, speed=27.2rpm, feed=1534.8mm/min */
-    671, /* entry 62, speed=28.0rpm, feed=1578.7mm/min */
-    652, /* entry 63, speed=28.8rpm, feed=1623.9mm/min */
-    634, /* entry 64, speed=29.6rpm, feed=1670.4mm/min */
-    616, /* entry 65, speed=30.4rpm, feed=1718.2mm/min */
-    599, /* entry 66, speed=31.3rpm, feed=1767.4mm/min */
-    582, /* entry 67, speed=32.2rpm, feed=1817.9mm/min */
-    566, /* entry 68, speed=33.1rpm, feed=1870.0mm/min */
-    550, /* entry 69, speed=34.1rpm, feed=1923.5mm/min */
-    535, /* entry 70, speed=35.0rpm, feed=1978.5mm/min */
-    520, /* entry 71, speed=36.0rpm, feed=2035.2mm/min */
-    506, /* entry 72, speed=37.1rpm, feed=2093.4mm/min */
-    492, /* entry 73, speed=38.1rpm, feed=2153.3mm/min */
-    478, /* entry 74, speed=39.2rpm, feed=2214.9mm/min */
-    465, /* entry 75, speed=40.3rpm, feed=2278.3mm/min */
-    452, /* entry 76, speed=41.5rpm, feed=2343.5mm/min */
-    439, /* entry 77, speed=42.7rpm, feed=2410.6mm/min */
-    427, /* entry 78, speed=43.9rpm, feed=2479.6mm/min */
-    415, /* entry 79, speed=45.2rpm, feed=2550.5mm/min */
-    404, /* entry 80, speed=46.5rpm, feed=2623.5mm/min */
-    392, /* entry 81, speed=47.8rpm, feed=2698.6mm/min */
-    381, /* entry 82, speed=49.2rpm, feed=2775.8mm/min */
-    371, /* entry 83, speed=50.6rpm, feed=2855.3mm/min */
-    361, /* entry 84, speed=52.0rpm, feed=2937.0mm/min */
-    350, /* entry 85, speed=53.5rpm, feed=3021.0mm/min */
-    341, /* entry 86, speed=55.0rpm, feed=3107.5mm/min */
-    331, /* entry 87, speed=56.6rpm, feed=3196.4mm/min */
-    322, /* entry 88, speed=58.2rpm, feed=3287.9mm/min */
-    313, /* entry 89, speed=59.9rpm, feed=3382.0mm/min */
-    304, /* entry 90, speed=61.6rpm, feed=3478.8mm/min */
-    296, /* entry 91, speed=63.4rpm, feed=3578.4mm/min */
-    288, /* entry 92, speed=65.2rpm, feed=3680.8mm/min */
-    280, /* entry 93, speed=67.0rpm, feed=3786.1mm/min */
-    272, /* entry 94, speed=69.0rpm, feed=3894.5mm/min */
-    264, /* entry 95, speed=70.9rpm, feed=4005.9mm/min */
-    257, /* entry 96, speed=73.0rpm, feed=4120.6mm/min */
-    250, /* entry 97, speed=75.1rpm, feed=4238.5mm/min */
-    243, /* entry 98, speed=77.2rpm, feed=4359.8mm/min */
-    236, /* entry 99, speed=79.4rpm, feed=4484.5mm/min */
-    230, /* entry 100, speed=81.7rpm, feed=4612.9mm/min */
-    223, /* entry 101, speed=84.0rpm, feed=4744.9mm/min */
-    217, /* entry 102, speed=86.4rpm, feed=4880.7mm/min */
-    211, /* entry 103, speed=88.9rpm, feed=5020.4mm/min */
-    205, /* entry 104, speed=91.4rpm, feed=5164.0mm/min */
-    199, /* entry 105, speed=94.1rpm, feed=5311.8mm/min */
-    194, /* entry 106, speed=96.8rpm, feed=5463.9mm/min */
-    188, /* entry 107, speed=99.5rpm, feed=5620.2mm/min */
-    183, /* entry 108, speed=102.4rpm, feed=5781.1mm/min */
-    178, /* entry 109, speed=105.3rpm, feed=5946.5mm/min */
-    173, /* entry 110, speed=108.3rpm, feed=6116.7mm/min */
-    168, /* entry 111, speed=111.4rpm, feed=6291.7mm/min */
-    164, /* entry 112, speed=114.6rpm, feed=6471.8mm/min */
-    159, /* entry 113, speed=117.9rpm, feed=6657.0mm/min */
-    155, /* entry 114, speed=121.3rpm, feed=6847.5mm/min */
-    150, /* entry 115, speed=124.7rpm, feed=7043.5mm/min */
-    146, /* entry 116, speed=128.3rpm, feed=7245.1mm/min */
-    142, /* entry 117, speed=132.0rpm, feed=7452.4mm/min */
-    138, /* entry 118, speed=135.7rpm, feed=7665.7mm/min */
-    134, /* entry 119, speed=139.6rpm, feed=7885.1mm/min */
-    131, /* entry 120, speed=143.6rpm, feed=8110.7mm/min */
-    127, /* entry 121, speed=147.7rpm, feed=8342.8mm/min */
-    123, /* entry 122, speed=152.0rpm, feed=8581.6mm/min */
-    120, /* entry 123, speed=156.3rpm, feed=8827.2mm/min */
-    117, /* entry 124, speed=160.8rpm, feed=9079.8mm/min */
-    113, /* entry 125, speed=165.4rpm, feed=9339.7mm/min */
-    110, /* entry 126, speed=170.1rpm, feed=9607.0mm/min */
-    107, /* entry 127, speed=175.0rpm, feed=9881.9mm/min */
-    104, /* entry 128, speed=180.0rpm, feed=10164.7mm/min */
+    6250, /* entry 1, speed=3.0rpm, feed=169.4mm/min */
+    6036, /* entry 2, speed=3.1rpm, feed=175.4mm/min */
+    5829, /* entry 3, speed=3.2rpm, feed=181.6mm/min */
+    5630, /* entry 4, speed=3.3rpm, feed=188.1mm/min */
+    5437, /* entry 5, speed=3.4rpm, feed=194.7mm/min */
+    5251, /* entry 6, speed=3.6rpm, feed=201.6mm/min */
+    5071, /* entry 7, speed=3.7rpm, feed=208.8mm/min */
+    4898, /* entry 8, speed=3.8rpm, feed=216.2mm/min */
+    4730, /* entry 9, speed=4.0rpm, feed=223.8mm/min */
+    4568, /* entry 10, speed=4.1rpm, feed=231.8mm/min */
+    4412, /* entry 11, speed=4.2rpm, feed=240.0mm/min */
+    4261, /* entry 12, speed=4.4rpm, feed=248.5mm/min */
+    4115, /* entry 13, speed=4.6rpm, feed=257.3mm/min */
+    3974, /* entry 14, speed=4.7rpm, feed=266.4mm/min */
+    3838, /* entry 15, speed=4.9rpm, feed=275.9mm/min */
+    3707, /* entry 16, speed=5.1rpm, feed=285.6mm/min */
+    3580, /* entry 17, speed=5.2rpm, feed=295.8mm/min */
+    3458, /* entry 18, speed=5.4rpm, feed=306.2mm/min */
+    3339, /* entry 19, speed=5.6rpm, feed=317.1mm/min */
+    3225, /* entry 20, speed=5.8rpm, feed=328.3mm/min */
+    3115, /* entry 21, speed=6.0rpm, feed=340.0mm/min */
+    3008, /* entry 22, speed=6.2rpm, feed=352.0mm/min */
+    2905, /* entry 23, speed=6.5rpm, feed=364.5mm/min */
+    2806, /* entry 24, speed=6.7rpm, feed=377.4mm/min */
+    2710, /* entry 25, speed=6.9rpm, feed=390.8mm/min */
+    2617, /* entry 26, speed=7.2rpm, feed=404.6mm/min */
+    2527, /* entry 27, speed=7.4rpm, feed=419.0mm/min */
+    2441, /* entry 28, speed=7.7rpm, feed=433.8mm/min */
+    2357, /* entry 29, speed=8.0rpm, feed=449.2mm/min */
+    2277, /* entry 30, speed=8.2rpm, feed=465.1mm/min */
+    2199, /* entry 31, speed=8.5rpm, feed=481.6mm/min */
+    2123, /* entry 32, speed=8.8rpm, feed=498.7mm/min */
+    2051, /* entry 33, speed=9.1rpm, feed=516.3mm/min */
+    1980, /* entry 34, speed=9.5rpm, feed=534.6mm/min */
+    1913, /* entry 35, speed=9.8rpm, feed=553.6mm/min */
+    1847, /* entry 36, speed=10.2rpm, feed=573.2mm/min */
+    1784, /* entry 37, speed=10.5rpm, feed=593.5mm/min */
+    1723, /* entry 38, speed=10.9rpm, feed=614.5mm/min */
+    1664, /* entry 39, speed=11.3rpm, feed=636.3mm/min */
+    1607, /* entry 40, speed=11.7rpm, feed=658.9mm/min */
+    1552, /* entry 41, speed=12.1rpm, feed=682.2mm/min */
+    1499, /* entry 42, speed=12.5rpm, feed=706.4mm/min */
+    1448, /* entry 43, speed=13.0rpm, feed=731.4mm/min */
+    1398, /* entry 44, speed=13.4rpm, feed=757.4mm/min */
+    1350, /* entry 45, speed=13.9rpm, feed=784.2mm/min */
+    1304, /* entry 46, speed=14.4rpm, feed=812.0mm/min */
+    1259, /* entry 47, speed=14.9rpm, feed=840.8mm/min */
+    1216, /* entry 48, speed=15.4rpm, feed=870.6mm/min */
+    1175, /* entry 49, speed=16.0rpm, feed=901.4mm/min */
+    1134, /* entry 50, speed=16.5rpm, feed=933.4mm/min */
+    1096, /* entry 51, speed=17.1rpm, feed=966.4mm/min */
+    1058, /* entry 52, speed=17.7rpm, feed=1000.7mm/min */
+    1022, /* entry 53, speed=18.3rpm, feed=1036.1mm/min */
+    987, /* entry 54, speed=19.0rpm, feed=1072.9mm/min */
+    953, /* entry 55, speed=19.7rpm, feed=1110.9mm/min */
+    921, /* entry 56, speed=20.4rpm, feed=1150.3mm/min */
+    889, /* entry 57, speed=21.1rpm, feed=1191.0mm/min */
+    859, /* entry 58, speed=21.8rpm, feed=1233.2mm/min */
+    829, /* entry 59, speed=22.6rpm, feed=1276.9mm/min */
+    801, /* entry 60, speed=23.4rpm, feed=1322.2mm/min */
+    773, /* entry 61, speed=24.2rpm, feed=1369.0mm/min */
+    747, /* entry 62, speed=25.1rpm, feed=1417.6mm/min */
+    721, /* entry 63, speed=26.0rpm, feed=1467.8mm/min */
+    697, /* entry 64, speed=26.9rpm, feed=1519.8mm/min */
+    673, /* entry 65, speed=27.9rpm, feed=1573.7mm/min */
+    650, /* entry 66, speed=28.9rpm, feed=1629.4mm/min */
+    628, /* entry 67, speed=29.9rpm, feed=1687.2mm/min */
+    606, /* entry 68, speed=30.9rpm, feed=1747.0mm/min */
+    585, /* entry 69, speed=32.0rpm, feed=1808.9mm/min */
+    565, /* entry 70, speed=33.2rpm, feed=1873.0mm/min */
+    546, /* entry 71, speed=34.3rpm, feed=1939.4mm/min */
+    527, /* entry 72, speed=35.6rpm, feed=2008.1mm/min */
+    509, /* entry 73, speed=36.8rpm, feed=2079.3mm/min */
+    492, /* entry 74, speed=38.1rpm, feed=2153.0mm/min */
+    475, /* entry 75, speed=39.5rpm, feed=2229.3mm/min */
+    459, /* entry 76, speed=40.9rpm, feed=2308.3mm/min */
+    443, /* entry 77, speed=42.3rpm, feed=2390.1mm/min */
+    428, /* entry 78, speed=43.8rpm, feed=2474.8mm/min */
+    413, /* entry 79, speed=45.4rpm, feed=2562.5mm/min */
+    399, /* entry 80, speed=47.0rpm, feed=2653.3mm/min */
+    385, /* entry 81, speed=48.7rpm, feed=2747.3mm/min */
+    372, /* entry 82, speed=50.4rpm, feed=2844.7mm/min */
+    359, /* entry 83, speed=52.2rpm, feed=2945.5mm/min */
+    347, /* entry 84, speed=54.0rpm, feed=3049.9mm/min */
+    335, /* entry 85, speed=55.9rpm, feed=3158.0mm/min */
+    324, /* entry 86, speed=57.9rpm, feed=3269.9mm/min */
+    313, /* entry 87, speed=60.0rpm, feed=3385.8mm/min */
+    302, /* entry 88, speed=62.1rpm, feed=3505.7mm/min */
+    292, /* entry 89, speed=64.3rpm, feed=3630.0mm/min */
+    282, /* entry 90, speed=66.6rpm, feed=3758.6mm/min */
+    272, /* entry 91, speed=68.9rpm, feed=3891.8mm/min */
+    263, /* entry 92, speed=71.4rpm, feed=4029.8mm/min */
+    254, /* entry 93, speed=73.9rpm, feed=4172.6mm/min */
+    245, /* entry 94, speed=76.5rpm, feed=4320.4mm/min */
+    237, /* entry 95, speed=79.2rpm, feed=4473.5mm/min */
+    229, /* entry 96, speed=82.0rpm, feed=4632.1mm/min */
+    221, /* entry 97, speed=84.9rpm, feed=4796.2mm/min */
+    213, /* entry 98, speed=87.9rpm, feed=4966.2mm/min */
+    206, /* entry 99, speed=91.1rpm, feed=5142.2mm/min */
+    199, /* entry 100, speed=94.3rpm, feed=5324.4mm/min */
+    192, /* entry 101, speed=97.6rpm, feed=5513.1mm/min */
+    185, /* entry 102, speed=101.1rpm, feed=5708.5mm/min */
+    179, /* entry 103, speed=104.7rpm, feed=5910.8mm/min */
+    173, /* entry 104, speed=108.4rpm, feed=6120.3mm/min */
+    167, /* entry 105, speed=112.2rpm, feed=6337.2mm/min */
+    161, /* entry 106, speed=116.2rpm, feed=6561.8mm/min */
+    156, /* entry 107, speed=120.3rpm, feed=6794.3mm/min */
+    151, /* entry 108, speed=124.6rpm, feed=7035.1mm/min */
+    145, /* entry 109, speed=129.0rpm, feed=7284.4mm/min */
+    140, /* entry 110, speed=133.6rpm, feed=7542.6mm/min */
+    136, /* entry 111, speed=138.3rpm, feed=7809.9mm/min */
+    131, /* entry 112, speed=143.2rpm, feed=8086.7mm/min */
+    126, /* entry 113, speed=148.3rpm, feed=8373.2mm/min */
+    122, /* entry 114, speed=153.5rpm, feed=8670.0mm/min */
+    118, /* entry 115, speed=159.0rpm, feed=8977.2mm/min */
+    114, /* entry 116, speed=164.6rpm, feed=9295.4mm/min */
+    110, /* entry 117, speed=170.4rpm, feed=9624.8mm/min */
+    106, /* entry 118, speed=176.5rpm, feed=9965.9mm/min */
+    103, /* entry 119, speed=182.7rpm, feed=10319.1mm/min */
+    99, /* entry 120, speed=189.2rpm, feed=10684.8mm/min */
+    96, /* entry 121, speed=195.9rpm, feed=11063.4mm/min */
+    92, /* entry 122, speed=202.9rpm, feed=11455.5mm/min */
+    89, /* entry 123, speed=210.0rpm, feed=11861.5mm/min */
+    86, /* entry 124, speed=217.5rpm, feed=12281.9mm/min */
+    83, /* entry 125, speed=225.2rpm, feed=12717.1mm/min */
+    80, /* entry 126, speed=233.2rpm, feed=13167.8mm/min */
+    78, /* entry 127, speed=241.4rpm, feed=13634.5mm/min */
+    75, /* entry 128, speed=250.0rpm, feed=14117.6mm/min */
 };           
 
 
@@ -482,7 +482,7 @@ debug_pin_write(1, DEBUG_1_PIN);
     for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
         //if ( st_tmc.step_period_us[thisAxis] > SG_step_periods_us[idx] ){ 
         if ( st_tmc.step_period_us[thisAxis] > pgm_read_word_near(SG_step_periods_us + idx) ){ //if storing in PROGMEM then use this: if ( st_tmc.step_period_us[thisAxis] > pgm_read_word_near(SG_step_periods_us + idx) ){
-            if (SG_calibration_table.SG_read_cnt[thisMotor][idx] < TMC_SG_MAX_AVERAGE) {
+            if (SG_calibration_table.SG_read_cnt[thisMotor][idx] < TMC_SG_MAX_AVERAGE) { /* only accumulate until max average is reached to keep 10bit SG value in 16 bit accumulator */
                 SG_calibration_table.SG_read[thisMotor][idx] += stallGuardCurrentValue;
                 SG_calibration_table.SG_read_cnt[thisMotor][idx] ++;
             }                
@@ -518,6 +518,7 @@ void tmc_compute_and_apply_calibration(void){
             if ( SG_calibration_table.SG_read_cnt[controller_id][idx] > 0 ) { /* catch divide by 0 */
                 SG_calibration_table.SG_read[controller_id][idx] /= SG_calibration_table.SG_read_cnt[controller_id][idx]; /* find averge SG value */
                 last_SG_read = SG_calibration_table.SG_read[controller_id][idx]; /* keep last entry in cache in case next entry is empty */
+                SG_calibration_table.SG_read_cnt[controller_id][idx] = 1; /*reset count to 1 to keep correct values in case that averaging is accidentally requested once again */
             }
             else{ /* if empty entry use the last filled one */
                 SG_calibration_table.SG_read[controller_id][idx] = last_SG_read;
@@ -593,12 +594,10 @@ debug_pin_write(1, DEBUG_1_PIN);
     tmc2590->resp.DiagnosticBits = (tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFFC00) >> 10 ;
 
     if ( ( st_tmc.calibration_enabled ) && ( st_tmc.current_scale_state == CURRENT_SCALE_ACTIVE ) ){
+        /* if feed is fast and SG_skips_counter is higher than min then store calibration value */
         if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED ){
-            /* if feed is fast and SG_skips_counter is higher than min then store calibration value */
-            if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED ){
-                tmc_store_calibration_point(tmc2590->thisMotor, tmc2590->thisAxis, tmc2590->resp.stallGuardCurrentValue);
-            }
-        }                   
+            tmc_store_calibration_point(tmc2590->thisMotor, tmc2590->thisAxis, tmc2590->resp.stallGuardCurrentValue);
+        }
     }        
 
     if ( ( st_tmc.stall_alarm_enabled ) && ( st_tmc.current_scale_state == CURRENT_SCALE_ACTIVE ) ){
@@ -626,9 +625,10 @@ debug_pin_write(1, DEBUG_1_PIN);
                             /* entry found, apply threshold */
                             if (SG_calibration_table.SG_read[tmc2590->thisMotor][idx] > tmc2590->stallGuardAlarmThreshold){
                                 stallGuardAlarmValue = SG_calibration_table.SG_read[tmc2590->thisMotor][idx] - tmc2590->stallGuardAlarmThreshold ;                                
-                            }                                    
+                            }
+                            break; /* break for loop when period is found */
                         }                
-                        break; /* for loop */                                    
+                        
                     } //for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
                 #ifdef SG_CAL_DEBUG_ENABLED
                 debug_pin_write(0, DEBUG_1_PIN);
@@ -647,16 +647,16 @@ debug_pin_write(1, DEBUG_1_PIN);
                     printInteger( tmc2590->thisMotor);
                     printPgmString(PSTR(", SG: "));
                     printInteger( tmc2590->resp.stallGuardCurrentValue);
+                    printPgmString(PSTR("<"));
+                    printInteger( stallGuardAlarmValue );
                     printPgmString(PSTR("\n"));
                 } //if (tmc2590->resp.stallGuardCurrentValue    < tmc2590->stallGuardAlarmValue) {
    
             } //if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )
                 
         } // if ( st_tmc.step_period_us[tmc2590->thisAxis] < max_step_period_us_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
-        else {
-                /* feed is slow, reset SG_skips_counter */
-                st_tmc.SG_skips_counter[tmc2590->thisAxis] = 0;
-        }
+            
+        /* if above "if" is not entered then feed is slow, and SG_skips_counter is being reset by st_tmc_fire_SG_read() */
             
     } //else if (st_tmc.stall_alarm_enabled){
     else{

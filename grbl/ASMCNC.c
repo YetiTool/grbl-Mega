@@ -442,7 +442,7 @@ void debug_pin_write(uint32_t level, uint32_t pin){
 
 
 /* polynomial is based on crc8.py module from pypl */
-static uint8_t const crc8x_table[] = {
+static uint8_t const crc8x_table[] PROGMEM = {
             0x00, 0x07, 0x0e, 0x09, 0x1c, 0x1b, 0x12, 0x15,
             0x38, 0x3f, 0x36, 0x31, 0x24, 0x23, 0x2a, 0x2d,
             0x70, 0x77, 0x7e, 0x79, 0x6c, 0x6b, 0x62, 0x65,
@@ -483,7 +483,7 @@ uint8_t crc8x_fast(uint8_t crc, uint8_t *mem, size_t len) {
         return 0xff;
     crc &= 0xff;
     for(uint8_t idx=0; idx<len; idx++){
-        crc = crc8x_table[crc ^ data[idx]];
+        crc = pgm_read_byte_near(crc8x_table + (crc ^ data[idx])); //= crc8x_table[crc ^ data[idx]];
     }
     return crc;
 }

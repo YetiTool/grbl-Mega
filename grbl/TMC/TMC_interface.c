@@ -156,6 +156,7 @@ void init_TMC(void){
     
 #ifdef RIGGY
     /* no motor */
+    tmc2590_X1.SlowDecayDuration            = 4;
     tmc2590_X1.stallGuardThreshold          = 6;
     tmc2590_X1.stallGuardAlarmValue         = 300;
     tmc2590_X1.stallGuardAlarmThreshold     = 200;
@@ -168,6 +169,7 @@ void init_TMC(void){
     //tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
     
     /* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400  at 3000mm/min on X with 177steps/mm*/
+    //tmc2590_X2.HystEnd                      = 0;   /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
     tmc2590_X2.stallGuardThreshold          = 5;
     tmc2590_X2.stallGuardAlarmValue         = 400;
     tmc2590_X2.stallGuardAlarmThreshold     = 200;
@@ -199,13 +201,14 @@ void init_TMC(void){
     
     /* ZH motor */
     /* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400 at 2000mm/min on Z with 267steps/mm*/
-    tmc2590_Z.HystEnd                       = 0;   /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+    //tmc2590_Z.HystEnd                       = 2;   /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+    tmc2590_Z.SlowDecayDuration             = 7;
     tmc2590_Z.stallGuardThreshold           = 5;
     tmc2590_Z.stallGuardAlarmValue          = 200;
     tmc2590_Z.stallGuardAlarmThreshold      = 200;
     tmc2590_Z.currentScale                  = 1; /* 0 - 31 where 31 is max, 0.25A */
     tmc2590_Z.standStillCurrentScale        = 0; //  2: set 1/2 of full scale, 1/4th of power
-    tmc2590_X2.vSense                       = 1; /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV.*/
+    tmc2590_Z.vSense                        = 1; /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV.*/
 
 #else
     /* ZH motor (medium 23HS22) in normal conditions (56steps/mm)*/
