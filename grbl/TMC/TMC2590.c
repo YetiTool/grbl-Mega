@@ -628,7 +628,10 @@ debug_pin_write(1, DEBUG_1_PIN);
                 /* feed rate is high enough and started more than SG_READING_SKIPS_AFTER_SLOW_FEED ago, lets analyse the stall */
                 
                 /* init stallGuardAlarmValue with entry from max speed */
-                uint16_t stallGuardAlarmValue = SG_calibration_table.SG_read[tmc2590->thisMotor][TMC_SG_PROFILE_POINTS-1] - tmc2590->stallGuardAlarmThreshold;
+                uint16_t stallGuardAlarmValue = 0;
+                if (SG_calibration_table.SG_read[tmc2590->thisMotor][TMC_SG_PROFILE_POINTS-1] > tmc2590->stallGuardAlarmThreshold){
+                    stallGuardAlarmValue = SG_calibration_table.SG_read[tmc2590->thisMotor][TMC_SG_PROFILE_POINTS-1] - tmc2590->stallGuardAlarmThreshold ;    
+                }
                 
                 /* find alarm value based on calibration matrix and predefined threshold */
                 #ifdef SG_CAL_DEBUG_ENABLED
@@ -641,6 +644,10 @@ debug_pin_write(1, DEBUG_1_PIN);
                             /* entry found, apply threshold */
                             if (SG_calibration_table.SG_read[tmc2590->thisMotor][idx] > tmc2590->stallGuardAlarmThreshold){
                                 stallGuardAlarmValue = SG_calibration_table.SG_read[tmc2590->thisMotor][idx] - tmc2590->stallGuardAlarmThreshold ;                                
+                            }
+                            else{
+                                /* silence the alarm: only entries with positive Alarm values will trigger alarm */ 
+                                stallGuardAlarmValue = 0;
                             }
                             break; /* break for loop when period is found */
                         }                

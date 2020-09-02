@@ -212,19 +212,25 @@ void init_TMC(void){
 
 #else
     /* ZH motor (medium 23HS22) in normal conditions (56steps/mm)*/
-    tmc2590_X1.stallGuardThreshold          = 6;
-    tmc2590_X1.stallGuardAlarmValue         = 400;
+    tmc2590_X1.SlowDecayDuration            = 5;
+    tmc2590_X1.stallGuardThreshold          = 7;
+    tmc2590_X1.stallGuardAlarmValue         = 300;
     tmc2590_X1.stallGuardAlarmThreshold     = 200;
     tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
+    tmc2590_X1.stallGuardFilter             = 0;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    //tmc2590_X1.chopperBlankTime             = 0; // Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54
+    //tmc2590_X1.HystEnd                      = 0; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+    
     
     /* ZH motor (medium 23HS22) in normal conditions (56steps/mm)*/
+    tmc2590_X2.SlowDecayDuration            = 5;
     tmc2590_X2.stallGuardThreshold          = 6;
-    tmc2590_X2.stallGuardAlarmValue         = 400;
+    tmc2590_X2.stallGuardAlarmValue         = 300;
     tmc2590_X2.stallGuardAlarmThreshold     = 200;
     tmc2590_X2.currentScale                 = 31; /* 0 - 31 where 31 is max */
     
     tmc2590_Y1.stallGuardThreshold          = 3;
-    tmc2590_Y2.stallGuardAlarmValue         = 400;
+    tmc2590_Y1.stallGuardAlarmValue         = 400;
     tmc2590_Y1.stallGuardAlarmThreshold     = 200;
     tmc2590_Y1.currentScale                 = 31; /* 0 - 31 where 31 is max */
     tmc2590_Y1.SlowDecayDuration            = 4;
@@ -233,6 +239,7 @@ void init_TMC(void){
     tmc2590_Y1.HystDectrement               = 2; /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
     tmc2590_Y1.slopeCtrlLow                 = 3;  // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
     tmc2590_Y1.slopeCtrlHigh                = 3;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    tmc2590_Y1.stallGuardFilter             = 0;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
     
     tmc2590_Y2.stallGuardThreshold          = 3;
     tmc2590_Y2.stallGuardAlarmValue         = 400;
@@ -251,6 +258,17 @@ void init_TMC(void){
     tmc2590_Z.stallGuardAlarmValue          = 200;
     tmc2590_Z.stallGuardAlarmThreshold      = 200;
     tmc2590_Z.currentScale                  = 31; /* 0 - 31 where 31 is max */
+    tmc2590_Z.HystStart                     = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
+    tmc2590_Z.HystEnd                       = 5; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+
+
+/* thermal test to match rack cutter: X:34C, Y:40C; Z:30C */
+	tmc2590_X1.standStillCurrentScale       = 11; 
+	tmc2590_X2.standStillCurrentScale       = 11; 
+	tmc2590_Y1.standStillCurrentScale       = 25; 
+	tmc2590_Y2.standStillCurrentScale       = 25; 
+	tmc2590_Z.standStillCurrentScale        = 5; 
+
 
 #endif    
     
