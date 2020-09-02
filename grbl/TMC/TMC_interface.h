@@ -41,8 +41,9 @@ typedef enum
 } tmc_homing_mode_enum_type_t;
 
 
-#define RIGGY
-#define SG_READ_STEP_COUNT 32 // TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled. UART reads could halt the readings up to 6ms, so many unfiltered samples could be missed at high speed. So for now read filtered SG twice per change.
+//#define RIGGY
+#define TMC_SG_PROFILE_POINTS               128
+#define SG_READ_STEP_COUNT                  32 // TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled. UART reads could halt the readings up to 6ms, so many unfiltered samples could be missed at high speed. So for now read filtered SG twice per change.
 #define SG_READING_SKIPS_AFTER_SLOW_FEED    6        /* Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis. Actually means 5 reads for dual axis and 10 for single */
 #define DEFAULT_TMC_READ_SELECT             1 /* read of the SG is default state of the system */
 
@@ -66,7 +67,7 @@ typedef enum
 
 // Stepper ISR data struct. Contains the running data for the main stepper ISR.
 typedef struct {
-    uint16_t step_period_us[N_AXIS];      // variables to hold the step period which is direct reflection of shaft rotational speed at the time when SG read was fired.
+    uint16_t step_period_idx[N_AXIS];      // variables to hold the step period which is direct reflection of shaft rotational speed at the time when SG read was fired.
     uint8_t  step_counter[N_AXIS];        // Counter variables for firing SG read. TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled
     uint8_t  SG_skips_counter[N_AXIS];    // Counter variables for blocking stall analysis due to preceding slow speed. Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis */
     uint8_t  current_scale_state;         // global holding effective current scale 
@@ -209,7 +210,9 @@ void tmc_report_calibration(void); /* print out calibration data */
 
 TMC2590TypeDef * get_TMC_controller(uint8_t controller); /* get pointer to required contoller */
 
-extern uint16_t max_step_period_us_to_read_SG[];
+//extern uint16_t max_step_period_us_to_read_SG[];
+extern uint8_t min_step_period_idx_to_read_SG[];
 extern stepper_tmc_t st_tmc; // structure to hold the shaft rotational speed at the time when SG read was fired.
+extern const uint16_t SG_step_periods_us[];
 
 #endif /* TMC_INTERFACE_H_ */

@@ -88,7 +88,7 @@ typedef struct {
     uint8_t prescaler;      // Without AMASS, a prescaler is required to adjust for slow timing.
   #endif
   uint16_t spindle_pwm;
-  uint16_t step_period_us[N_AXIS]; /* step time in microseconds, max 64ms which is 1s per full step or 1rev per 200s (0.3rpm), slowest speed for SG detection is 1rpm, so should be good enough for London */ 
+  uint8_t step_period_idx[N_AXIS]; /* index into LUT "SG_step_periods_us" step time in microseconds, max 64ms which is 1s per full step or 1rev per 200s (0.3rpm), slowest speed for SG detection is 1rpm, so should be good enough for London */
 } segment_t;
 static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
 
@@ -310,7 +310,7 @@ void st_go_idle()
 /* Function st_tmc_fire_SG_read is the main interface between the stepper and the TMC hardware. 
    It lets main loop know when it is time to read the SG value and also keeps track of current speed 
    of each motor so this information could be used to apply all necessary corrections to the SG readings and analysis 
-   * function overhead is 6.5us, 9us when SG read is scheduled. this includes debug pin toggle which is ~1us
+   * function overhead is 5.5us, 7.5us when SG read is scheduled. this includes debug pin toggle which is ~1us
    */
 void st_tmc_fire_SG_read(uint8_t axis, uint8_t command){ 
 
@@ -318,14 +318,14 @@ void st_tmc_fire_SG_read(uint8_t axis, uint8_t command){
 debug_pin_write(1, DEBUG_0_PIN);
 #endif
     /* if feed is too slow reset SG counter the moment the step is too long */
-    if ( st.exec_segment->step_period_us[X_AXIS] > max_step_period_us_to_read_SG[X_AXIS] )     {         st_tmc.SG_skips_counter[X_AXIS] = 0;     }
-    if ( st.exec_segment->step_period_us[Y_AXIS] > max_step_period_us_to_read_SG[Y_AXIS] )     {         st_tmc.SG_skips_counter[Y_AXIS] = 0;     }
-    if ( st.exec_segment->step_period_us[Z_AXIS] > max_step_period_us_to_read_SG[Z_AXIS] )     {         st_tmc.SG_skips_counter[Z_AXIS] = 0;     }
+    if ( st.exec_segment->step_period_idx[X_AXIS] <= min_step_period_idx_to_read_SG[X_AXIS] )     {         st_tmc.SG_skips_counter[X_AXIS] = 0;     }
+    if ( st.exec_segment->step_period_idx[Y_AXIS] <= min_step_period_idx_to_read_SG[Y_AXIS] )     {         st_tmc.SG_skips_counter[Y_AXIS] = 0;     }
+    if ( st.exec_segment->step_period_idx[Z_AXIS] <= min_step_period_idx_to_read_SG[Z_AXIS] )     {         st_tmc.SG_skips_counter[Z_AXIS] = 0;     }
     
     /* schedule SG read every SG_READ_STEP_COUNT steps */
     if (st_tmc.step_counter[axis]++ >= SG_READ_STEP_COUNT) 
     {
-        st_tmc.step_period_us[axis] = st.exec_segment->step_period_us[axis];
+        st_tmc.step_period_idx[axis] = st.exec_segment->step_period_idx[axis];
         st_tmc.step_counter[axis] = 0;
         system_set_exec_tmc_command_flag(command);  
     }
@@ -1210,20 +1210,36 @@ void st_prep_buffer()
         */        
         
     #ifdef SG_CAL_DEBUG_ENABLED
+    /* total compute takes 850-900us depend on location in LUT. Bubble search could be optimised*/
     debug_pin_write(1, DEBUG_2_PIN);
     #endif    
     /* calculate step_period_us using float logic. For loop below takes 300-400us due to float division */
-    for (uint8_t idx=0; idx<N_AXIS; idx++) { 
+    for (uint8_t thisAxis=0; thisAxis<N_AXIS; thisAxis++) { 
         uint32_t us_per_step;
+        uint16_t step_period_us;
         float steps, ratio;
-        steps = st_prep_block->steps[idx];
+        steps = st_prep_block->steps[thisAxis];
         steps = steps ? steps : 1; /* catch divide by zero - for very low speeds */
         ratio = st_prep_block->step_event_count / steps;    /* all this ratio business is to keep calculation within 32 bit*/     
         ratio = ratio * (1 << prep_segment->amass_level);        
         us_per_step = (prep_segment->cycles_per_tick * ratio) / 16 ; /* timer cycles per step divided by timer speed (16M) */
-        if (us_per_step < (1UL << 16)) { prep_segment->step_period_us[idx] = us_per_step; } // < 65536: 64ms which is 1s per full step or 1rev per 200s (0.3rpm), slowest speed for SG detection is 1rpm, so should be good enough for London 
-        else { prep_segment->step_period_us[idx] = 0xffff; } // Just set the max period possible                
+        if (us_per_step < (1UL << 16)) { step_period_us = us_per_step; } // < 65536: 64ms which is 1s per full step or 1rev per 200s (0.3rpm), slowest speed for SG detection is 1rpm, so should be good enough for London 
+        else { step_period_us = 0xffff; } // Just set the max period possible                           
+           
+        /* using LUT is improving real-time execution time as only computation is required in planning (here). Later only index is used to look into the LUT and extract the GS calibrated values */
+        
+        /* find entry in step_period_us lookup table corresponding to this step size. function takes up to 500ms to execute */    
+        prep_segment->step_period_idx[thisAxis] = TMC_SG_PROFILE_POINTS-1; /* init the table with max index value, this will ensure anything above max feed would fall in the last bin */
+        for (uint8_t idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
+            if ( step_period_us > pgm_read_word_near(SG_step_periods_us + idx) ){ //if storing in PROGMEM then use this: if ( st_tmc.step_period_us[thisAxis] > pgm_read_word_near(SG_step_periods_us + idx) ){
+                prep_segment->step_period_idx[thisAxis] = idx;
+                break; /* for loop */
+            } // if ( prep_segment->step_period_us[thisAxis] > pgm_read_word_near(SG_step_periods_us + idx) ){
+        } //for (uint8_t idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
+            
     } //for (uint8_t idx=0; idx<N_AXIS; idx++) { 
+    
+    
     #ifdef SG_CAL_DEBUG_ENABLED
     debug_pin_write(0, DEBUG_2_PIN);
     #endif

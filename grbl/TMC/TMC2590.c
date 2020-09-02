@@ -9,7 +9,38 @@
 
 #include <string.h>
 
-uint16_t max_step_period_us_to_read_SG[] = { SG_MAX_VALID_PERIOD_X_US, SG_MAX_VALID_PERIOD_Y_US, SG_MAX_VALID_PERIOD_Z_US }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
+//uint16_t max_step_period_us_to_read_SG[] = { SG_MAX_VALID_PERIOD_X_US, SG_MAX_VALID_PERIOD_Y_US, SG_MAX_VALID_PERIOD_Z_US }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
+uint8_t min_step_period_idx_to_read_SG[] = { 0, 0, 0 }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
+    
+
+/* calculate index into the LUT based on predefined maximum microstep periods */
+void min_step_period_idx_compute(void){
+    
+    uint16_t step_period_us_to_read_SG[3];
+    
+    if ( st_tmc.calibration_enabled ) {
+        step_period_us_to_read_SG[0] = SG_MAX_CALIBR_PERIOD_X_US;
+        step_period_us_to_read_SG[1] = SG_MAX_CALIBR_PERIOD_Y_US;
+        step_period_us_to_read_SG[1] = SG_MAX_CALIBR_PERIOD_Z_US;
+    }   
+    else{
+        step_period_us_to_read_SG[0] = SG_MAX_VALID_PERIOD_X_US;
+        step_period_us_to_read_SG[1] = SG_MAX_VALID_PERIOD_Y_US;
+        step_period_us_to_read_SG[1] = SG_MAX_VALID_PERIOD_Z_US;
+    }
+                 
+    uint16_t step_period_us = 0;
+    for (uint8_t thisAxis=0; thisAxis<N_AXIS; thisAxis++) { 
+        step_period_us = step_period_us_to_read_SG[thisAxis];
+        for (uint8_t idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
+            if ( step_period_us > pgm_read_word_near(SG_step_periods_us + idx) ){ //if storing in PROGMEM then use this: if ( st_tmc.step_period_us[thisAxis] > pgm_read_word_near(SG_step_periods_us + idx) ){
+                min_step_period_idx_to_read_SG[thisAxis] = idx;
+                break; /* for loop */
+            } // if ( prep_segment->step_period_us[thisAxis] > pgm_read_word_near(SG_step_periods_us + idx) ){
+        } //for (uint8_t idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){            
+    } //for (uint8_t idx=0; idx<N_AXIS; idx++) { 
+
+}
 
 void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef *tmc2590_config, const int32_t *registerResetState)
 {
@@ -24,6 +55,8 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
 		tmc2590->registerResetState[i]                          = registerResetState[i];
         tmc2590->config->shadowRegister[ i | TMC2590_WRITE_BIT] = registerResetState[i];
 	}
+
+    min_step_period_idx_compute();
     
     /* initialise registers */
 
@@ -477,18 +510,12 @@ void tmc_store_calibration_point(	uint8_t thisMotor, uint8_t thisAxis, uint16_t 
 #ifdef SG_CAL_DEBUG_ENABLED
 debug_pin_write(1, DEBUG_1_PIN);
 #endif    
-    /* find entry in calibration table based on step_period_us and add it */
-    uint8_t idx;
-    for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
-        //if ( st_tmc.step_period_us[thisAxis] > SG_step_periods_us[idx] ){ 
-        if ( st_tmc.step_period_us[thisAxis] > pgm_read_word_near(SG_step_periods_us + idx) ){ //if storing in PROGMEM then use this: if ( st_tmc.step_period_us[thisAxis] > pgm_read_word_near(SG_step_periods_us + idx) ){
-            if (SG_calibration_table.SG_read_cnt[thisMotor][idx] < TMC_SG_MAX_AVERAGE) { /* only accumulate until max average is reached to keep 10bit SG value in 16 bit accumulator */
-                SG_calibration_table.SG_read[thisMotor][idx] += stallGuardCurrentValue;
-                SG_calibration_table.SG_read_cnt[thisMotor][idx] ++;
-            }                
-            break; /* for loop */            
-        }
-    } //for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
+    /* find entry in calibration table based on step_period_idx and add it */
+    uint8_t idx = st_tmc.step_period_idx[thisAxis];
+    if (SG_calibration_table.SG_read_cnt[thisMotor][idx] < TMC_SG_MAX_AVERAGE) { /* only accumulate until max average is reached to keep 10bit SG value in 16 bit accumulator */
+        SG_calibration_table.SG_read[thisMotor][idx] += stallGuardCurrentValue;
+        SG_calibration_table.SG_read_cnt[thisMotor][idx] ++;
+    }
 #ifdef SG_CAL_DEBUG_ENABLED
 debug_pin_write(0, DEBUG_1_PIN);
 #endif
@@ -502,10 +529,8 @@ void tmc_calibration_init(void){
     /* disable timer2 Interrupt for calibration cycle duration*/
     TIMSK2 &=~(1<<OCIE2A); //Timer/Counter2 Output Compare Match A Interrupt    
 
-    /* lower the max step period for calibration purposes */    
-    max_step_period_us_to_read_SG[X_AXIS] = SG_MAX_CALIBR_PERIOD_X_US ;
-    max_step_period_us_to_read_SG[Y_AXIS] = SG_MAX_CALIBR_PERIOD_Y_US ;
-    max_step_period_us_to_read_SG[Z_AXIS] = SG_MAX_CALIBR_PERIOD_Z_US ;
+    /* lower the max step period for calibration purposes */ 
+    min_step_period_idx_compute();
     
     memset(&SG_calibration_table, 0, sizeof(stall_guard_tmc_matrix_t));
 }
@@ -545,10 +570,8 @@ void tmc_compute_and_apply_calibration(void){
     /*reenable alarm */
     st_tmc.stall_alarm_enabled  = true;                  /* global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm      */
     
-    /* restore the max step period for calibration purposes */
-    max_step_period_us_to_read_SG[X_AXIS] = SG_MAX_VALID_PERIOD_X_US ;
-    max_step_period_us_to_read_SG[Y_AXIS] = SG_MAX_VALID_PERIOD_Y_US ;
-    max_step_period_us_to_read_SG[Z_AXIS] = SG_MAX_VALID_PERIOD_Z_US ;
+    /* restore the max step period after calibration */
+    min_step_period_idx_compute();
     
     /* reenable SPI engine timer : Enable timer2 Interrupt */
     TIMSK2 |= (1<<OCIE2A); //Timer/Counter2 Output Compare Match A Interrupt Enable    
@@ -594,6 +617,7 @@ void stall_guard_calibration_load(void){
 void process_controller_status(TMC2590TypeDef *tmc2590){
 
 #ifdef SG_SKIP_DEBUG_ENABLED
+/* measured 50-60us per function call */
 debug_pin_write(1, DEBUG_1_PIN);
 #endif
     
@@ -620,7 +644,7 @@ debug_pin_write(1, DEBUG_1_PIN);
         
         /* start reading SG if rotational speed is sufficiently high */                       
         /* feed speed validation. If feed was slow then SG_skips_counter gets reset, then decrement till reaches 0, only after that SG analysis for stall detection is allowed */
-        if ( st_tmc.step_period_us[tmc2590->thisAxis] < max_step_period_us_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
+        if ( st_tmc.step_period_idx[tmc2590->thisAxis] > min_step_period_idx_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
                     
             /* feed is fast, increment SG_skips_counter until 0 then analyse SG for stall */
             if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )
@@ -637,22 +661,16 @@ debug_pin_write(1, DEBUG_1_PIN);
                 #ifdef SG_CAL_DEBUG_ENABLED
                 debug_pin_write(1, DEBUG_1_PIN);
                 #endif    
-                    /* find entry in calibration table based on step_period_us and extract SG calibrated level from there */
-                    uint8_t idx;
-                    for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
-                        if ( st_tmc.step_period_us[tmc2590->thisAxis] > pgm_read_word_near(SG_step_periods_us + idx) ){ //if storing in PROGMEM then use this: if ( st_tmc.step_period_us[thisAxis] > pgm_read_word_near(SG_step_periods_us + idx) ){
-                            /* entry found, apply threshold */
-                            if (SG_calibration_table.SG_read[tmc2590->thisMotor][idx] > tmc2590->stallGuardAlarmThreshold){
-                                stallGuardAlarmValue = SG_calibration_table.SG_read[tmc2590->thisMotor][idx] - tmc2590->stallGuardAlarmThreshold ;                                
-                            }
-                            else{
-                                /* silence the alarm: only entries with positive Alarm values will trigger alarm */ 
-                                stallGuardAlarmValue = 0;
-                            }
-                            break; /* break for loop when period is found */
-                        }                
-                        
-                    } //for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
+                /* find entry in calibration table based on step_period_idx and extract SG calibrated level from there */
+                uint8_t idx = st_tmc.step_period_idx[tmc2590->thisAxis];
+                /* entry found, apply threshold */
+                if (SG_calibration_table.SG_read[tmc2590->thisMotor][idx] > tmc2590->stallGuardAlarmThreshold){
+                    stallGuardAlarmValue = SG_calibration_table.SG_read[tmc2590->thisMotor][idx] - tmc2590->stallGuardAlarmThreshold ;                                
+                }
+                else{
+                    /* silence the alarm: only entries with positive Alarm values will trigger alarm */ 
+                    stallGuardAlarmValue = 0;
+                }
                 #ifdef SG_CAL_DEBUG_ENABLED
                 debug_pin_write(0, DEBUG_1_PIN);
                 #endif
@@ -665,7 +683,7 @@ debug_pin_write(1, DEBUG_1_PIN);
                     /* trigger alarm */
                     tmc_trigger_stall_alarm(tmc2590->thisAxis);
                     /* reset SG period to max as alarm will immediately stop the stepper and period will remain as it was at the point of trigger */
-                    st_tmc.step_period_us[tmc2590->thisAxis] = 0xFFFF;
+                    st_tmc.step_period_idx[tmc2590->thisAxis] = 0;
                     printPgmString(PSTR("\nSG ALARM, motor "));
                     printInteger( tmc2590->thisMotor);
                     printPgmString(PSTR(", SG: "));
@@ -677,7 +695,7 @@ debug_pin_write(1, DEBUG_1_PIN);
    
             } //if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )
                 
-        } // if ( st_tmc.step_period_us[tmc2590->thisAxis] < max_step_period_us_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
+        } // if ( st_tmc.step_period_idx[tmc2590->thisAxis] > min_step_period_idx_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
             
         /* if above "if" is not entered then feed is slow, and SG_skips_counter is being reset by st_tmc_fire_SG_read() */
             

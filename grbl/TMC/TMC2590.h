@@ -61,7 +61,6 @@ static const int32_t tmc2590_defaultRegisterResetState[TMC2590_REGISTER_COUNT] =
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^//
 */
 
-#define TMC_SG_PROFILE_POINTS 128
 #define TMC_SG_MAX_AVERAGE    64    /* max number of SG reads into one matrix cell. SG is 10 bit, matrix is 16 bits, so only 2^(16-10) = 64 values could fit safely */
 /* structure to hold live SG profile to track the load and alarm on stall detection*/
 typedef struct {

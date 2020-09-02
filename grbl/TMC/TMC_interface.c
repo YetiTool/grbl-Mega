@@ -217,7 +217,7 @@ void init_TMC(void){
     tmc2590_X1.stallGuardAlarmValue         = 300;
     tmc2590_X1.stallGuardAlarmThreshold     = 200;
     tmc2590_X1.currentScale                 = 31; /* 0 - 31 where 31 is max */
-    tmc2590_X1.stallGuardFilter             = 0;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    //tmc2590_X1.stallGuardFilter             = 0;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
     //tmc2590_X1.chopperBlankTime             = 0; // Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54
     //tmc2590_X1.HystEnd                      = 0; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
     
@@ -239,7 +239,7 @@ void init_TMC(void){
     tmc2590_Y1.HystDectrement               = 2; /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
     tmc2590_Y1.slopeCtrlLow                 = 3;  // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
     tmc2590_Y1.slopeCtrlHigh                = 3;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
-    tmc2590_Y1.stallGuardFilter             = 0;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    //tmc2590_Y1.stallGuardFilter             = 0;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
     
     tmc2590_Y2.stallGuardThreshold          = 3;
     tmc2590_Y2.stallGuardAlarmValue         = 400;
@@ -819,9 +819,9 @@ void tmc_globals_reset(void)
 
     /* initialise stepper TMC interface structure */
     /* initialise SG periods to max values (slowest feed) */
-    st_tmc.step_period_us[X_AXIS] = 0xFFFF;
-    st_tmc.step_period_us[Y_AXIS] = 0xFFFF;
-    st_tmc.step_period_us[Z_AXIS] = 0xFFFF;
+    st_tmc.step_period_idx[X_AXIS] = 0;
+    st_tmc.step_period_idx[Y_AXIS] = 0;
+    st_tmc.step_period_idx[Z_AXIS] = 0;
     /* initialise SG skip counters used to analyse stall based on SG readings */
     st_tmc.SG_skips_counter[X_AXIS] = 0;
     st_tmc.SG_skips_counter[Y_AXIS] = 0;
