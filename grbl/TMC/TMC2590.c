@@ -21,12 +21,12 @@ void min_step_period_idx_compute(void){
     if ( st_tmc.calibration_enabled ) {
         step_period_us_to_read_SG[0] = SG_MAX_CALIBR_PERIOD_X_US;
         step_period_us_to_read_SG[1] = SG_MAX_CALIBR_PERIOD_Y_US;
-        step_period_us_to_read_SG[1] = SG_MAX_CALIBR_PERIOD_Z_US;
+        step_period_us_to_read_SG[2] = SG_MAX_CALIBR_PERIOD_Z_US;
     }   
     else{
         step_period_us_to_read_SG[0] = SG_MAX_VALID_PERIOD_X_US;
         step_period_us_to_read_SG[1] = SG_MAX_VALID_PERIOD_Y_US;
-        step_period_us_to_read_SG[1] = SG_MAX_VALID_PERIOD_Z_US;
+        step_period_us_to_read_SG[2] = SG_MAX_VALID_PERIOD_Z_US;
     }
                  
     uint16_t step_period_us = 0;
