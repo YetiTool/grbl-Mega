@@ -122,9 +122,10 @@ enum rgbHexStates{
 //#define DEBUG_ADC_ENABLED // comment out to remove ADC debug pins functionality - remove for production version
 //#define MSTEP_READING_ENABLED // good to have a temporal view of MSTEP for debug purposes
 //#define SG_SKIP_DEBUG_ENABLED // enable to debug stall guard masking engine
-#define SG_CAL_DEBUG_ENABLED // enable to debug stall guard calibration engine
+//#define SG_CAL_DEBUG_ENABLED // enable to debug stall guard calibration engine
+#define FLASH_DEBUG_ENABLED // enable to debug EEPROM storage
 
-#if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED) || defined(SG_CAL_DEBUG_ENABLED)
+#if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED) || defined(SG_CAL_DEBUG_ENABLED) || defined(FLASH_DEBUG_ENABLED)
 #define ANY_DEBUG_PINS_ENABLED // 
 #endif
 
@@ -146,6 +147,34 @@ enum adc_states{
 	ADC_CH2,  // ADC is running conversion on Channel 2	
 };
 
+
+#define CURRENT_FLASH_STAT_VER			20090614 //0x18100600 
+#define UPTIME_FIFO_SIZE_BYTES          32
+
+// Flash statistics
+typedef struct {
+    /* reset source from MCUSR – MCU Status Register */
+    uint32_t TOT_cnt;                                               /* total count of resets */
+    uint32_t JTRF_cnt;                                              /* count of resets due to JTAG Reset Flag This bit is set if a reset is being caused by a logic one in the JTAG Reset Register selected by the JTAG instruction AVR_RESET. This bit is reset by a Power-on Reset, or by writing a logic zero to the flag. */
+    uint32_t WDRF_cnt;                                              /* count of resets due to Watchdog Reset Flag. This bit is set if a Watchdog Reset occurs. The bit is reset by a Power-on Reset, or by writing a logic zero to the flag. */
+    uint32_t BORF_cnt;                                              /* count of resets due to Brown-out Reset Flag. This bit is set if a Brown-out Reset occurs. The bit is reset by a Power-on Reset, or by writing a logic zero to the flag. */
+    uint32_t EXTRF_cnt;                                             /* count of resets due to External Reset Flag. This bit is set if an External Reset occurs. The bit is reset by a Power-on Reset, or by writing a logic zero to the flag. */
+    uint32_t PORF_cnt;                                              /* count of resets due to Power-on Reset Flag. This bit is set if a Power-on Reset occurs. The bit is reset only by writing a logic zero to the flag. */
+    uint32_t flashStatisticsVersion;                                /* Current flashConfigVersion, required to decide which fields to be updated under DFU, CURRENT_FLASHCONFIG_VER*/
+    uint32_t totalRunTimeSeconds;                                   /* total ON time in seconds. (using spi_interrupt) */
+    uint8_t  RunTimeMinutesFIFO[UPTIME_FIFO_SIZE_BYTES];            /* Flash lifetime is not affected when 0 is written, only depend on erase cycles. this array would allow to write 256 zeros and only then erase to loop the counter. If do it every minute eeprom life will be reached in 40 years. */
+    uint32_t totalTravelMillimeters;                                /* total travelled distance in mm. (using mm_var) */
+    uint32_t totalStallsDetected;                                   /* total number of stalls detected */
+    /* fifo with statistic on stall: total distance, feed, */
+    uint32_t lastStallsTravels[4];                                  /* fifo buffer for when last stalls were happening */
+    uint16_t lastStallsFeeds[4];                                    /* fifo buffer for feed rates at last stalls */
+} FlashStat;
+extern FlashStat flashStatistics;
+extern float totalTravelMillimeters;                                /* accumulator for accurate tracking of the distance */
+
+
+
+
 void asmcnc_init(void);
 //void asmcnc_TMR3_init();
 void asmcnc_RGB_off(void);
@@ -154,7 +183,7 @@ void asmcnc_RGB_red_flash(void);
 void asmcnc_RGB_setup(void);
 uint8_t asmcnc_execute_line(char *line);
 
-uint8_t crc8x_fast(uint8_t crc, uint8_t *mem, size_t len); /* fast crc8 calculator */
+uint8_t crc8x_fast(uint8_t crc, uint8_t *mem, uint8_t len); /* fast crc8 calculator */
 
 #define UNUSED_VARIABLE(X)  ((void)(X))
 #define UNUSED_PARAMETER(X) UNUSED_VARIABLE(X)
@@ -164,5 +193,7 @@ void asmcnc_start_ADC(void);        /* start ADC state machine from channel 1 */
 uint8_t char2intValidate(char);     /* convert hex char to int and validate result (return 0xFF if character is not hex byte code */
 int get_temperature (void);
 int get_spindle_load_volts(void);
+
+void uptime_increment(void);
 
 #endif /* ASMCNC_h */

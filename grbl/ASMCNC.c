@@ -16,41 +16,11 @@ int temperature_cent_celsius    = 2500;     // global variable for latest temper
 int spindle_load_ADC_reading;               // global variable for latest temperature ADC value
 int temperature_ADC_reading;                // global variable for latest Load ADC value
 
-void asmcnc_init(void)
-{
-	AC_YLIM_XLIM_DDRL 	|=AC_LIM_RED_MASK_XZ;
-	AC_ACCS_DDR			|=AC_ACCS_MASK;
-	AC_DOOR_DDR			|=AC_DOOR_RED_MASK;
-	AC_RGB_DDR 			|=AC_RGB_MASK;
-#if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED)
-	DEBUG_DDR  			|=DEBUG_PORT_MASK;
-#endif
-	AC_PROBE_HOLDER_DDR	&=~AC_PROBE_HOLDER_MASK; //Set as input
+static uint32_t localRunTimeSeconds;
 
-	PORTL |= AC_LIM_RED_MASK_XZ;
-	PORTL |= AC_DOOR_RED_MASK;
-	PORTG &=~(1<<AC_EXTRACTOR);
-	PORTG &=~(1<<AC_LIGHT);
+FlashStat flashStatistics;
+float totalTravelMillimeters = 0; /* accumulator for accurate tracking of the distance */
 
-
-	/* setup timer 3 for RGB lights */
-	TCCR3A = 0;	//Clear timer3 registers
-	TCCR3B = 0;
-	TCCR3C = 0;
-	TCCR3A |= ((1<<COM3C1)|(1<<COM3B1)|(1<<COM3A1)); 	/* Setup non-inverted output for channels A, B and C */
-	asmcnc_RGB_setup(); 							/* Setup pre-scaling = 8 and Waveform Generation Mode: PWM, Phase Correct, 8-bit */
-	TCNT3=0; 											/* Zero timer 3 */
-	OCR3A = 0; OCR3B = 0; OCR3C = 0;					/* Turn off all LED's */
-
-#if defined(ENABLE_SPINDLE_LOAD_MONITOR) || defined(ENABLE_TEMPERATURE_MONITOR)
-	asmcnc_init_ADC();
-#endif
-
-	init_TMC(); /* initialise TMC motor controllers */
-
-
-
-}
 
 /* convert hex char to int */
 uint8_t char2int(char input)
@@ -477,7 +447,7 @@ static uint8_t const crc8x_table[] PROGMEM = {
             0xe6, 0xe1, 0xe8, 0xef, 0xfa, 0xfd, 0xf4, 0xf3};
 
 
-uint8_t crc8x_fast(uint8_t crc, uint8_t *mem, size_t len) {
+uint8_t crc8x_fast(uint8_t crc, uint8_t *mem, uint8_t len) {
 	uint8_t *data = mem;
     if (data == NULL)
         return 0xff;
@@ -486,4 +456,242 @@ uint8_t crc8x_fast(uint8_t crc, uint8_t *mem, size_t len) {
         crc = pgm_read_byte_near(crc8x_table + (crc ^ data[idx])); //= crc8x_table[crc ^ data[idx]];
     }
     return crc;
+}
+
+
+void log_resetreason(void)
+{
+    uint8_t resetReason = MCUSR;
+    /* find and log reset reason */    
+    printPgmString(PSTR("\r\n\r\nReset cause: "));
+    if      ( resetReason & ( 1<<PORF ) )   { flashStatistics.PORF_cnt++;  printPgmString(PSTR("Power On\n")); }
+    else if ( resetReason & ( 1<<EXTRF) )   { flashStatistics.EXTRF_cnt++; printPgmString(PSTR("External Reset\n")); }
+    else if ( resetReason & ( 1<<BORF ) )   { flashStatistics.BORF_cnt++;  printPgmString(PSTR("Brown out\n")); }
+    else if ( resetReason & ( 1<<WDRF ) )   { flashStatistics.WDRF_cnt++;  printPgmString(PSTR("Watch Dog\n")); }
+    else if ( resetReason & ( 1<<JTRF ) )   { flashStatistics.JTRF_cnt++;  printPgmString(PSTR("JTAG\n")); }
+
+    /* clear status register after reading as it is sticky */
+    MCUSR = 0;
+}
+
+
+void manage_rst_reasons(void){
+
+    log_resetreason();
+    flashStatistics.TOT_cnt++; /* increment total reset count */
+    
+    printPgmString(PSTR("Total resets: "));   printInteger( flashStatistics.TOT_cnt );
+    printPgmString(PSTR(" = "));        printInteger( flashStatistics.PORF_cnt);
+    printPgmString(PSTR(" POR + "));     printInteger( flashStatistics.EXTRF_cnt);
+    printPgmString(PSTR(" EXT + "));     printInteger( flashStatistics.BORF_cnt);
+    printPgmString(PSTR(" BOR + "));     printInteger( flashStatistics.WDRF_cnt);
+    printPgmString(PSTR(" WDT + "));     printInteger( flashStatistics.JTRF_cnt);
+    printPgmString(PSTR(" JTAG\n"));    
+
+    ///* manage last epcs storage*/
+    //int i;
+    ///* shift */
+    //for (i=2; i>=0; i--){
+        //flashConfig.last_epcs[i+1]      = flashConfig.last_epcs[i];
+        //flashConfig.last_exccauses[i+1] = flashConfig.last_exccauses[i];
+    //}
+    //flashConfig.last_epcs[0]        = rst_info->epc1;
+    //flashConfig.last_exccauses[0]   = rst_info->exccause;
+//
+    ///* print */
+    //os_printf("last epcs(cause):");
+    //for (i=0; i<4; i++){
+        //os_printf(" 0x%08x (%d), ", flashConfig.last_epcs[i], flashConfig.last_exccauses[i]);
+    //}
+    //os_printf("\n");
+
+}
+
+/* implementation of safe flash structure update if new field is added in the end */
+void manage_psflash_updates(void){
+    if (flashStatistics.flashStatisticsVersion < CURRENT_FLASH_STAT_VER){  /* new trap method to initialise new variables under DFU */
+        if (flashStatistics.flashStatisticsVersion < 20090614) {                  /* first time */
+            printPgmString(PSTR("trap to update from version "));   printInteger( flashStatistics.flashStatisticsVersion );
+            printPgmString(PSTR(" to version "));                   printInteger( CURRENT_FLASH_STAT_VER );
+            printPgmString(PSTR("\n"));
+            /* trap to update RSSI for new DFU where flash structure changed */
+            flashStatistics.TOT_cnt = 0;                           /* Current flashConfigVersion, required to decide which fields to be updated under DFU, CURRENT_FLASHCONFIG_VER*/
+            flashStatistics.EXTRF_cnt = 0;                           /* Current flashConfigVersion, required to decide which fields to be updated under DFU, CURRENT_FLASHCONFIG_VER*/
+            flashStatistics.JTRF_cnt = 0;                           /* Current flashConfigVersion, required to decide which fields to be updated under DFU, CURRENT_FLASHCONFIG_VER*/
+            flashStatistics.totalTravelMillimeters = 0;             /* Current flashConfigVersion, required to decide which fields to be updated under DFU, CURRENT_FLASHCONFIG_VER*/
+            flashStatistics.flashStatisticsVersion = 20090614;     /* Current flashConfigVersion, required to decide which fields to be updated under DFU, CURRENT_FLASHCONFIG_VER*/
+        }
+        //if (flashStatistics.flashStatisticsVersion < 20091500) {                  /* second time */
+            //printPgmString(PSTR("trap to update from version "));   printInteger( flashStatistics.flashStatisticsVersion );
+            //printPgmString(PSTR(" to version "));                   printInteger( CURRENT_FLASH_STAT_VER );
+            //printPgmString(PSTR("\n"));
+            ///* trap to update RSSI for new DFU where flash structure changed */
+            //flashStatistics.flashStatisticsVersion = 20091500;     /* Current flashConfigVersion, required to decide which fields to be updated under DFU, CURRENT_FLASHCONFIG_VER*/
+        //}
+        
+    } //if (flashStatistics.flashStatisticsVersion < CURRENT_FLASH_STAT_VER){  /* new trap method to initialise new variables under DFU */
+}
+
+
+
+
+uint8_t flashStatisticsRestore(void){
+#ifdef FLASH_DEBUG_ENABLED
+debug_pin_write(1, DEBUG_1_PIN);
+#endif    
+    /* load statistics from eeprom */
+    if (!(memcpy_from_eeprom_with_checksum((char*)&flashStatistics, EEPROM_ADDR_STATISTICS, sizeof(FlashStat)))) {
+        // Reset with default zero vector
+        memset(&flashStatistics, 0, sizeof(FlashStat));
+        memset(&flashStatistics.RunTimeMinutesFIFO, 0xFF, UPTIME_FIFO_SIZE_BYTES);
+#ifdef FLASH_DEBUG_ENABLED
+debug_pin_write(0, DEBUG_1_PIN);
+#endif        
+        return(false);
+    }
+    
+    /* restore local time counter */
+    localRunTimeSeconds = flashStatistics.totalRunTimeSeconds;
+    /* add seconds remainder rolling bits from array into seconds */
+    for (uint8_t byte_index=0; byte_index<UPTIME_FIFO_SIZE_BYTES; byte_index++){
+        for (uint8_t bit_position=0; bit_position<8; bit_position++){            
+            /* increment localRunTimeSeconds if bit is not 1*/
+            if ( !(flashStatistics.RunTimeMinutesFIFO[byte_index] & (1<<bit_position)) ){
+                localRunTimeSeconds += 64;
+            }
+        }        
+    }
+    
+#ifdef FLASH_DEBUG_ENABLED
+debug_pin_write(0, DEBUG_1_PIN);
+#endif    
+    return(true);
+}
+
+void flashStatisticsSave(void){
+#ifdef FLASH_DEBUG_ENABLED
+debug_pin_write(1, DEBUG_1_PIN);
+#endif
+/* only access EEPROM in not in motions state */
+    if ( !(sys.state & (STATE_CYCLE | STATE_HOMING | STATE_JOG) ) ){
+        /* save statistics to eeprom */    
+        memcpy_to_eeprom_with_checksum(EEPROM_ADDR_STATISTICS, (char*)&flashStatistics, sizeof(FlashStat));
+    }    
+#ifdef FLASH_DEBUG_ENABLED
+debug_pin_write(0, DEBUG_1_PIN);
+#endif    
+}
+
+void uptime_increment(void){
+    
+#ifdef FLASH_DEBUG_ENABLED
+debug_pin_write(1, DEBUG_0_PIN);
+#endif
+    
+    localRunTimeSeconds++;       
+    
+    /* Flash lifetime is not affected when 0 is written, only depend on erase cycles. 
+    array would allow to write 256 zeros and only then erase to loop the counter. 
+    If do it every minute eeprom life will be reached in 10 years. */    
+    
+    /* every minute write bit to the minutes bit array */
+    if ( (localRunTimeSeconds % 64) == 0 )
+    {
+        
+        /* update travel distance if long enough */
+        if ( totalTravelMillimeters > 10.0){
+            flashStatistics.totalTravelMillimeters += (uint32_t)totalTravelMillimeters;
+            totalTravelMillimeters = 0.0;
+        }
+        
+        
+        
+        uint32_t localRunTimeMinutes = localRunTimeSeconds >> 6; /* not exactly minutes but dies the job be slowing down EEPROM writes 64 times */
+
+        /* unroll the minutes remainder */
+        uint16_t minutes_remainder = localRunTimeMinutes % (UPTIME_FIFO_SIZE_BYTES*8);
+
+        /* position "minutes_remainder" is position of the bit in the array that need to be set to "0" */
+
+        /* find which byte it should be set in: */
+        uint8_t byte_index = minutes_remainder >> 3;
+        uint8_t bit_position = minutes_remainder % 8;
+
+        /* clear relevant bit */
+        flashStatistics.RunTimeMinutesFIFO[byte_index] &=~(1<<bit_position) ;
+
+        /* update flashStatistics.totalRunTimeSeconds when bit buffer wraps and erase the buffer RunTimeMinutesFIFO (this is what actually takes time and life from EEPROM */
+        if ( minutes_remainder == (UPTIME_FIFO_SIZE_BYTES*8-1) )
+        {
+            flashStatistics.totalRunTimeSeconds = localRunTimeSeconds+64;
+            memset(&flashStatistics.RunTimeMinutesFIFO, 0xFF, UPTIME_FIFO_SIZE_BYTES);
+        }
+
+
+        /* write total statistic to EEPROM every hour */
+        flashStatisticsSave();
+
+#ifdef FLASH_DEBUG_ENABLED
+        printPgmString(PSTR("total ")); printInteger( flashStatistics.totalRunTimeSeconds );
+        printPgmString(PSTR("s, local ")); printInteger( localRunTimeSeconds );
+        printPgmString(PSTR("s, minutes_remainder ")); printInteger( minutes_remainder );
+        printPgmString(PSTR("\n"));       
+#endif
+        
+        
+    }
+#ifdef FLASH_DEBUG_ENABLED
+debug_pin_write(0, DEBUG_0_PIN);
+#endif
+    
+}
+
+
+
+void asmcnc_init(void)
+{
+    
+    AC_YLIM_XLIM_DDRL 	|=AC_LIM_RED_MASK_XZ;
+    AC_ACCS_DDR			|=AC_ACCS_MASK;
+    AC_DOOR_DDR			|=AC_DOOR_RED_MASK;
+    AC_RGB_DDR 			|=AC_RGB_MASK;
+    #if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED)
+    DEBUG_DDR  			|=DEBUG_PORT_MASK;
+    #endif
+    AC_PROBE_HOLDER_DDR	&=~AC_PROBE_HOLDER_MASK; //Set as input
+
+    PORTL |= AC_LIM_RED_MASK_XZ;
+    PORTL |= AC_DOOR_RED_MASK;
+    PORTG &=~(1<<AC_EXTRACTOR);
+    PORTG &=~(1<<AC_LIGHT);
+
+
+    /* setup timer 3 for RGB lights */
+    TCCR3A = 0;	//Clear timer3 registers
+    TCCR3B = 0;
+    TCCR3C = 0;
+    TCCR3A |= ((1<<COM3C1)|(1<<COM3B1)|(1<<COM3A1)); 	/* Setup non-inverted output for channels A, B and C */
+    asmcnc_RGB_setup(); 							/* Setup pre-scaling = 8 and Waveform Generation Mode: PWM, Phase Correct, 8-bit */
+    TCNT3=0; 											/* Zero timer 3 */
+    OCR3A = 0; OCR3B = 0; OCR3C = 0;					/* Turn off all LED's */
+
+    #if defined(ENABLE_SPINDLE_LOAD_MONITOR) || defined(ENABLE_TEMPERATURE_MONITOR)
+    asmcnc_init_ADC();
+    #endif
+
+    init_TMC(); /* initialise TMC motor controllers */
+
+#ifdef FLASH_DEBUG_ENABLED
+//debug_pin_write(1, DEBUG_0_PIN);
+#endif    
+    flashStatisticsRestore();
+    manage_rst_reasons();
+    manage_psflash_updates();
+    printPgmString(PSTR("Up time: "));  printInteger( localRunTimeSeconds ); printPgmString(PSTR("seconds\n"));
+    printPgmString(PSTR("total distance: "));  printInteger( flashStatistics.totalTravelMillimeters); printPgmString(PSTR("mm\n"));    
+    flashStatisticsSave();
+#ifdef FLASH_DEBUG_ENABLED
+//debug_pin_write(0, DEBUG_0_PIN);
+#endif
+
 }

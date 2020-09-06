@@ -14,7 +14,8 @@
 //#define SPI_TIMER_CYCLE_PER_READ 0x5D   /* 6.016ms with prescaler 1024*/
 #define SPI_TIMER_CYCLE_PER_READ 0xFF   /* 16.384ms with prescaler 1024*/
 #define SPI_READ_OCR_PERIOD_US ((1+SPI_TIMER_CYCLE_PER_READ)<<6) /* SPI timer period, typically 16384us with prescaler 1024*/
-#define SPI_READ_ALL_PERIOD_MS 1000     /* how ofter SPI engine should read all valus from each controller, typically 1s */
+#define SPI_READ_ALL_PERIOD_MS 1500     /* how ofter SPI engine should read all values from each controller, typically 1s */
+#define UPTIME_TICK_PERIOD_MS 1000      /* how ofter SPI engine should signal to main loop to increment uptime */
 
 
 /* SPI_TX_BUFFER holds the outgoing SPI commands, worst case - required for single motors - in that case number initial SPI transactions

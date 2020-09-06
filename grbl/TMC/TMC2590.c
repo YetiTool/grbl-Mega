@@ -11,7 +11,8 @@
 
 //uint16_t max_step_period_us_to_read_SG[] = { SG_MAX_VALID_PERIOD_X_US, SG_MAX_VALID_PERIOD_Y_US, SG_MAX_VALID_PERIOD_Z_US }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
 uint8_t min_step_period_idx_to_read_SG[] = { 0, 0, 0 }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
-    
+
+FlashTMCconfig flashTMCconfig;    
 
 /* calculate index into the LUT based on predefined maximum microstep periods */
 void min_step_period_idx_compute(void){
@@ -367,7 +368,10 @@ void tmc_trigger_stall_alarm(uint8_t axis){
 
 /************************************************ stall guad calibration ***********************************************/
 
-stall_guard_tmc_matrix_t SG_calibration_table;
+/* structure to hold live SG profile to track the load and alarm on stall detection*/
+uint8_t  SG_calibration_read_cnt[TOTAL_TMCS][TMC_SG_PROFILE_POINTS];  // counter for averaging of SG values at calibration
+uint16_t SG_calibration_value[TOTAL_TMCS][TMC_SG_PROFILE_POINTS];     // SG reads for each motor
+
 
 
 const uint16_t SG_step_periods_us[] PROGMEM =   /* must be size of TMC_SG_PROFILE_POINTS, can be put in PROGMEM  */
@@ -512,9 +516,9 @@ debug_pin_write(1, DEBUG_1_PIN);
 #endif    
     /* find entry in calibration table based on step_period_idx and add it */
     uint8_t idx = st_tmc.step_period_idx[thisAxis];
-    if (SG_calibration_table.SG_read_cnt[thisMotor][idx] < TMC_SG_MAX_AVERAGE) { /* only accumulate until max average is reached to keep 10bit SG value in 16 bit accumulator */
-        SG_calibration_table.SG_read[thisMotor][idx] += stallGuardCurrentValue;
-        SG_calibration_table.SG_read_cnt[thisMotor][idx] ++;
+    if (SG_calibration_read_cnt[thisMotor][idx] < TMC_SG_MAX_AVERAGE) { /* only accumulate until max average is reached to keep 10bit SG value in 16 bit accumulator */
+        SG_calibration_value[thisMotor][idx] += stallGuardCurrentValue;
+        SG_calibration_read_cnt[thisMotor][idx] ++;
     }
 #ifdef SG_CAL_DEBUG_ENABLED
 debug_pin_write(0, DEBUG_1_PIN);
@@ -532,13 +536,12 @@ void tmc_calibration_init(void){
     /* lower the max step period for calibration purposes */ 
     min_step_period_idx_compute();
     
-    memset(&SG_calibration_table, 0, sizeof(stall_guard_tmc_matrix_t));
+    memset(SG_calibration_read_cnt, 0, sizeof(SG_calibration_read_cnt));
+    memset(SG_calibration_value, 0, sizeof(SG_calibration_value));
 }
 
 /* stop calibration and compute coefficients based on accumulated data */
 void tmc_compute_and_apply_calibration(void){
-    
-    st_tmc.calibration_enabled = 0;
     
     /* loop over the whole table and calculate average */    
     /* cycle through every motors */
@@ -548,25 +551,37 @@ void tmc_compute_and_apply_calibration(void){
     for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
         /* first apply averaging and fill 0 entires with lower values */             
         for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
-            if ( SG_calibration_table.SG_read_cnt[controller_id][idx] > 0 ) { /* catch divide by 0 */
-                SG_calibration_table.SG_read[controller_id][idx] /= SG_calibration_table.SG_read_cnt[controller_id][idx]; /* find averge SG value */
-                last_SG_read = SG_calibration_table.SG_read[controller_id][idx]; /* keep last entry in cache in case next entry is empty */
-                SG_calibration_table.SG_read_cnt[controller_id][idx] = 1; /*reset count to 1 to keep correct values in case that averaging is accidentally requested once again */
+            if ( SG_calibration_read_cnt[controller_id][idx] > 0 ) { /* catch divide by 0 */
+                SG_calibration_value[controller_id][idx] /= SG_calibration_read_cnt[controller_id][idx]; /* find averge SG value */
+                last_SG_read = SG_calibration_value[controller_id][idx]; /* keep last entry in cache in case next entry is empty */
+                SG_calibration_read_cnt[controller_id][idx] = 1; /*reset count to 1 to keep correct values in case that averaging is accidentally requested once again */
             }
             else{ /* if empty entry use the last filled one */
-                SG_calibration_table.SG_read[controller_id][idx] = last_SG_read;
+                SG_calibration_value[controller_id][idx] = last_SG_read;
             }            
         } 
         /* finally sweep down and fill 0 entires with upper values */
         for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
-            if ( SG_calibration_table.SG_read_cnt[controller_id][TMC_SG_PROFILE_POINTS-1-idx] == 0 ) { /* catch empty entries */
-                SG_calibration_table.SG_read[controller_id][TMC_SG_PROFILE_POINTS-1-idx] = last_SG_read;
+            if ( SG_calibration_read_cnt[controller_id][TMC_SG_PROFILE_POINTS-1-idx] == 0 ) { /* catch empty entries */
+                SG_calibration_value[controller_id][TMC_SG_PROFILE_POINTS-1-idx] = last_SG_read;
             }
             else{
-                last_SG_read = SG_calibration_table.SG_read[controller_id][TMC_SG_PROFILE_POINTS-1-idx];
+                last_SG_read = SG_calibration_value[controller_id][TMC_SG_PROFILE_POINTS-1-idx];
             }
         }        
     }             
+    
+    #ifdef FLASH_DEBUG_ENABLED
+    debug_pin_write(1, DEBUG_1_PIN);
+    #endif
+    /* save calibration to eeprom */
+    memcpy_to_eeprom_with_checksum(EEPROM_ADDR_TMC_CALIBRATION, (char*)SG_calibration_value, sizeof(SG_calibration_value));    
+    #ifdef FLASH_DEBUG_ENABLED
+    debug_pin_write(0, DEBUG_1_PIN);
+    #endif
+    
+    st_tmc.calibration_enabled = 0;    
+    
     /*reenable alarm */
     st_tmc.stall_alarm_enabled  = true;                  /* global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm      */
     
@@ -587,25 +602,37 @@ void tmc_report_calibration(void){
         printPgmString(PSTR(":"));
         for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
     	    printPgmString(PSTR(","));            
-    	    printInteger( SG_calibration_table.SG_read[controller_id][idx] );
+    	    printInteger( SG_calibration_value[controller_id][idx] );
         }
         printPgmString(PSTR(">\n"));
     }
 
 }
 
+
+
+
 void stall_guard_calibration_load(void){
     
-    /* init default calibration values */
-    uint8_t controller_id;
-    uint8_t idx;
-    TMC2590TypeDef *tmc2590;
-    for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
-        tmc2590 = get_TMC_controller(controller_id);
-        for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
-            SG_calibration_table.SG_read[controller_id][idx] = tmc2590->stallGuardAlarmValue + tmc2590->stallGuardAlarmThreshold;
-        }
-    }    
+    if (!(memcpy_from_eeprom_with_checksum((char*)SG_calibration_value, EEPROM_ADDR_TMC_CALIBRATION, sizeof(SG_calibration_value)))) {
+        uint8_t controller_id;
+        uint8_t idx;
+        TMC2590TypeDef *tmc2590;
+        /* load TMC calibration from eeprom for each motor */
+        for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+                // If no calibration in EEPROM then Reset with default thresholds vector
+                /* init default calibration values */
+                tmc2590 = get_TMC_controller(controller_id);
+                for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
+                    SG_calibration_value[controller_id][idx] = tmc2590->stallGuardAlarmValue + tmc2590->stallGuardAlarmThreshold;
+                }            
+        } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+    
+    } //if (!(memcpy_from_eeprom_with_checksum((char*)&flashTMCcalibration, EEPROM_ADDR_TMC_CALIBRATION, sizeof(FlashTMCcalibration)))) {
+        
+    /*reset count to 1 to keep correct values in case that averaging is accidentally requested once again */
+    memset(&SG_calibration_read_cnt, 1, sizeof(SG_calibration_read_cnt));
+
 }
 
 
@@ -653,8 +680,8 @@ debug_pin_write(1, DEBUG_1_PIN);
                 
                 /* init stallGuardAlarmValue with entry from max speed */
                 uint16_t stallGuardAlarmValue = 0;
-                if (SG_calibration_table.SG_read[tmc2590->thisMotor][TMC_SG_PROFILE_POINTS-1] > tmc2590->stallGuardAlarmThreshold){
-                    stallGuardAlarmValue = SG_calibration_table.SG_read[tmc2590->thisMotor][TMC_SG_PROFILE_POINTS-1] - tmc2590->stallGuardAlarmThreshold ;    
+                if (SG_calibration_value[tmc2590->thisMotor][TMC_SG_PROFILE_POINTS-1] > tmc2590->stallGuardAlarmThreshold){
+                    stallGuardAlarmValue = SG_calibration_value[tmc2590->thisMotor][TMC_SG_PROFILE_POINTS-1] - tmc2590->stallGuardAlarmThreshold ;    
                 }
                 
                 /* find alarm value based on calibration matrix and predefined threshold */
@@ -664,8 +691,8 @@ debug_pin_write(1, DEBUG_1_PIN);
                 /* find entry in calibration table based on step_period_idx and extract SG calibrated level from there */
                 uint8_t idx = st_tmc.step_period_idx[tmc2590->thisAxis];
                 /* entry found, apply threshold */
-                if (SG_calibration_table.SG_read[tmc2590->thisMotor][idx] > tmc2590->stallGuardAlarmThreshold){
-                    stallGuardAlarmValue = SG_calibration_table.SG_read[tmc2590->thisMotor][idx] - tmc2590->stallGuardAlarmThreshold ;                                
+                if (SG_calibration_value[tmc2590->thisMotor][idx] > tmc2590->stallGuardAlarmThreshold){
+                    stallGuardAlarmValue = SG_calibration_value[tmc2590->thisMotor][idx] - tmc2590->stallGuardAlarmThreshold ;                                
                 }
                 else{
                     /* silence the alarm: only entries with positive Alarm values will trigger alarm */ 

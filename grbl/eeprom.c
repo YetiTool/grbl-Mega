@@ -23,16 +23,13 @@
 ****************************************************************************/
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include "ASMCNC.h"
 
 /* These EEPROM bits have different names on different devices. */
 #ifndef EEPE
 		#define EEPE  EEWE  //!< EEPROM program/write enable.
 		#define EEMPE EEMWE //!< EEPROM master program/write enable.
 #endif
-
-/* These two are unfortunately not defined in the device include files. */
-#define EEPM1 5 //!< EEPROM Programming Mode Bit 1.
-#define EEPM0 4 //!< EEPROM Programming Mode Bit 0.
 
 /* Define to reduce code size. */
 #define EEPROM_IGNORE_SELFPROG //!< Remove SPM flag polling.
@@ -73,15 +70,21 @@ unsigned char eeprom_get_char( unsigned int addr )
  */
 void eeprom_put_char( unsigned int addr, unsigned char new_value )
 {
+    
+#ifdef FLASH_DEBUG_ENABLED
+debug_pin_write(1, DEBUG_2_PIN);
+#endif
+    
 	char old_value; // Old EEPROM value.
 	char diff_mask; // Difference mask, i.e. old value XOR new value.
 
-	cli(); // Ensure atomic operation for the write operation.
-	
 	do {} while( EECR & (1<<EEPE) ); // Wait for completion of previous write.
 	#ifndef EEPROM_IGNORE_SELFPROG
 	do {} while( SPMCSR & (1<<SELFPRGEN) ); // Wait for completion of SPM.
 	#endif
+    
+
+	cli(); // Ensure atomic operation for the write operation.
 	
 	EEAR = addr; // Set EEPROM address register.
 	EECR = (1<<EERE); // Start EEPROM read operation.
@@ -122,6 +125,11 @@ void eeprom_put_char( unsigned int addr, unsigned char new_value )
 	}
 	
 	sei(); // Restore interrupt flag state.
+    
+#ifdef FLASH_DEBUG_ENABLED
+debug_pin_write(0, DEBUG_2_PIN);
+#endif
+    
 }
 
 // Extensions added as part of Grbl 

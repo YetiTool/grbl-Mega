@@ -367,29 +367,35 @@ debug_pin_write(1, DEBUG_0_PIN);
 #endif
     
 	/* slow down polling the drivers, 1 is 16ms , 61 is around 1s */
-    static uint8_t skip_count;
+    static uint8_t skip_count = 0 ;
+    static uint8_t uptime_count = 0;
     
-    if (++skip_count % ((SPI_READ_ALL_PERIOD_MS*1000UL)/SPI_READ_OCR_PERIOD_US) != 0)  { /* set SPI poll interval to 1s */
+    if (++uptime_count % ((UPTIME_TICK_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US) == 0)  { /* set uptime interval to 1s */
+        system_set_exec_tmc_command_flag(UPTIME_INCREMENT_COMMAND);
+        uptime_count = 0;
+    }
+    
+    if (++skip_count % ((SPI_READ_ALL_PERIOD_MS*1000UL)/SPI_READ_OCR_PERIOD_US) == 0)  { /* set SPI poll interval to 1s */
         #ifdef DEBUG_PINS_ENABLED
         debug_pin_write(0, DEBUG_0_PIN);
         #endif        
-        return;}
-    skip_count = 0;
+        skip_count = 0;
 
-    /* schedule next SPI transfer: indicate to main loop that there is a time to prepare SPI buffer and send it */
-    system_set_exec_tmc_command_flag(TMC_SPI_READ_ALL_COMMAND);
+        /* schedule next SPI transfer: indicate to main loop that there is a time to prepare SPI buffer and send it */
+        system_set_exec_tmc_command_flag(TMC_SPI_READ_ALL_COMMAND);
 
-    /* if for some reason the SPI was not released (HW glitch or comms loss) wait for 30 timer cycles and reset the busy flag */
-    static uint8_t busy_reset_count = 0;
-    if ( (spi_busy) && ( busy_reset_count < 30 ) ){
-        busy_reset_count++;
-        if ( busy_reset_count > 1 ) printPgmString(PSTR("\n!!! SPI BUSY !!!\n")); /* spi is busy for more than 5 us */
-        return;
-    }
+        /* if for some reason the SPI was not released (HW glitch or comms loss) wait for 30 timer cycles and reset the busy flag */
+        static uint8_t busy_reset_count = 0;
+        if ( (spi_busy) && ( busy_reset_count < 30 ) ){
+            busy_reset_count++;
+            if ( busy_reset_count > 1 ) printPgmString(PSTR("\n!!! SPI BUSY !!!\n")); /* spi is busy for more than 5 us */
+            return;
+        }
 
-    spi_busy = false;
-    SPI_current_state 		= SPI_STATE_IDLE;
-    busy_reset_count = 0;
+        spi_busy = false;
+        SPI_current_state 		= SPI_STATE_IDLE;
+        busy_reset_count = 0;
+    } //if (++skip_count % ((SPI_READ_ALL_PERIOD_MS*1000UL)/SPI_READ_OCR_PERIOD_US) == 0)  { /* set SPI poll interval to 1s */
     
     
 #ifdef DEBUG_PINS_ENABLED

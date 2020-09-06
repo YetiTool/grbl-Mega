@@ -548,6 +548,12 @@ void protocol_exec_rt_system()
           /* process all responses and update the current status of controller's parameters */
           process_status_of_all_controllers();
       }
+      
+      /* schedule uptime increment and EEPROM update if needed */
+      if (rt_exec & UPTIME_INCREMENT_COMMAND) {
+          uptime_increment();
+      }          
+      
 
       
   } //if rt_exec = sys_rt_exec_tmc_command;

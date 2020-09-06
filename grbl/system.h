@@ -130,6 +130,7 @@
 #define TMC_SPI_READ_SG_X_COMMAND       bit(4)
 #define TMC_SPI_READ_SG_Y_COMMAND       bit(5)
 #define TMC_SPI_READ_SG_Z_COMMAND       bit(6)
+#define UPTIME_INCREMENT_COMMAND        bit(7)
 
 // Define TMC calibration flags
 #define TMC_DISABLED                    0  // Must be zero.

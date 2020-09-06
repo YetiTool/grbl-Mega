@@ -144,6 +144,17 @@ typedef struct {
 
 
 
+// Flash configuration settings for Trinamics drivers. When adding new items always add them at the end and formulate
+// them such that a value of zero is an appropriate default or backwards compatible. Existing
+// modules that are upgraded will have zero in the new fields. This ensures that an upgrade does
+// not wipe out the old settings.
+typedef struct {
+    uint32_t flashTMCconfigVersion;                                 /* Current flashConfigVersion, required to decide which fields to be updated under DFU, CURRENT_FLASHCONFIG_VER*/
+    int32_t  registerState[TOTAL_TMCS][TMC2590_REGISTER_COUNT];     /* TMC registers for each of 5 controllers: DRVCTRL, CHOPCONF, SMARTEN, SGCSCONF, DRVCONF. 160 bytes */
+    uint16_t temperatureCoefficient[TOTAL_TMCS];                    /* coefficient defining thermal offset applied to calibration curve */
+    uint16_t stallGuardAlarmThreshold[TOTAL_TMCS];                  /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
+} FlashTMCconfig;
+
 
 /* host commands definitions */
 #define TMC_COMMAND_BIT_SIZE 5
