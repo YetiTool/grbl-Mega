@@ -90,7 +90,9 @@ typedef struct {
 
 // Usage note: use 1 TypeDef per IC
 typedef struct {
-	ConfigurationTypeDef *config;
+    
+	int32_t shadowRegister[TMC_REGISTER_COUNT];
+	uint8_t channel;
 
 	uint8_t thisMotor;          /* this motor index */
 	uint8_t thisAxis;           /* this motor Axis */
@@ -137,9 +139,6 @@ typedef struct {
     
     TMC2590Response resp;
 
-	//uint8_t registerAccess[TMC2590_REGISTER_COUNT];
-	int32_t registerResetState[TMC2590_REGISTER_COUNT];
-    
 } TMC2590TypeDef;
 
 

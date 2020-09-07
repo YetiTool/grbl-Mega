@@ -30,7 +30,6 @@
  */
 typedef struct
 {
-    uint8_t m_tmc_channel;                                              /* one out of 3 channels to select the SPI slave: X, Y or Z */
     uint8_t buf_size;                                                   /* 3 for single or 5 for dual */
 	uint8_t m_spi_tx_buf[TX_BUF_SIZE_DUAL]; 						    /* individual buffer storage for each element of the Tx queue*/
     TMC2590TypeDef *tmc2590_1;                                          /* pointer to current motor controller 1 */

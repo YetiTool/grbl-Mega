@@ -175,7 +175,7 @@ void spi_process_tx_queue(void){
             SPI_current_state = SPI_STATE_1;
         
             /* pull CS pin down */
-            tmc_pin_write(0, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->channel);
+            tmc_pin_write(0, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->channel);
 
             /* initiate transfer by writing first byte to the data register */
             SPDR = m_spi_tx_buffer[m_spi_tx_index].m_spi_tx_buf[0];
@@ -267,7 +267,7 @@ ISR(SPI_STC_vect)
     debug_pin_write(0, DEBUG_2_PIN);
 #endif
     			/* BK profiling: 9us */
-                //m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] =
+                //m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] =
                 //            TMC2590_VALUE(_8_32(m_spi_rx_data[0], m_spi_rx_data[1], m_spi_rx_data[2], 0) >> 12) ;
 
     			/* BK profiling: 6.3us */
@@ -277,7 +277,7 @@ ISR(SPI_STC_vect)
     debug_pin_write(0, DEBUG_2_PIN);
 #endif
     			/* BK profiling: 2.7us */
-    			m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] = a;
+    			m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] = a;
 #ifdef DEBUG_PINS_ENABLED
     debug_pin_write(1, DEBUG_2_PIN);
     debug_pin_write(0, DEBUG_2_PIN);
@@ -292,7 +292,7 @@ ISR(SPI_STC_vect)
 #endif
                 
                 /* pull CS pin up */
-                tmc_pin_write(1, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->channel);
+                tmc_pin_write(1, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->channel);
 
                 /* Write SPI returns Success. Increment buffer index and process again in case something is in a queue*/
                 m_spi_tx_index++;
@@ -323,9 +323,9 @@ ISR(SPI_STC_vect)
             m_spi_rx_data[4] = SPDR;
         
             /* deconstruct response */
-            m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] = 
+            m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] = 
                         _8_32(m_spi_rx_data[2], m_spi_rx_data[3], m_spi_rx_data[4], 0) >> 8 ;
-            m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->config->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->respIdx] = 
+            m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->respIdx] = 
                         TMC2590_VALUE(_8_32(m_spi_rx_data[0], m_spi_rx_data[1], m_spi_rx_data[2], 0) >> 12) ;    
             
             // set virtual read address for next reply given by RDSEL on given motor, can only change by setting RDSEL in DRVCONF
@@ -333,7 +333,7 @@ ISR(SPI_STC_vect)
             m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->respIdx = m_spi_tx_buffer[m_spi_tx_index].rdsel;
             
             /* pull CS pin up */
-            tmc_pin_write(1, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->config->channel);
+            tmc_pin_write(1, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->channel);
 
             /* Write SPI returns Success. Increment buffer index and process again in case something is in a queue*/
             m_spi_tx_index++;

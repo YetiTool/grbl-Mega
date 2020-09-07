@@ -63,7 +63,7 @@ static const int32_t tmc2590_defaultRegisterResetState[TMC2590_REGISTER_COUNT] =
 
 #define TMC_SG_MAX_AVERAGE    64    /* max number of SG reads into one matrix cell. SG is 10 bit, matrix is 16 bits, so only 2^(16-10) = 64 values could fit safely */
 
-void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef *tmc2590_config, const int32_t *registerResetState);
+void tmc2590_init(TMC2590TypeDef *tmc2590, const int32_t *registerResetState);
 
 /*single motor*/
 void tmc2590_single_read_all(TMC2590TypeDef *tmc2590);

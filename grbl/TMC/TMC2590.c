@@ -43,18 +43,15 @@ void min_step_period_idx_compute(void){
 
 }
 
-void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef *tmc2590_config, const int32_t *registerResetState)
+void tmc2590_init(TMC2590TypeDef *tmc2590, const int32_t *registerResetState)
 {
   	uint32_t value;    
-
-	tmc2590->config               = tmc2590_config;
-	tmc2590->config->channel      = channel;
 
 	for(size_t i = 0; i < TMC2590_REGISTER_COUNT; i++)
 	{
 		//tmc2590->registerAccess[i]      = tmc2590_defaultRegisterAccess[i];
-		tmc2590->registerResetState[i]                          = registerResetState[i];
-        tmc2590->config->shadowRegister[ i | TMC2590_WRITE_BIT] = registerResetState[i];
+		//tmc2590->registerResetState[i]                          = registerResetState[i];
+        tmc2590->shadowRegister[ i | TMC2590_WRITE_BIT] = registerResetState[i];
 	}
 
     min_step_period_idx_compute();
@@ -62,7 +59,7 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
     /* initialise registers */
 
     /* TMC2590_DRVCONF */
-	value = tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT];
+	value = tmc2590->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT];
     
 	value &= ~TMC2590_SET_RDSEL(-1);                                    /* clear RDSEL bits */
 	value |= TMC2590_SET_RDSEL(tmc2590->respIdx);                       /* set rdsel  */
@@ -95,11 +92,11 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
 	value |= TMC2590_SET_SLP2((tmc2590->slopeCtrlHigh)>>2);
 
 
-    tmc2590->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
+    tmc2590->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
     
     
     /* TMC2590_DRVCTRL */
-	value = tmc2590->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT];
+	value = tmc2590->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT];
     
 	value &= ~TMC2590_SET_INTERPOL(-1);                         // clear bits
     value |= TMC2590_SET_INTERPOL(tmc2590->interpolationEn);    /* enable interpolation */    
@@ -108,11 +105,11 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
 	value &= ~TMC2590_SET_MRES(-1);                             // clear MRES bits
 	value |= TMC2590_SET_MRES(tmc2590->microSteps);             // set MRES  = 16
     
-    tmc2590->config->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
+    tmc2590->shadowRegister[TMC2590_DRVCTRL | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
 
 
     /* TMC2590_CHOPCONF */
-	value = tmc2590->config->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];    
+	value = tmc2590->shadowRegister[TMC2590_CHOPCONF | TMC2590_WRITE_BIT];    
     //default: 0x00091935,
     value &= ~TMC2590_SET_TOFF(-1);                       // clear
     value |= TMC2590_SET_TOFF(tmc2590->SlowDecayDuration);// Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 ... %1111: 2 ... 15 */
@@ -135,11 +132,11 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
 	value &= ~TMC2590_SET_CHM(-1);                         // clear
 	value |= TMC2590_SET_CHM(tmc2590->chopperMode);        // Chopper mode. This mode bit affects the interpretation of the HDEC, HEND, and HSTRT parameters shown below. 0 Standard mode (SpreadCycle)
 
-    tmc2590->config->shadowRegister[TMC2590_CHOPCONF  | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
+    tmc2590->shadowRegister[TMC2590_CHOPCONF  | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
     
 
     /* TMC2590_SMARTEN */
-	value = tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT];    
+	value = tmc2590->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT];    
     //default: 0x000A0000,  
     
 	value &= ~TMC2590_SET_SEIMIN(-1);                       // clear 
@@ -151,11 +148,11 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
     value &= ~TMC2590_SET_SEMAX(-1);                        // clear, 
   	value |= TMC2590_SET_SEMAX(tmc2590->coolStepMax);       // set to trigger if SG above 7x32 = 224
 
-    tmc2590->config->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
+    tmc2590->shadowRegister[TMC2590_SMARTEN | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
     
     
     /* TMC2590_SGCSCONF */
-	value = tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT];    
+	value = tmc2590->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT];    
     //default: 0x000D0505,  
 
     /* 16 scale of 31 for current */
@@ -169,7 +166,7 @@ void tmc2590_init(TMC2590TypeDef *tmc2590, uint8_t channel, ConfigurationTypeDef
   	value |= TMC2590_SET_SGT(tmc2590->stallGuardThreshold); // set threshold
 
 
-    tmc2590->config->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
+    tmc2590->shadowRegister[TMC2590_SGCSCONF | TMC2590_WRITE_BIT] = TMC2590_VALUE(value);
 
 }
 
@@ -180,8 +177,8 @@ void tmc2590_single_writeInt(TMC2590TypeDef *tmc2590_1, uint8_t address)
 {
     int32_t controller1_register_value, drvconf_register_value;
 
-    controller1_register_value = tmc2590_1->config->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT];
-    drvconf_register_value     = tmc2590_1->config->shadowRegister[TMC2590_DRVCONF      | TMC2590_WRITE_BIT];
+    controller1_register_value = tmc2590_1->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT];
+    drvconf_register_value     = tmc2590_1->shadowRegister[TMC2590_DRVCONF      | TMC2590_WRITE_BIT];
 
     uint8_t rdsel = 0;
     
@@ -217,13 +214,13 @@ void tmc2590_read_single(TMC2590TypeDef *tmc2590_1, uint8_t rdsel){
     
     uint32_t drvconf_register_value;
     
-   	drvconf_register_value = tmc2590_1->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT];
+   	drvconf_register_value = tmc2590_1->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT];
 	   
 	drvconf_register_value &= ~TMC2590_SET_RDSEL(-1);      // clear RDSEL bits
 	drvconf_register_value |= TMC2590_SET_RDSEL(rdsel);    // set rdsel
     //nrf_delay_us(delay_us);
     
-    tmc2590_1->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = drvconf_register_value;
+    tmc2590_1->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = drvconf_register_value;
 
     tmc2590_single_writeInt(tmc2590_1, TMC2590_DRVCONF);
     
@@ -254,9 +251,9 @@ void tmc2590_dual_writeInt(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2,
 {
     int32_t controller1_register_value, controller2_register_value, drvconf_register_value;
 
-    controller1_register_value = tmc2590_1->config->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT];
-    controller2_register_value = tmc2590_2->config->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT];
-    drvconf_register_value     = tmc2590_1->config->shadowRegister[TMC2590_DRVCONF      | TMC2590_WRITE_BIT];
+    controller1_register_value = tmc2590_1->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT];
+    controller2_register_value = tmc2590_2->shadowRegister[TMC_ADDRESS(address) | TMC2590_WRITE_BIT];
+    drvconf_register_value     = tmc2590_1->shadowRegister[TMC2590_DRVCONF      | TMC2590_WRITE_BIT];
     
     uint8_t rdsel = 0;
     /* read select shall always be taken from DRVCONF register */
@@ -298,16 +295,16 @@ void tmc2590_dual_read_single(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590
     
     uint32_t drvconf1_register_value, drvconf2_register_value;
     
-   	drvconf1_register_value = tmc2590_1->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT];
-   	drvconf2_register_value = tmc2590_2->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT];
+   	drvconf1_register_value = tmc2590_1->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT];
+   	drvconf2_register_value = tmc2590_2->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT];
 	            
 	drvconf1_register_value &= ~TMC2590_SET_RDSEL(-1);      // clear RDSEL bits
 	drvconf1_register_value |= TMC2590_SET_RDSEL(rdsel);    // set rdsel
 	drvconf2_register_value &= ~TMC2590_SET_RDSEL(-1);      // clear RDSEL bits
 	drvconf2_register_value |= TMC2590_SET_RDSEL(rdsel);    // set rdsel
     
-    tmc2590_1->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = drvconf1_register_value;
-    tmc2590_2->config->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = drvconf2_register_value;
+    tmc2590_1->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = drvconf1_register_value;
+    tmc2590_2->shadowRegister[TMC2590_DRVCONF | TMC2590_WRITE_BIT] = drvconf2_register_value;
 
     tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCONF);
     
@@ -649,16 +646,16 @@ debug_pin_write(1, DEBUG_1_PIN);
 #endif
     
     /* TMC2590_RESPONSE0 #define TMC2590_GET_MSTEP(X)  (0x3FF & ((X) >> 10)) */     
-    tmc2590->resp.mStepCurrentValue = TMC2590_GET_MSTEP(tmc2590->config->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
-    tmc2590->resp.stallGuardCurrentValue = TMC2590_GET_SG(tmc2590->config->shadowRegister[TMC2590_RESPONSE1]);
+    tmc2590->resp.mStepCurrentValue = TMC2590_GET_MSTEP(tmc2590->shadowRegister[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
+    tmc2590->resp.stallGuardCurrentValue = TMC2590_GET_SG(tmc2590->shadowRegister[TMC2590_RESPONSE1]);
 
     /* TMC2590_RESPONSE2 #define TMC2590_GET_SGU(X)    (0x1F & ((X) >> 15)) #define TMC2590_GET_SE(X)     (0x1F & ((X) >> 10))    */
-    tmc2590->resp.stallGuardShortValue= TMC2590_GET_SGU(tmc2590->config->shadowRegister[TMC2590_RESPONSE2]);
-    tmc2590->resp.coolStepCurrentValue= TMC2590_GET_SE(tmc2590->config->shadowRegister[TMC2590_RESPONSE2]);
+    tmc2590->resp.stallGuardShortValue= TMC2590_GET_SGU(tmc2590->shadowRegister[TMC2590_RESPONSE2]);
+    tmc2590->resp.coolStepCurrentValue= TMC2590_GET_SE(tmc2590->shadowRegister[TMC2590_RESPONSE2]);
 
     /* TMC2590_RESPONSE3 status and diagnostic */
-    tmc2590->resp.StatusBits = tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFF;
-    tmc2590->resp.DiagnosticBits = (tmc2590->config->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFFC00) >> 10 ;
+    tmc2590->resp.StatusBits = tmc2590->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFF;
+    tmc2590->resp.DiagnosticBits = (tmc2590->shadowRegister[TMC2590_RESPONSE_LATEST] & 0xFFC00) >> 10 ;
 
     if ( ( st_tmc.calibration_enabled ) && ( st_tmc.current_scale_state == CURRENT_SCALE_ACTIVE ) ){
         /* if feed is fast and SG_skips_counter is higher than min then store calibration value */

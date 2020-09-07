@@ -604,8 +604,6 @@ debug_pin_write(1, DEBUG_0_PIN);
             totalTravelMillimeters = 0.0;
         }
         
-        
-        
         uint32_t localRunTimeMinutes = localRunTimeSeconds >> 6; /* not exactly minutes but dies the job be slowing down EEPROM writes 64 times */
 
         /* unroll the minutes remainder */

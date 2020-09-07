@@ -8,7 +8,7 @@
 #ifndef TMC_API_HEADER_H_
 #define TMC_API_HEADER_H_
 
-	#include "Config.h"
+	//#include "Config.h"
 	#include "Macros.h"
 	#include "Constants.h"
 	#include "Bits.h"
