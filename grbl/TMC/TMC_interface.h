@@ -92,16 +92,21 @@ typedef struct {
 // Usage note: use 1 TypeDef per IC
 typedef struct {
     
-	int32_t shadowRegister[TMC_REGISTER_COUNT];
-	uint8_t channel;
-
-	uint8_t thisMotor;          /* this motor index */
-	uint8_t thisAxis;           /* this motor Axis */
+    /* Parameters stored in EEPROM */
+	int32_t shadowRegister[TMC2590_REGISTER_COUNT]; /* latest state of each config register */
+	uint16_t stallGuardAlarmThreshold;              /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
+	uint16_t temperatureCoefficient;                /* correction for temperatures other than calibration */
+	uint8_t standStillCurrentScale;                 /* standstill current - to reduce energy consumption while job is idle */
     
-	uint8_t stallGuardThreshold;
-	uint16_t stallGuardAlarmValue;      /* when current SG reading is lower than this value corresponded axis alarm will be triggered */
-	uint16_t stallGuardAlarmThreshold;  /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
-	int16_t stallGuardDelta;           /* difference between current SG reading and calibrated curve */
+    /* running variables */    
+	uint8_t channel;                                /* pio index defining SPI channel */
+	uint8_t thisMotor;                              /* this motor index */
+	uint8_t thisAxis;                               /* this motor Axis */    
+	uint16_t stallGuardAlarmValue;                  /* when current SG reading is lower than this value corresponded axis alarm will be triggered */
+	int16_t stallGuardDelta;                        /* difference between current SG reading and calibrated curve */
+    uint8_t respIdx;                                /* current rdsel to know which response is coming next */    
+    int32_t response[TMC2590_RESPONSE3+1];          /* raw response from controllers */
+    TMC2590Response resp;                           /* decoded response from controllers */
 
 
     /* TMC config parameters */
@@ -110,8 +115,8 @@ typedef struct {
     uint8_t microSteps;         /* 4 : set MRES  = 16*/
 
 	uint8_t currentScale;       /* 0 - 31 where 31 is max */
-	uint8_t standStillCurrentScale; /* standstill current - to reduce energy consumption while job is idle */
 	uint8_t stallGuardFilter;   // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
+	uint8_t stallGuardThreshold;
     
 	uint8_t vSense;             /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV. */   
     uint8_t currentSEmin;       /* set 1/4 of full scale */
@@ -140,11 +145,6 @@ typedef struct {
     uint8_t slopeCtrlLow;       // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
     uint8_t senseVoltage;       // Sense resistor voltage-based current scaling. 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV. (Full-scale refers to a current setting of 31.) */
 
-    
-    uint8_t respIdx;            /* current rdsel to know which response is coming next */
-    
-    TMC2590Response resp;
-
 } TMC2590TypeDef;
 
 
@@ -154,10 +154,11 @@ typedef struct {
 // modules that are upgraded will have zero in the new fields. This ensures that an upgrade does
 // not wipe out the old settings.
 typedef struct {
-    uint32_t flashTMCconfigVersion;                                 /* Current flashConfigVersion, required to decide which fields to be updated under DFU, CURRENT_FLASHCONFIG_VER*/
+    //uint32_t flashTMCconfigVersion;                               /* Current flashConfigVersion, required to decide which fields to be updated under DFU, CURRENT_FLASHCONFIG_VER*/
     int32_t  registerState[TOTAL_TMCS][TMC2590_REGISTER_COUNT];     /* TMC registers for each of 5 controllers: DRVCTRL, CHOPCONF, SMARTEN, SGCSCONF, DRVCONF. 160 bytes */
     uint16_t temperatureCoefficient[TOTAL_TMCS];                    /* coefficient defining thermal offset applied to calibration curve */
     uint16_t stallGuardAlarmThreshold[TOTAL_TMCS];                  /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
+    uint8_t standStillCurrentScale[TOTAL_TMCS];                     /* standstill current - to reduce energy consumption while job is idle */
 } FlashTMCconfig;
 
 
@@ -232,5 +233,9 @@ TMC2590TypeDef * get_TMC_controller(uint8_t controller); /* get pointer to requi
 extern uint8_t min_step_period_idx_to_read_SG[];
 extern stepper_tmc_t st_tmc; // structure to hold the shaft rotational speed at the time when SG read was fired.
 extern const uint16_t SG_step_periods_us[];
+
+void tmc_load_settings(void);
+void tmc_store_settings(void);
+
 
 #endif /* TMC_INTERFACE_H_ */

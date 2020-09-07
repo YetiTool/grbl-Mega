@@ -8,9 +8,9 @@
 #ifndef TMC_IC_TMC2590_TMC2590_CONSTANTS_H_
 #define TMC_IC_TMC2590_TMC2590_CONSTANTS_H_
 
-#include "Constants.h"
+//#include "Constants.h"
 
-#define TMC2590_REGISTER_COUNT   8
+#define TMC2590_REGISTER_COUNT   5
 #define TMC2590_MOTORS           1
 #define TMC2590_WRITE_BIT        0x08
 #define TMC2590_ADDRESS_MASK     0x07
@@ -22,6 +22,8 @@
 #define TMC2590_RESPONSE0        0
 #define TMC2590_RESPONSE1        1
 #define TMC2590_RESPONSE2        2
-#define TMC2590_RESPONSE_LATEST  3
+#define TMC2590_RESPONSE3        3
+
+#define TMC_ADDRESS_MASK         0x7F
 
 #endif /* TMC_IC_TMC2590_TMC2590_CONSTANTS_H_ */

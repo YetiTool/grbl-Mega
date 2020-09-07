@@ -10,7 +10,7 @@
 
 	//#include "Config.h"
 	#include "Macros.h"
-	#include "Constants.h"
+	//#include "Constants.h"
 	#include "Bits.h"
 	#include "CRC.h"
 	#include "RegisterAccess.h"

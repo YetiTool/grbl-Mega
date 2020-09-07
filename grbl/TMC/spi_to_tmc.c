@@ -267,8 +267,6 @@ ISR(SPI_STC_vect)
     debug_pin_write(0, DEBUG_2_PIN);
 #endif
     			/* BK profiling: 9us */
-                //m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] =
-                //            TMC2590_VALUE(_8_32(m_spi_rx_data[0], m_spi_rx_data[1], m_spi_rx_data[2], 0) >> 12) ;
 
     			/* BK profiling: 6.3us */
     			a = TMC2590_VALUE(_8_32(m_spi_rx_data[0], m_spi_rx_data[1], m_spi_rx_data[2], 0) >> 12);
@@ -277,7 +275,7 @@ ISR(SPI_STC_vect)
     debug_pin_write(0, DEBUG_2_PIN);
 #endif
     			/* BK profiling: 2.7us */
-    			m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] = a;
+    			m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->response[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] = a;
 #ifdef DEBUG_PINS_ENABLED
     debug_pin_write(1, DEBUG_2_PIN);
     debug_pin_write(0, DEBUG_2_PIN);
@@ -323,9 +321,9 @@ ISR(SPI_STC_vect)
             m_spi_rx_data[4] = SPDR;
         
             /* deconstruct response */
-            m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] = 
+            m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->response[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] = 
                         _8_32(m_spi_rx_data[2], m_spi_rx_data[3], m_spi_rx_data[4], 0) >> 8 ;
-            m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->shadowRegister[m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->respIdx] = 
+            m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->response[m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->respIdx] = 
                         TMC2590_VALUE(_8_32(m_spi_rx_data[0], m_spi_rx_data[1], m_spi_rx_data[2], 0) >> 12) ;    
             
             // set virtual read address for next reply given by RDSEL on given motor, can only change by setting RDSEL in DRVCONF

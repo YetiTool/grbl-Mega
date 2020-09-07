@@ -10,28 +10,70 @@
 
 #include "TMC_interface.h"
 
-static const uint8_t tmc2590_defaultRegisterAccess[TMC2590_REGISTER_COUNT] =
+static const uint8_t tmc2590_defaultStandStillCurrentScale[TOTAL_TMCS] =
 {
-	0x02,  // 0: DRVCTRL
-	0x00,  // 1: UNUSED
-	0x00,  // 2: UNUSED
-	0x00,  // 3: UNUSED
-	0x02,  // 4: CHOPCONF
-	0x02,  // 5: SMARTEN
-	0x02,  // 6: SGCSCONF
-	0x02   // 7: DRVCONF
+    11,   /* X1 motor */
+    11,   /* X2 motor */
+    25,   /* Y1 motor */
+    25,   /* Y2 motor */
+    5     /* Z motor  */
 };
 
-static const int32_t tmc2590_defaultRegisterResetState[TMC2590_REGISTER_COUNT] =
+static const uint16_t tmc2590_defaultTemperatureCoefficient[TOTAL_TMCS] =
 {
-	0x00000204,  // 0: DRVCTRL
-	0x00000000,  // 1: UNUSED
-	0x00000000,  // 2: UNUSED
-	0x00000000,  // 3: UNUSED
-	0x00091935,  // 4: CHOPCONF
-	0x000A8000,  // 5: SMARTEN
-	0x000C0507,  // 6: SGCSCONF
-	0x000EF000   // 7: DRVCONF
+    11,   /* X1 motor */
+    11,   /* X2 motor */
+    25,   /* Y1 motor */
+    25,   /* Y2 motor */
+    5     /* Z motor  */
+};
+
+static const uint16_t tmc2590_defaultStallGuardAlarmThreshold[TOTAL_TMCS] =
+{
+    200,   /* X1 motor */
+    200,   /* X2 motor */
+    200,   /* Y1 motor */
+    200,   /* Y2 motor */
+    200    /* Z motor  */
+};
+
+static const int32_t tmc2590_defaultRegisterResetState[TOTAL_TMCS][TMC2590_REGISTER_COUNT] =
+{
+    {
+        0x00000204,  // 0: X1 DRVCTRL
+        0x00093125,  // 4: X1 CHOPCONF
+        0x000a8100,  // 5: X1 SMARTEN
+        0x000d071f,  // 6: X1 SGCSCONF
+        0x000ef011   // 7: X1 DRVCONF
+    },
+    {
+        0x00000204,  // 0: X2 DRVCTRL
+        0x00093125,  // 4: X2 CHOPCONF
+        0x000a8100,  // 5: X2 SMARTEN
+        0x000d061f,  // 6: X2 SGCSCONF
+        0x000ef011   // 7: X2 DRVCONF
+    },                    
+    {                     
+        0x00000204,  // 0: Y1 DRVCTRL
+        0x000932d4,  // 4: Y1 CHOPCONF
+        0x000a8100,  // 5: Y1 SMARTEN
+        0x000d031f,  // 6: Y1 SGCSCONF
+        0x000ef011   // 7: Y1 DRVCONF
+    },                     
+    {                      
+        0x00000204,  // 0: Y2 DRVCTRL
+        0x000932d4,  // 4: Y2 CHOPCONF
+        0x000a8100,  // 5: Y2 SMARTEN
+        0x000d031f,  // 6: Y2 SGCSCONF
+        0x000ef011   // 7: Y2 DRVCONF
+    },                     
+    {                      
+        0x00000204,  // 0: Z  DRVCTRL
+        0x000932d5,  // 4: Z  CHOPCONF
+        0x000a8100,  // 5: Z  SMARTEN
+        0x000d061f,  // 6: Z  SGCSCONF
+        0x000ef011   // 7: Z  DRVCONF
+    }
 };
 
 /*
@@ -80,7 +122,6 @@ void process_status_of_single_controller(TMC2590TypeDef *tmc2590);
 void tmc2590_single_write_route(uint8_t controller_id, uint8_t address);
 void tmc_hw_init(void);
 void tmc_kick_spi_processing(void); /* flush the SPI queue starting from next SPI transfer */
-void stall_guard_calibration_load(void);
-
+void tmc_load_stall_guard_calibration(void);
 
 #endif /* TMC_IC_TMC2590_H_ */
