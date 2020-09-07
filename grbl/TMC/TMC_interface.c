@@ -13,7 +13,6 @@ stepper_tmc_t st_tmc;                               /* global structure holding 
 
 /* declare structures for all 5 motors */
 TMC2590TypeDef tmc2590_X1, tmc2590_X2, tmc2590_Y1, tmc2590_Y2, tmc2590_Z;
-//ConfigurationTypeDef tmc2590_config_X1, tmc2590_config_X2, tmc2590_config_Y1, tmc2590_config_Y2, tmc2590_config_Z;
 
 uint8_t homing_sg_read_ongoing = false;             /* global flag indicating homing is ongoing */
 
@@ -280,8 +279,6 @@ void init_TMC(void){
     tmc_hw_init();
 
 	/* initialise wanted variables */
-    	//tmc2590               = tmc2590_config;
-    	//tmc2590->channel      = channel;
 	tmc2590_X1.channel      = channel_X;
 	tmc2590_X2.channel      = channel_X;
 	tmc2590_Y1.channel      = channel_Y;

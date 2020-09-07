@@ -47,6 +47,7 @@ typedef enum
 #define SG_READING_SKIPS_AFTER_SLOW_FEED    6        /* Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis. Actually means 5 reads for dual axis and 10 for single */
 #define DEFAULT_TMC_READ_SELECT             1 /* read of the SG is default state of the system */
 
+#define REPORT_TMC_REFRESH_COUNT            10 /* how often print full TMC statistics on UART */
 
 /* max valid periods are limited by acceleration: Z motor with acc=200 starts with 930us pulses and ends with 1600us pulses. X and Y motors with acc=130 starts with 9530us and ends with 12500us */
 #ifdef RIGGY
@@ -96,16 +97,21 @@ typedef struct {
 
 	uint8_t thisMotor;          /* this motor index */
 	uint8_t thisAxis;           /* this motor Axis */
+    
+	uint8_t stallGuardThreshold;
+	uint16_t stallGuardAlarmValue;      /* when current SG reading is lower than this value corresponded axis alarm will be triggered */
+	uint16_t stallGuardAlarmThreshold;  /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
+	int16_t stallGuardDelta;           /* difference between current SG reading and calibrated curve */
 
+
+    /* TMC config parameters */
+    
 	uint8_t interpolationEn;
     uint8_t microSteps;         /* 4 : set MRES  = 16*/
 
 	uint8_t currentScale;       /* 0 - 31 where 31 is max */
 	uint8_t standStillCurrentScale; /* standstill current - to reduce energy consumption while job is idle */
 	uint8_t stallGuardFilter;   // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
-	uint8_t stallGuardThreshold;
-	uint16_t stallGuardAlarmValue;      /* when current SG reading is lower than this value corresponded axis alarm will be triggered */
-	uint16_t stallGuardAlarmThreshold;  /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
     
 	uint8_t vSense;             /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV. */   
     uint8_t currentSEmin;       /* set 1/4 of full scale */
@@ -216,6 +222,8 @@ void tmc_globals_reset(void); /* reset all tmc global variables to known init st
 void tmc_calibration_init(void); /* clear calibration matrix and get ready for data collection */
 void tmc_compute_and_apply_calibration(void); /* stop calibration and compute coefficients based on accumulated data */
 void tmc_report_calibration(void); /* print out calibration data */
+void tmc_report_status(void);
+void tmc_report_SG_delta(void);
 
 
 TMC2590TypeDef * get_TMC_controller(uint8_t controller); /* get pointer to required contoller */

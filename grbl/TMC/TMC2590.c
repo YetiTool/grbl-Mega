@@ -14,6 +14,10 @@ uint8_t min_step_period_idx_to_read_SG[] = { 0, 0, 0 }; /* for SB2: X motor 23HS
 
 FlashTMCconfig flashTMCconfig;    
 
+#define HEX_BYTES_LEN 6
+char ByteArrayToHexViaLookup[] = "0123456789ABCDEF";
+
+
 /* calculate index into the LUT based on predefined maximum microstep periods */
 void min_step_period_idx_compute(void){
     
@@ -607,6 +611,64 @@ void tmc_report_calibration(void){
 }
 
 
+/* print TMC stall guard deltas to UART */
+void tmc_report_SG_delta(void){
+    /* cycle through all motors */        
+    uint8_t controller_id;
+    TMC2590TypeDef *tmc2590;
+    printPgmString(PSTR("|TSG:"));
+    for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+	    tmc2590 = get_TMC_controller(controller_id);
+        printInteger( tmc2590->stallGuardDelta );
+        if (controller_id < TOTAL_TMCS-1) {printPgmString(PSTR(","));}
+    } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+    stall_guard_statistics_reset();          
+}
+
+/* print full TMC statistics hex string out to UART */
+void tmc_report_status(void){
+    
+  #ifdef ENABLE_TMC_FEEDBACK_MONITOR
+      /* cycle through all motors */
+      uint8_t controller_id;
+      TMC2590TypeDef *tmc2590;
+      uint8_t hex_byte_buffer[HEX_BYTES_LEN];
+      for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+	      tmc2590 = get_TMC_controller(controller_id);
+
+	      /* pack values to hex string
+	      * motor                       param                   range, bits bytes   hex bytes
+	      * X1                          stallGuardCurrentValue   10          2       4
+	      * X1                          coolStepCurrentValue     5
+	      * X1                          StatusBits              8           1       2
+	      * X1                          DiagnosticBits          10          3       6
+	      * X1                          MSTEP                   10
+	      * */
+	      /* split the data into nibbles and convert to hex string through the lookup table */
+	      hex_byte_buffer[0]  =  tmc2590->resp.stallGuardCurrentValue       & 0xFF; /* LSB 8 bits of SG */
+	      hex_byte_buffer[1]  = (tmc2590->resp.stallGuardCurrentValue >> 8) & 0x03; /* MSB 2 bits of SG */
+	      hex_byte_buffer[1] |=  tmc2590->resp.coolStepCurrentValue   << 2;
+	      hex_byte_buffer[2]  =  tmc2590->resp.StatusBits;
+	      hex_byte_buffer[3]  =  tmc2590->resp.DiagnosticBits              & 0xFF; /* LSB 8 bits of DiagnosticBits */
+	      hex_byte_buffer[4]  = (tmc2590->resp.DiagnosticBits        >> 8) & 0x03; /* MSB 2 bits of DiagnosticBits */
+	      hex_byte_buffer[4] |= (tmc2590->resp.mStepCurrentValue      << 2) & 0xFC; /* LSB 6 bits of MSTEP */
+	      hex_byte_buffer[5]  = (tmc2590->resp.mStepCurrentValue      >> 6) & 0xF;  /* MSB 4 bits of MSTEP */
+	      /* convert bytes to hex str  */
+	      char hex_str_buffer[HEX_BYTES_LEN*2+1];
+	      for (uint8_t i = 0; i < HEX_BYTES_LEN ; i ++){
+	          hex_str_buffer[i*2+1] = ByteArrayToHexViaLookup[hex_byte_buffer[i]    & 0xF];        /* LSB 4 bits */
+	          hex_str_buffer[i*2  ] = ByteArrayToHexViaLookup[hex_byte_buffer[i]>>4 & 0xF];        /* MSB 4 bits */
+	          //printInteger( hex_byte_buffer[i] );
+	          //printPgmString(PSTR(","));
+	      }
+	      hex_str_buffer[HEX_BYTES_LEN*2] = 0; /* terminator */
+	      printString(hex_str_buffer);
+
+      } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){      
+
+  #endif //#ifdef ENABLE_TMC_FEEDBACK_MONITOR    
+    
+}
 
 
 void stall_guard_calibration_load(void){
@@ -664,6 +726,8 @@ debug_pin_write(1, DEBUG_1_PIN);
         }
     }        
 
+    tmc2590->stallGuardDelta = -999; /* default to invalid SG reading */
+    
     if ( ( st_tmc.stall_alarm_enabled ) && ( st_tmc.current_scale_state == CURRENT_SCALE_ACTIVE ) ){
         
         /* start reading SG if rotational speed is sufficiently high */                       
@@ -677,7 +741,7 @@ debug_pin_write(1, DEBUG_1_PIN);
                 
                 /* init stallGuardAlarmValue with entry from max speed */
                 uint16_t stallGuardAlarmValue = 0;
-                if (SG_calibration_value[tmc2590->thisMotor][TMC_SG_PROFILE_POINTS-1] > tmc2590->stallGuardAlarmThreshold){
+                if (SG_calibration_value[tmc2590->thisMotor][TMC_SG_PROFILE_POINTS-1] > tmc2590->stallGuardAlarmThreshold){ /* only do so if there is enough headroom below the caliration value to track the SG, otherwise keep it "0" which is ALARM_DIASBLED*/
                     stallGuardAlarmValue = SG_calibration_value[tmc2590->thisMotor][TMC_SG_PROFILE_POINTS-1] - tmc2590->stallGuardAlarmThreshold ;    
                 }
                 
@@ -688,7 +752,7 @@ debug_pin_write(1, DEBUG_1_PIN);
                 /* find entry in calibration table based on step_period_idx and extract SG calibrated level from there */
                 uint8_t idx = st_tmc.step_period_idx[tmc2590->thisAxis];
                 /* entry found, apply threshold */
-                if (SG_calibration_value[tmc2590->thisMotor][idx] > tmc2590->stallGuardAlarmThreshold){
+                if (SG_calibration_value[tmc2590->thisMotor][idx] > tmc2590->stallGuardAlarmThreshold){ /* only do so if there is enough headroom below the caliration value to track the SG, otherwise keep it "0" which is ALARM_DIASBLED*/
                     stallGuardAlarmValue = SG_calibration_value[tmc2590->thisMotor][idx] - tmc2590->stallGuardAlarmThreshold ;                                
                 }
                 else{
@@ -698,6 +762,14 @@ debug_pin_write(1, DEBUG_1_PIN);
                 #ifdef SG_CAL_DEBUG_ENABLED
                 debug_pin_write(0, DEBUG_1_PIN);
                 #endif
+                
+                /* keep track of how far the current SG value is from the calibrated level, this is printed to UART and used to indicate the current load. The bigger the value-> the higher the load.*/
+                if (stallGuardAlarmValue > 0){
+                    /* SG reading is valid and enough headroom is remaining below calibrated value*/
+                    tmc2590->stallGuardDelta = SG_calibration_value[tmc2590->thisMotor][idx] - tmc2590->resp.stallGuardCurrentValue;
+                }
+                
+
 
                 
                 
