@@ -10,6 +10,7 @@
 
 #include "TMC_interface.h"
 
+/* thermal test to match rack cutter: X:34C, Y:40C; Z:30C */
 static const uint8_t tmc2590_defaultStandStillCurrentScale[TOTAL_TMCS] =
 {
     11,   /* X1 motor */

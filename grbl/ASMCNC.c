@@ -447,12 +447,12 @@ static uint8_t const crc8x_table[] PROGMEM = {
             0xe6, 0xe1, 0xe8, 0xef, 0xfa, 0xfd, 0xf4, 0xf3};
 
 
-uint8_t crc8x_fast(uint8_t crc, uint8_t *mem, uint8_t len) {
+uint8_t crc8x_fast(uint8_t crc, uint8_t *mem, uint16_t len) {
 	uint8_t *data = mem;
     if (data == NULL)
         return 0xff;
     crc &= 0xff;
-    for(uint8_t idx=0; idx<len; idx++){
+    for(uint16_t idx=0; idx<len; idx++){
         crc = pgm_read_byte_near(crc8x_table + (crc ^ data[idx])); //= crc8x_table[crc ^ data[idx]];
     }
     return crc;

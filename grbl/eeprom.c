@@ -136,23 +136,28 @@ debug_pin_write(0, DEBUG_2_PIN);
 
 
 void memcpy_to_eeprom_with_checksum(unsigned int destination, char *source, unsigned int size) {
-  unsigned char checksum = 0;
+
+  unsigned char checksum = crc8x_fast(0, (uint8_t *) source, size);
+
   for(; size > 0; size--) { 
-    checksum = (checksum << 1) || (checksum >> 7);
-    checksum += *source;
     eeprom_put_char(destination++, *(source++)); 
   }
   eeprom_put_char(destination, checksum);
 }
 
 int memcpy_from_eeprom_with_checksum(char *destination, unsigned int source, unsigned int size) {
+
+  char * destination_copy = destination;
+  unsigned int size_copy = size;
   unsigned char data, checksum = 0;
+  
   for(; size > 0; size--) { 
     data = eeprom_get_char(source++);
-    checksum = (checksum << 1) || (checksum >> 7);
-    checksum += data;    
     *(destination++) = data; 
   }
+  
+  checksum = crc8x_fast(0, (uint8_t *)destination_copy, size_copy);
+  
   return(checksum == eeprom_get_char(source));
 }
 

@@ -111,39 +111,39 @@ typedef struct {
 
     /* TMC config parameters */
     
-	uint8_t interpolationEn;
-    uint8_t microSteps;         /* 4 : set MRES  = 16*/
-
+	//uint8_t interpolationEn;
+    //uint8_t microSteps;         /* 4 : set MRES  = 16*/
+//
 	uint8_t currentScale;       /* 0 - 31 where 31 is max */
-	uint8_t stallGuardFilter;   // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
-	uint8_t stallGuardThreshold;
-    
-	uint8_t vSense;             /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV. */   
-    uint8_t currentSEmin;       /* set 1/4 of full scale */
-
-    uint8_t overcurrentSense;       //0/1 0: Low sensitivity 1: High sensitivity. The high-side overcurrent detector can be set to a higher sensitivity by setting this flag. This will allow detection of wrong cabling even with higher resistive motors.
-    uint8_t shortDetectionDelay ;   //0/1 %00: 3.2us, %01: 1.6us, %10: 1.2us, %11: 0.8us, Short detection delay for high-side and low side detectors. The short detection delay shall cover the bridge switching time. %01 will work for most applications. A higher delay makes detection less sensitive to capacitive load.
-    uint8_t disableShortToVSprotection ;   //0/1 Leave detection enabled for normal use (0). Allows to disable short to VS protection. 0/1 Leave detection enabled for normal use (0).
-    uint8_t EnableProtection ;   //0/1 Enable detection for normal use (1). Explicitly enable short to VS and overcurrent protection by setting this bit.
-
-    uint8_t chopperMode;        // Chopper mode. This mode bit affects the interpretation of the HDEC, HEND, and HSTRT parameters shown below. 0 Standard mode (SpreadCycle)
-    uint8_t chopperBlankTime;   // Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54
+	//uint8_t stallGuardFilter;   // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
+	//uint8_t stallGuardThreshold;
+    //
+	//uint8_t vSense;             /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV. */   
+    //uint8_t currentSEmin;       /* set 1/4 of full scale */
+//
+    //uint8_t overcurrentSense;       //0/1 0: Low sensitivity 1: High sensitivity. The high-side overcurrent detector can be set to a higher sensitivity by setting this flag. This will allow detection of wrong cabling even with higher resistive motors.
+    //uint8_t shortDetectionDelay ;   //0/1 %00: 3.2us, %01: 1.6us, %10: 1.2us, %11: 0.8us, Short detection delay for high-side and low side detectors. The short detection delay shall cover the bridge switching time. %01 will work for most applications. A higher delay makes detection less sensitive to capacitive load.
+    //uint8_t disableShortToVSprotection ;   //0/1 Leave detection enabled for normal use (0). Allows to disable short to VS protection. 0/1 Leave detection enabled for normal use (0).
+    //uint8_t EnableProtection ;   //0/1 Enable detection for normal use (1). Explicitly enable short to VS and overcurrent protection by setting this bit.
+//
+    //uint8_t chopperMode;        // Chopper mode. This mode bit affects the interpretation of the HDEC, HEND, and HSTRT parameters shown below. 0 Standard mode (SpreadCycle)
+    //uint8_t chopperBlankTime;   // Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54
     uint8_t SlowDecayDuration;  /* Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 ... %1111: 2 ... 15 */
-
-    uint8_t HystStart;          /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be ? 15 */
-    uint8_t HystEnd;            /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
-    uint8_t HystDectrement;     /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
-    uint8_t SlowDecayRandom;    /* Enable randomizing the slow decay phase duration: 0: Chopper off time is fixed as set by bits tOFF 1: Random mode, tOFF is random modulated by dNCLK= -12 - +3 clocks */
-
-	uint8_t coolStepMin;        // Lower CoolStep threshold/CoolStep disable. If SEMIN is 0, CoolStep is disabled. If SEMIN is nonzero and the StallGuard2 value SG falls below SEMIN x 32, the CoolStep current scaling factor is increased
-    uint8_t coolStepMax;        // Upper CoolStep threshold as an offset from the lower threshold. If the StallGuard2 measurement value SG is sampled equal to or above (SEMIN+SEMAX+1) x 32 enough times, then the coil current scaling factor is decremented.
-    uint8_t coolStepUp;         // Current increment size. Number of current increment steps for each time that the StallGuard2 value SG is sampled below the lower threshold: %00: 1; %01: 2; %10: 4; %11: 8
-    uint8_t coolStepDown;       // Current decrement speed. Number of times that the StallGuard2 value must be sampled equal to or above the upper threshold for each decrement of the coil current: %00: 32; %01: 8; %10: 2; %11: 1
-    uint8_t coolStepCurrentMin; // Minimum CoolStep current: 0: 1/2 CS current setting; 1: 1/4 CS current setting
-
-    uint8_t slopeCtrlHigh;      // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
-    uint8_t slopeCtrlLow;       // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
-    uint8_t senseVoltage;       // Sense resistor voltage-based current scaling. 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV. (Full-scale refers to a current setting of 31.) */
+//
+    //uint8_t HystStart;          /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be ? 15 */
+    //uint8_t HystEnd;            /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
+    //uint8_t HystDectrement;     /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
+    //uint8_t SlowDecayRandom;    /* Enable randomizing the slow decay phase duration: 0: Chopper off time is fixed as set by bits tOFF 1: Random mode, tOFF is random modulated by dNCLK= -12 - +3 clocks */
+//
+	//uint8_t coolStepMin;        // Lower CoolStep threshold/CoolStep disable. If SEMIN is 0, CoolStep is disabled. If SEMIN is nonzero and the StallGuard2 value SG falls below SEMIN x 32, the CoolStep current scaling factor is increased
+    //uint8_t coolStepMax;        // Upper CoolStep threshold as an offset from the lower threshold. If the StallGuard2 measurement value SG is sampled equal to or above (SEMIN+SEMAX+1) x 32 enough times, then the coil current scaling factor is decremented.
+    //uint8_t coolStepUp;         // Current increment size. Number of current increment steps for each time that the StallGuard2 value SG is sampled below the lower threshold: %00: 1; %01: 2; %10: 4; %11: 8
+    //uint8_t coolStepDown;       // Current decrement speed. Number of times that the StallGuard2 value must be sampled equal to or above the upper threshold for each decrement of the coil current: %00: 32; %01: 8; %10: 2; %11: 1
+    //uint8_t coolStepCurrentMin; // Minimum CoolStep current: 0: 1/2 CS current setting; 1: 1/4 CS current setting
+//
+    //uint8_t slopeCtrlHigh;      // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    //uint8_t slopeCtrlLow;       // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
+    //uint8_t senseVoltage;       // Sense resistor voltage-based current scaling. 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV. (Full-scale refers to a current setting of 31.) */
 
 } TMC2590TypeDef;
 

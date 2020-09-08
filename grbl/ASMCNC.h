@@ -183,7 +183,7 @@ void asmcnc_RGB_red_flash(void);
 void asmcnc_RGB_setup(void);
 uint8_t asmcnc_execute_line(char *line);
 
-uint8_t crc8x_fast(uint8_t crc, uint8_t *mem, uint8_t len); /* fast crc8 calculator */
+uint8_t crc8x_fast(uint8_t crc, uint8_t *mem, uint16_t len); /* fast crc8 calculator */
 
 #define UNUSED_VARIABLE(X)  ((void)(X))
 #define UNUSED_PARAMETER(X) UNUSED_VARIABLE(X)
