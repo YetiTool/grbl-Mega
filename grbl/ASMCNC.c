@@ -534,14 +534,18 @@ void manage_psflash_updates(void){
 
 
 
+/* flashStatistics save and restore are done without crc 
+ * 1) to avoid wearing flash prematurely (write happens every minute to circular buffer RunTimeMinutesFIFO), and crc location would have been worn fast.
+ * 2) statistics is just for info and it is not too critical to keep it checked */
 
 uint8_t flashStatisticsRestore(void){
 #ifdef FLASH_DEBUG_ENABLED
 debug_pin_write(1, DEBUG_1_PIN);
 #endif    
     /* load statistics from eeprom */
-    if (!(memcpy_from_eeprom_with_checksum((char*)&flashStatistics, EEPROM_ADDR_STATISTICS, sizeof(FlashStat)))) {
-        // Reset with default zero vector
+    memcpy_from_eeprom((char*)&flashStatistics, EEPROM_ADDR_STATISTICS, sizeof(FlashStat));
+    if (flashStatistics.flashStatisticsVersion == 0xFFFFFFFF) { 
+        /* Reset with default zero vector if load for the first time */
         memset(&flashStatistics, 0, sizeof(FlashStat));
         memset(&flashStatistics.RunTimeMinutesFIFO, 0xFF, UPTIME_FIFO_SIZE_BYTES);
 #ifdef FLASH_DEBUG_ENABLED
@@ -575,7 +579,7 @@ debug_pin_write(1, DEBUG_1_PIN);
 /* only access EEPROM in not in motions state */
     if ( !(sys.state & (STATE_CYCLE | STATE_HOMING | STATE_JOG) ) ){
         /* save statistics to eeprom */    
-        memcpy_to_eeprom_with_checksum(EEPROM_ADDR_STATISTICS, (char*)&flashStatistics, sizeof(FlashStat));
+        memcpy_to_eeprom(EEPROM_ADDR_STATISTICS, (char*)&flashStatistics, sizeof(FlashStat));
     }    
 #ifdef FLASH_DEBUG_ENABLED
 debug_pin_write(0, DEBUG_1_PIN);
@@ -598,8 +602,8 @@ debug_pin_write(1, DEBUG_0_PIN);
     if ( (localRunTimeSeconds % 64) == 0 )
     {
         
-        /* update travel distance if long enough */
-        if ( totalTravelMillimeters > 10.0){
+        /* update travel distance if long enough (more than 1m) */
+        if ( totalTravelMillimeters > 1000.0){
             flashStatistics.totalTravelMillimeters += (uint32_t)totalTravelMillimeters;
             totalTravelMillimeters = 0.0;
         }
