@@ -163,9 +163,30 @@ typedef struct {
 
 
 /* host commands definitions */
-#define TMC_COMMAND_BIT_SIZE 5
-#define MOTOR_OFFSET_MASK   0x1F   /* Motor offset mask must be a mask of contiguous zeroes, followed by contiguous sequence of ones: 000...111. */
-#define MOTOR_OFFSET        (MOTOR_OFFSET_MASK+1)     /* Motor offset */
+#define TMC_COMMAND_BIT_SIZE   4
+#define MOTOR_OFFSET_MASK      0xF   /* Motor offset mask must be a mask of contiguous zeroes, followed by contiguous sequence of ones: 000...111. */
+#define MOTOR_OFFSET           (MOTOR_OFFSET_MASK+1)     /* Motor offset */
+
+// individual commands to be applied to individual motors
+#define SET_DRVCTRL            TMC2590_DRVCTRL
+#define SET_CHOPCONF           TMC2590_CHOPCONF
+#define SET_SMARTEN            TMC2590_SMARTEN
+#define SET_SGCSCONF           TMC2590_SGCSCONF
+#define SET_DRVCONF            TMC2590_DRVCONF 
+#define SET_IDLE_CURRENT       5  // set the current scale applied when no pulses are detected on the given axis
+#define SET_MOTOR_ENERGIZED    6  // energize or shut off the motor completely, for example to let user move turret easier
+#define GET_REGISTERS          7
+
+// common commands to be applied to whole system
+#define SET_SG_ALARM           100  // desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm
+#define SET_CALIBR_MODE        101  // 1: reset all calibrations and prepare for new one, 2: complete calibration, compute , 3: print calibration coefficients
+#define GET_STATISTICS         102  
+#define GET_TMC_STATUS         103  
+#define RESTORE_TMC_DEFAULTS   104
+
+
+
+
 #define SET_MRES            1   /* Microstep resolution for STEP/DIR mode. Microsteps per fullstep: %0000: 256; %0001: 128; %0010: 64; %0011: 32; %0100: 16; %0101: 8; %0110: 4; %0111: 2 (halfstep); %1000: 1 (fullstep) */
 #define SET_DEDGE           2   /*  */
 #define SET_INTERPOL        3   /* Enable STEP interpolation. 0: Disable STEP pulse interpolation. 1: Enable MicroPlyer STEP pulse multiplication by 16 */
@@ -192,10 +213,6 @@ typedef struct {
 #define SET_SLPL            24   /* Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes */
 #define SET_SLPH            25   /* Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes */
 #define SET_TST             26   /*  */
-#define SET_IDLE_CURRENT    27   /* set the current scale applied when no pulses are detected on the given axis */
-#define SET_MOTOR_ENERGIZED 28   /* energize or shut off the motor completely, for example to let user move turret easier */
-#define SET_SG_ALARM        29   /* desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm */
-#define SET_CALIBR_MODE     30   /* 1: reset all calibrations and prepare for new one, 2: complete calibration, compute, 3: print calibration coefficients  */
 
 
 

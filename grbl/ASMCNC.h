@@ -16,7 +16,8 @@
 #define ASMCNC_INVALID_MOTOR_ID	        40 //ASM Error code 40. TMC command received for wrong motor
 #define ASMCNC_CRC8_ERROR	            41 //ASM Error code 41. TMC command received but crc8 does not match
 #define ASMCNC_INVALID_HEX_CODE         42 //ASM Error code 42. Non "hex code" character received
-#define ASMCNC_PARAM_ERROR              43 //ASM Error code 43. Parameter supplied to the function is outside wanted range
+#define ASMCNC_COMMAND_ERROR            43 //ASM Error code 43. Command supplied to the function is outside wanted range
+#define ASMCNC_PARAM_ERROR              44 //ASM Error code 44. Parameter supplied to the function is outside wanted range
 
 
 // Z-head PCB has two options for spindle control:
@@ -99,7 +100,7 @@ enum rgbHexStates{
 	RTL_TMC_RX,   		// TMC command code reception ongoing
 };
 
-#define RTL_TMC_COMMAND_SIZE 3 /* 3 bytes: command, value, crc */
+#define RTL_TMC_COMMAND_SIZE 7 /* 7 bytes: len, command, value, crc */
 #define RTL_RGB_COMMAND_SIZE 6 /* 6 hex bytes: 2xR, 2xG, 2xB */
 
 

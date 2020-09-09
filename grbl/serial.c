@@ -23,8 +23,6 @@
 
 #define RX_RING_BUFFER (RX_BUFFER_SIZE+1)
 #define TX_RING_BUFFER (TX_BUFFER_SIZE+1)
-#define RX_RTL_RING_BUFFER (RX_RTL_BUFFER_SIZE+1)
-
 
 uint8_t serial_rx_buffer[RX_RING_BUFFER];
 uint16_t serial_rx_buffer_head = 0;
@@ -36,10 +34,11 @@ volatile uint16_t serial_tx_buffer_tail = 0;
 
 uint8_t serial_rx_rtl_state = 0; 			/* RGB HEX Rx state machine state */
 uint8_t serial_rx_rtl_count = 0; 			/* number of currently received hex characters */
+uint8_t serial_rx_rtl_length= 7;            /* length of the next command to be received */
 uint8_t serial_rx_rtl_byte_buffer[3] = {0}; /* buffer to hold output int values for RGB codes */
 uint8_t serial_rx_rgb_nibble = 0;			/* declaring ISR variable here to minimise declarations in ISR */
 
-uint8_t serial_rx_rtl_buffer[RX_RING_BUFFER];
+uint8_t serial_rx_rtl_buffer[RX_RTL_BUFFER_SIZE];
 uint16_t serial_rx_rtl_buffer_head = 0;
 uint16_t serial_rx_rtl_buffer_tail = 0;
 
@@ -170,7 +169,21 @@ uint8_t serial_rtl_data_available()
 		return SERIAL_NO_DATA;
 		} 
 	else {
-		return 0;
+        /* if data available check if the buffer is complete and then return the first byte which should be a length of the command */
+        uint8_t len = serial_rx_rtl_buffer[serial_rx_rtl_buffer_tail];
+        if (len == serial_rtl_data_available_length()){
+            /* check length range */
+            if ( ( len > 0 ) && (len <= RTL_TMC_COMMAND_SIZE) ){
+                return len;        
+            }
+            else{
+                return SERIAL_DATA_INCOMPLETE;    
+            }
+            
+        }
+        else{
+            return SERIAL_DATA_INCOMPLETE;    
+        }
 	}
 }
 
@@ -238,16 +251,21 @@ ISR(SERIAL_RX)
         if (next_head != serial_rx_rtl_buffer_tail) {
 			serial_rx_rtl_buffer[serial_rx_rtl_buffer_head] = data;
 	        serial_rx_rtl_buffer_head = next_head;
-			}
-		
-		//serial_rx_rtl_byte_buffer[serial_rx_rtl_count] = data;
-		serial_rx_rtl_count++;
-		if (serial_rx_rtl_count >= RTL_TMC_COMMAND_SIZE){ /* TMC code reception completed, pass to main loop */
-			serial_rx_rtl_state = RTL_IDLE;
-			serial_rx_rtl_count = 0;
-			/* indicate to main loop that there is a TMC command to process */
-			system_set_exec_rtl_command_flag(RTL_TMC_COMMAND);
-		}
+		    /* first byte of the command is length */
+            if (serial_rx_rtl_count == 0){    		    
+    		    serial_rx_rtl_length = data;
+		    }
+		    //serial_rx_rtl_byte_buffer[serial_rx_rtl_count] = data;
+		    serial_rx_rtl_count++;
+		    if (serial_rx_rtl_count >= serial_rx_rtl_length){ /* TMC code reception completed, pass to main loop */
+			    serial_rx_rtl_state = RTL_IDLE;
+			    serial_rx_rtl_count = 0;
+			    /* indicate to main loop that there is a TMC command to process */
+			    system_set_exec_rtl_command_flag(RTL_TMC_COMMAND);
+		    }            
+    	}
+        
+
 		return; /* exit the ISR - this line is where serial bypass actually happens */
 
 	//case RGB_HEX_RTL_ERR:  /* FAULT - other than "0123456789ABCDEF" char received */

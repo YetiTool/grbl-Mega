@@ -28,13 +28,14 @@
 #endif
 #ifndef RX_RTL_BUFFER_SIZE
   #define RX_RTL_BUFFER_MASK 	0x3F                 	/* RX Buffer mask, must be a mask of contiguous zeroes, followed by contiguous sequence of ones: 000...111. */
-  #define RX_RTL_BUFFER_SIZE 	(SPI_TX_BUFFER_MASK + 1)/* Size of the send buffer, which is 1 higher than the mask. */
+  #define RX_RTL_BUFFER_SIZE 	(RX_RTL_BUFFER_MASK + 1)/* Size of the send buffer, which is 1 higher than the mask. */
 #endif
 #ifndef TX_BUFFER_SIZE
   #define TX_BUFFER_SIZE 255
 #endif
 
 #define SERIAL_NO_DATA 0xff
+#define SERIAL_DATA_INCOMPLETE 0xf7
 
 
 void serial_init();
