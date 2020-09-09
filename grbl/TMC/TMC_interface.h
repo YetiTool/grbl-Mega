@@ -253,6 +253,8 @@ extern const uint16_t SG_step_periods_us[];
 
 void tmc_load_settings(void);
 void tmc_store_settings(void);
+void restore_TMC_defaults(void);
+void apply_TMC_settings_from_flash(void);
 
 
 #endif /* TMC_INTERFACE_H_ */

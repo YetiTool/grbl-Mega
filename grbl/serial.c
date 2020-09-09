@@ -171,7 +171,7 @@ uint8_t serial_rtl_data_available()
 	else {
         /* if data available check if the buffer is complete and then return the first byte which should be a length of the command */
         uint8_t len = serial_rx_rtl_buffer[serial_rx_rtl_buffer_tail];
-        if (len == serial_rtl_data_available_length()){
+        if (len <= serial_rtl_data_available_length()){
             /* check length range */
             if ( ( len > 0 ) && (len <= RTL_TMC_COMMAND_SIZE) ){
                 return len;        
@@ -188,7 +188,7 @@ uint8_t serial_rtl_data_available()
 }
 
 uint8_t serial_rtl_data_available_length(void){
-    return (uint8_t)(serial_rx_rtl_buffer_head - serial_rx_rtl_buffer_tail);
+    return ((uint8_t)(serial_rx_rtl_buffer_head - serial_rx_rtl_buffer_tail)) & RX_RTL_BUFFER_MASK;
 }
 
 

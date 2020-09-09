@@ -365,8 +365,8 @@ debug_pin_write(1, DEBUG_0_PIN);
 #endif
     
 	/* slow down polling the drivers, 1 is 16ms , 61 is around 1s */
-    static uint8_t skip_count = 0 ;
-    static uint8_t uptime_count = 0;
+    static uint8_t skip_count = ((UPTIME_TICK_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US)-2 ;
+    static uint8_t uptime_count = ((SPI_READ_ALL_PERIOD_MS*1000UL)/SPI_READ_OCR_PERIOD_US)-2;
     
     if (++uptime_count % ((UPTIME_TICK_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US) == 0)  { /* set uptime interval to 1s */
         system_set_exec_tmc_command_flag(UPTIME_INCREMENT_COMMAND);

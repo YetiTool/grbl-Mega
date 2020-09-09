@@ -299,12 +299,12 @@ void init_TMC(void){
     
     stall_guard_statistics_reset();    
     
-    tmc_hw_init();
-
 	/* initialise motors with wanted parameters */
     tmc2590_dual_restore(&tmc[TMC_X1], &tmc[TMC_X2]);
     tmc2590_dual_restore(&tmc[TMC_Y1], &tmc[TMC_Y2]);
 	tmc2590_single_restore(&tmc[TMC_Z]);    
+
+    tmc_hw_init();
 
 }
 
@@ -415,15 +415,14 @@ void process_individual_command(uint8_t controller_id, uint8_t command, uint32_t
 		/* print out register state for this motor */
 		case GET_REGISTERS:        
         {
-            printPgmString(PSTR("<TREG"));
+            printPgmString(PSTR("^TREG:"));
             printInteger( tmc2590->thisMotor );
-            printPgmString(PSTR(":"));
             uint8_t idx;
             for (idx=TMC2590_DRVCTRL; idx <= TMC2590_DRVCONF; idx++){
-                if (idx>TMC2590_DRVCTRL) { printPgmString(PSTR(","));}
+                printPgmString(PSTR(","));
                 printInteger( tmc2590->shadowRegister[idx] );                
             }
-      	    printPgmString(PSTR(">\n"));            
+      	    printPgmString(PSTR("v\n"));            
         }   
 		break;
 
@@ -456,7 +455,7 @@ void process_global_command(uint8_t command, uint32_t value){
 		/* print out 2560 statistics */
 		case GET_STATISTICS:
 		{
-    		printPgmString(PSTR("<STAT:"));
+    		printPgmString(PSTR("^STAT:"));
       		printInteger(flashStatistics.TOT_cnt                ); printPgmString(PSTR(", "));
       		printInteger(flashStatistics.JTRF_cnt               ); printPgmString(PSTR(", "));
       		printInteger(flashStatistics.WDRF_cnt               ); printPgmString(PSTR(", "));
@@ -465,24 +464,37 @@ void process_global_command(uint8_t command, uint32_t value){
       		printInteger(flashStatistics.PORF_cnt               ); printPgmString(PSTR(", "));
       		printInteger(flashStatistics.totalRunTimeSeconds    ); printPgmString(PSTR(", "));
       		printInteger(flashStatistics.totalTravelMillimeters ); printPgmString(PSTR(", "));
-      		printInteger(flashStatistics.totalStallsDetected    ); printPgmString(PSTR(", "));
-    		printPgmString(PSTR(">\n"));
+      		printInteger(flashStatistics.totalStallsDetected    ); 
+    		printPgmString(PSTR("v\n"));
 		}
 		break;
 
 		/* print out register state for this motor */
 		case GET_TMC_STATUS:
 		{
-    		printPgmString(PSTR("<Status:"));
-    		printPgmString(PSTR(">\n"));
+    		printPgmString(PSTR("^Status:"));
+    		printPgmString(PSTR("v\n"));
 		}
 		break;
 
 		/* restore all TMC default settings from flash */
 		case RESTORE_TMC_DEFAULTS:
 		{
-    		printPgmString(PSTR("<Restore"));
-    		printPgmString(PSTR(">\n"));
+    		printPgmString(PSTR("TMC settings Restore\n"));
+            restore_TMC_defaults();
+            /* apply loaded settings to each controller */
+            apply_TMC_settings_from_flash();        
+            /* store the default settings */
+            tmc_store_settings(); 
+          	/* initialise motors with wanted parameters */
+            tmc2590_dual_restore(&tmc[TMC_X1], &tmc[TMC_X2]);
+            tmc2590_dual_restore(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+	        tmc2590_single_restore(&tmc[TMC_Z]);    
+            /* start SPI transfers flushing the queue */
+            tmc_kick_spi_processing();
+            //tmc_standstill_off();
+            st_tmc.current_scale_state = CURRENT_SCALE_ACTIVE;
+            
 		}
 		break;
                 
@@ -746,29 +758,31 @@ void stall_guard_statistics_reset(void ){
     }
 }
 
-void tmc_load_settings(void){
+void restore_TMC_defaults(void){
     
     uint8_t controller_id;
     uint8_t reg_idx;
-    uint8_t load_successful = true;
     
-    if (!(memcpy_from_eeprom_with_checksum((char*)&flashTMCconfig, EEPROM_ADDR_TMC_SETTINS, sizeof(flashTMCconfig)))) {
-        load_successful = false;
-        /* if CRC is wrong then load default config */
-        for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
-                // If no calibration in EEPROM then Reset with default thresholds vector
-                /* init default calibration values */
-                for(reg_idx = 0; reg_idx < TMC2590_REGISTER_COUNT; reg_idx++)
-                {
-                    flashTMCconfig.registerState[controller_id][reg_idx] = tmc2590_defaultRegisterResetState[controller_id][reg_idx];
-                }
-                flashTMCconfig.stallGuardAlarmThreshold[controller_id] = tmc2590_defaultStallGuardAlarmThreshold[controller_id];
-                flashTMCconfig.temperatureCoefficient  [controller_id] = tmc2590_defaultTemperatureCoefficient  [controller_id];
-                flashTMCconfig.standStillCurrentScale  [controller_id] = tmc2590_defaultStandStillCurrentScale  [controller_id];            
-        } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
-    } //if (!(memcpy_from_eeprom_with_checksum((char*)&flashTMCcalibration, EEPROM_ADDR_TMC_CALIBRATION, sizeof(FlashTMCcalibration)))) {
+    for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+        // If no calibration in EEPROM then Reset with default thresholds vector
+        /* init default calibration values */
+        for(reg_idx = 0; reg_idx < TMC2590_REGISTER_COUNT; reg_idx++)
+        {
+            flashTMCconfig.registerState[controller_id][reg_idx] = tmc2590_defaultRegisterResetState[controller_id][reg_idx];
+        }
+        flashTMCconfig.stallGuardAlarmThreshold[controller_id] = tmc2590_defaultStallGuardAlarmThreshold[controller_id];
+        flashTMCconfig.temperatureCoefficient  [controller_id] = tmc2590_defaultTemperatureCoefficient  [controller_id];
+        flashTMCconfig.standStillCurrentScale  [controller_id] = tmc2590_defaultStandStillCurrentScale  [controller_id];
+    } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){    
+}
 
+void apply_TMC_settings_from_flash(void){
+    
+    uint8_t controller_id;
+    uint8_t reg_idx;
+    
     /* apply loaded settings to each controller */        
+
     for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
         for(reg_idx = 0; reg_idx < TMC2590_REGISTER_COUNT; reg_idx++)
         {
@@ -778,6 +792,21 @@ void tmc_load_settings(void){
         tmc[controller_id].temperatureCoefficient   = flashTMCconfig.temperatureCoefficient  [controller_id];
         tmc[controller_id].standStillCurrentScale   = flashTMCconfig.standStillCurrentScale  [controller_id];        
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+    
+}
+
+void tmc_load_settings(void){
+    
+    uint8_t load_successful = true;
+    
+    if (!(memcpy_from_eeprom_with_checksum((char*)&flashTMCconfig, EEPROM_ADDR_TMC_SETTINS, sizeof(flashTMCconfig)))) {
+        load_successful = false;
+        /* if CRC is wrong then load default config */
+        restore_TMC_defaults();
+    } //if (!(memcpy_from_eeprom_with_checksum((char*)&flashTMCcalibration, EEPROM_ADDR_TMC_CALIBRATION, sizeof(FlashTMCcalibration)))) {
+
+    /* apply loaded settings to each controller */        
+    apply_TMC_settings_from_flash();
     
     /* if load did not find correct settings store the defualt settings */
     if (!load_successful) {
