@@ -100,42 +100,6 @@ void init_TMC(void){
     tmc_globals_reset();
     
 	tmc[TMC_X1].stallGuardAlarmValue         = 100; /* when current SG reading is lower than this value corresponded axis alarm will be triggered */
-
-
-
-	//tmc[TMC_X1].interpolationEn              = 1;
-	//tmc[TMC_X1].microSteps                   = 4; /* 4 : set MRES  = 16*/
-	//tmc[TMC_X1].currentScale                 = 31; /* 0 - 31 where 31 is max */
-	//tmc[TMC_X1].stallGuardFilter             = 1; // 1: Filtered mode, updated once for each four fullsteps to compensate for variation in motor construction, highest accuracy.
-	//tmc[TMC_X1].stallGuardThreshold          = 6; 
-	//tmc[TMC_X1].stallGuardAlarmThreshold     = 200; /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
-	//tmc[TMC_X1].vSense                       = 0; /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV. */
-	//tmc[TMC_X1].currentSEmin                 = 1; // 1: set 1/4 of full scale when CoolStep is active
-	//tmc[TMC_X1].coolStepMin                  = 0; // default CoolStep = 0 (disable); if want to enable then set for example to trigger if SG below 7x32 = 224
-	//tmc[TMC_X1].coolStepMax                  = 1; // set to trigger if SG above (7+1)8x32 = 256
-    //tmc[TMC_X1].SlowDecayDuration            = 5; // Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 ... %1111: 2 ... 15 */
-    //tmc[TMC_X1].HystStart                    = 2; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
-    //tmc[TMC_X1].HystEnd                      = 2; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
-    //tmc[TMC_X1].HystDectrement               = 2; /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
-    //tmc[TMC_X1].SlowDecayRandom              = 1; /* Enable randomizing the slow decay phase duration: 0: Chopper off time is fixed as set by bits tOFF 1: Random mode, tOFF is random modulated by dNCLK= -12 - +3 clocks */
-    //tmc[TMC_X1].chopperMode                  = 0; // Chopper mode. This mode bit affects the interpretation of the HDEC, HEND, and HSTRT parameters shown below. 0 Standard mode (SpreadCycle)    
-    //tmc[TMC_X1].chopperBlankTime             = 2; // Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54
-	//tmc[TMC_X1].standStillCurrentScale       = 15; // 15: set 1/2 of full scale, 1/4th of power
-    //tmc[TMC_X1].slopeCtrlHigh                = 3;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
-    //tmc[TMC_X1].slopeCtrlLow                 = 3;  // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
-//
-//
-//
-    ///* control protection */
-    //tmc[TMC_X1].overcurrentSense             = 0; //0/1 0: Low sensitivity 1: High sensitivity. The high-side overcurrent detector can be set to a higher sensitivity by setting this flag. This will allow detection of wrong cabling even with higher resistive motors.
-    //tmc[TMC_X1].shortDetectionDelay          = 0; //0/1 %00: 3.2us, %01: 1.6us, %10: 1.2us, %11: 0.8us, Short detection delay for high-side and low side detectors. The short detection delay shall cover the bridge switching time. %01 will work for most applications. A higher delay makes detection less sensitive to capacitive load.
-    //tmc[TMC_X1].disableShortToVSprotection   = 0; //0/1 Leave detection enabled for normal use (0). Allows to disable short to VS protection. 0/1 Leave detection enabled for normal use (0).
-    //tmc[TMC_X1].EnableProtection             = 1; //0/1 Enable detection for normal use (1). Explicitly enable short to VS and overcurrent protection by setting this bit.
-
-	//memcpy(&tmc[TMC_X2], &tmc[TMC_X1], sizeof(tmc[TMC_X1]));
-	//memcpy(&tmc[TMC_Y1], &tmc[TMC_X1], sizeof(tmc[TMC_X1]));
-	//memcpy(&tmc[TMC_Y2], &tmc[TMC_X1], sizeof(tmc[TMC_X1]));
-	//memcpy(&tmc[TMC_Z],  &tmc[TMC_X1], sizeof(tmc[TMC_X1]));
     
     /* individual motor settings */
    
@@ -144,130 +108,22 @@ void init_TMC(void){
     tmc[TMC_Y1].thisAxis                     = Y_AXIS;
     tmc[TMC_Y2].thisAxis                     = Y_AXIS;
     tmc[TMC_Z].thisAxis                      = Z_AXIS;
-
-
-    
-	//tmc[TMC_Y1].standStillCurrentScale       = 30; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
-	//tmc[TMC_Y2].standStillCurrentScale       = 30; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
-    
-    
     
 #ifdef RIGGY
     /* no motor */
-    //tmc[TMC_X1].SlowDecayDuration            = 4;
-    //tmc[TMC_X1].stallGuardThreshold          = 6;
     tmc[TMC_X1].stallGuardAlarmValue         = 300;
-    //tmc[TMC_X1].stallGuardAlarmThreshold     = 200;
-    //tmc[TMC_X1].currentScale                 = 31; /* 0 - 31 where 31 is max */
-	//tmc[TMC_X1].standStillCurrentScale       = 0; // 30: set 30/31 of full scale, 90% of power; this is required for Y motor to prevent operator from accidentally knock the X beam off the position
-    /* ZH motor (medium 23HS22) in riggy conditions (177steps/mm)*/
-    //tmc[TMC_X1].stallGuardThreshold          = 7;
-    //tmc[TMC_X1].stallGuardAlarmValue         = 200;
-    //tmc[TMC_X1].stallGuardAlarmThreshold         = 200;
-    //tmc[TMC_X1].currentScale                 = 31; /* 0 - 31 where 31 is max */
-    
     /* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400  at 3000mm/min on X with 177steps/mm*/
-    //tmc[TMC_X2].HystEnd                      = 0;   /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
-    //tmc[TMC_X2].stallGuardThreshold          = 5;
     tmc[TMC_X2].stallGuardAlarmValue         = 400;
-    //tmc[TMC_X2].stallGuardAlarmThreshold     = 200;
-    //tmc[TMC_X2].currentScale                 = 1; /* 0 - 31 where 31 is max, 0.25A */
-    //tmc[TMC_X2].standStillCurrentScale       = 0; //  2: set 1/2 of full scale, 1/4th of power
-    //tmc[TMC_X2].vSense                       = 1; /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV.*/
-    //
-    //tmc[TMC_Y1].stallGuardThreshold          = 3;
     tmc[TMC_Y1].stallGuardAlarmValue         = 400;
-    //tmc[TMC_Y1].stallGuardAlarmThreshold     = 200;
-    //tmc[TMC_Y1].currentScale                 = 31; /* 0 - 31 where 31 is max */
-    //tmc[TMC_Y1].SlowDecayDuration            = 4;
-    //tmc[TMC_Y1].HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
-    //tmc[TMC_Y1].HystEnd                      = 5; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
-    //tmc[TMC_Y1].HystDectrement               = 2; /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
-    //tmc[TMC_Y1].slopeCtrlLow                 = 3;  // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
-    //tmc[TMC_Y1].slopeCtrlHigh                = 3;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
-    //
-    //tmc[TMC_Y2].stallGuardThreshold          = 3;
     tmc[TMC_Y2].stallGuardAlarmValue         = 400;
-    //tmc[TMC_Y2].stallGuardAlarmThreshold     = 200;
-    //tmc[TMC_Y2].currentScale                 = 31; /* 0 - 31 where 31 is max */
-    //tmc[TMC_Y2].SlowDecayDuration            = 4;
-    //tmc[TMC_Y2].HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
-    //tmc[TMC_Y2].HystEnd                      = 5; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
-    //tmc[TMC_Y2].HystDectrement               = 2; /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
-    //tmc[TMC_Y2].slopeCtrlLow                 = 3;  // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
-    //tmc[TMC_Y2].slopeCtrlHigh                = 3;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
-    //
-    ///* ZH motor */
-    ///* riggy motor (smallest 17HS15-0404S) idle SG ~500, loaded ~400 at 2000mm/min on Z with 267steps/mm*/
-    ////tmc[TMC_Z].HystEnd                       = 2;   /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
-    //tmc[TMC_Z].SlowDecayDuration             = 7;
-    //tmc[TMC_Z].stallGuardThreshold           = 5;
     tmc[TMC_Z].stallGuardAlarmValue          = 200;
-    //tmc[TMC_Z].stallGuardAlarmThreshold      = 200;
-    //tmc[TMC_Z].currentScale                  = 1; /* 0 - 31 where 31 is max, 0.25A */
-    //tmc[TMC_Z].standStillCurrentScale        = 0; //  2: set 1/2 of full scale, 1/4th of power
-    //tmc[TMC_Z].vSense                        = 1; /* 0: Full-scale sense resistor voltage is 325mV. 1: Full-scale sense resistor voltage is 173mV.*/
-//
 #else
-    ///* ZH motor (medium 23HS22) in normal conditions (56steps/mm)*/
-    //tmc[TMC_X1].SlowDecayDuration            = 5;
-    //tmc[TMC_X1].stallGuardThreshold          = 7;
     tmc[TMC_X1].stallGuardAlarmValue         = 300;
-    //tmc[TMC_X1].stallGuardAlarmThreshold     = 200;
-    //tmc[TMC_X1].currentScale                 = 31; /* 0 - 31 where 31 is max */
-    ////tmc[TMC_X1].stallGuardFilter             = 0;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
-    ////tmc[TMC_X1].chopperBlankTime             = 0; // Blanking time. Blanking time interval, in system clock periods: %00: 16 %01: 24 %10: 36 %11: 54
-    ////tmc[TMC_X1].HystEnd                      = 0; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
-    //
-    //
     ///* ZH motor (medium 23HS22) in normal conditions (56steps/mm)*/
-    //tmc[TMC_X2].SlowDecayDuration            = 5;
-    //tmc[TMC_X2].stallGuardThreshold          = 6;
     tmc[TMC_X2].stallGuardAlarmValue         = 300;
-    //tmc[TMC_X2].stallGuardAlarmThreshold     = 200;
-    //tmc[TMC_X2].currentScale                 = 31; /* 0 - 31 where 31 is max */
-    //
-    //tmc[TMC_Y1].stallGuardThreshold          = 3;
     tmc[TMC_Y1].stallGuardAlarmValue         = 400;
-    //tmc[TMC_Y1].stallGuardAlarmThreshold     = 200;
-    //tmc[TMC_Y1].currentScale                 = 31; /* 0 - 31 where 31 is max */
-    //tmc[TMC_Y1].SlowDecayDuration            = 4;
-    //tmc[TMC_Y1].HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
-    //tmc[TMC_Y1].HystEnd                      = 5; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
-    //tmc[TMC_Y1].HystDectrement               = 2; /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
-    //tmc[TMC_Y1].slopeCtrlLow                 = 3;  // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
-    //tmc[TMC_Y1].slopeCtrlHigh                = 3;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
-    ////tmc[TMC_Y1].stallGuardFilter             = 0;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
-    //
-    //tmc[TMC_Y2].stallGuardThreshold          = 3;
     tmc[TMC_Y2].stallGuardAlarmValue         = 400;
-    //tmc[TMC_Y2].stallGuardAlarmThreshold     = 200;
-    //tmc[TMC_Y2].currentScale                 = 31; /* 0 - 31 where 31 is max */
-    //tmc[TMC_Y2].SlowDecayDuration            = 4;
-    //tmc[TMC_Y2].HystStart                    = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
-    //tmc[TMC_Y2].HystEnd                      = 5; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
-    //tmc[TMC_Y2].HystDectrement               = 2; /* Hysteresis decrement period setting, in system clock periods: %00: 16; %01: 32; %10: 48; %11: 64 */
-    //tmc[TMC_Y2].slopeCtrlLow                 = 3;  // Slope control, low side, Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
-    //tmc[TMC_Y2].slopeCtrlHigh                = 3;  // Slope control, high side. Gate driver strength 1 to 7. 7 is maximum current for fastest slopes
-    //
-    //
-    ///* ZH motor */
-    //tmc[TMC_Z].stallGuardThreshold           = 6;
     tmc[TMC_Z].stallGuardAlarmValue          = 200;
-    //tmc[TMC_Z].stallGuardAlarmThreshold      = 200;
-    //tmc[TMC_Z].currentScale                  = 31; /* 0 - 31 where 31 is max */
-    //tmc[TMC_Z].HystStart                     = 5; /* Hysteresis start value, Hysteresis start offset from HEND: %000: 1 %100: 5; %001: 2 %101: 6; %010: 3 %110: 7; %011: 4 %111: 8; Effective: HEND+HSTRT must be 15 */
-    //tmc[TMC_Z].HystEnd                       = 5; /* Hysteresis end (low) value; %0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting) This is the hysteresis value which becomes used for the hysteresis chopper. */
-//
-//
-///* thermal test to match rack cutter: X:34C, Y:40C; Z:30C */
-	//tmc[TMC_X1].standStillCurrentScale       = 11; 
-	//tmc[TMC_X2].standStillCurrentScale       = 11; 
-	//tmc[TMC_Y1].standStillCurrentScale       = 25; 
-	//tmc[TMC_Y2].standStillCurrentScale       = 25; 
-	//tmc[TMC_Z].standStillCurrentScale        = 5; 
-
-
 #endif    
     
 
@@ -279,7 +135,6 @@ void init_TMC(void){
 	tmc[TMC_Z].channel       = channel_Z;
     
     tmc_load_settings();
-    //void tmc_store_settings(void);
 
     uint8_t controller_id;
     for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
@@ -288,12 +143,6 @@ void init_TMC(void){
         tmc[controller_id].currentScale         = TMC2590_GET_CS(  tmc[controller_id].shadowRegister[TMC2590_SGCSCONF]);
         tmc[controller_id].thisMotor            = controller_id;
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
-
-	//tmc2590_init(&tmc[TMC_X1], tmc2590_defaultRegisterResetState[TMC_X1]);
-	//tmc2590_init(&tmc[TMC_X2], tmc2590_defaultRegisterResetState[TMC_X2]);
-	//tmc2590_init(&tmc[TMC_Y1], tmc2590_defaultRegisterResetState[TMC_Y1]);
-	//tmc2590_init(&tmc[TMC_Y2], tmc2590_defaultRegisterResetState[TMC_Y2]);
-	//tmc2590_init(&tmc[TMC_Z],  tmc2590_defaultRegisterResetState[TMC_Z ]);
 
     tmc_load_stall_guard_calibration();
     
@@ -393,12 +242,14 @@ void process_individual_command(uint8_t controller_id, uint8_t command, uint32_t
 
 		/* set the current scale applied when no pulses are detected on the given axis */
 		case SET_IDLE_CURRENT:
+            value = value & 0xFF;
             tmc2590->standStillCurrentScale = value;
 			break;
 
 		/* energize or shut off the motor completely, for example to let user move turret easier */
 		case SET_MOTOR_ENERGIZED:
         {
+            value = value & 0xFF;
             uint8_t SlowDecayDuration = tmc2590->SlowDecayDuration;
             if (value == 0){
                 SlowDecayDuration = 0;
@@ -422,6 +273,10 @@ void process_individual_command(uint8_t controller_id, uint8_t command, uint32_t
                 printPgmString(PSTR(","));
                 printInteger( tmc2590->shadowRegister[idx] );                
             }
+            printPgmString(PSTR(","));
+            printInteger( tmc2590->currentScale );
+            printPgmString(PSTR(","));
+            printInteger( tmc2590->standStillCurrentScale );
       	    printPgmString(PSTR("v\n"));            
         }   
 		break;
@@ -438,11 +293,13 @@ void process_global_command(uint8_t command, uint32_t value){
 
 		/* desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm */
 		case SET_SG_ALARM:
+            value = value & 0xFF;
             st_tmc.stall_alarm_enabled = value;
 		break;
 
 		/* 1: reset all calibrations and prepare for new one, 2: complete calibration, compute cal tables and apply correction, 4: print calibration coefficients */
 		case SET_CALIBR_MODE:
+            value = value & 0xFF;
             if ( (value == TMC_CALIBRATION_INIT) || (value == TMC_CALIBRATION_COMPUTE) || (value == TMC_CALIBRATION_REPORT) )
                 {
                     system_set_exec_tmc_cal_command_flag(value);                
@@ -496,6 +353,11 @@ void process_global_command(uint8_t command, uint32_t value){
             st_tmc.current_scale_state = CURRENT_SCALE_ACTIVE;
             
 		}
+		break;
+              
+		/* store existing (tuned) paraeters to the flash */
+		case STORE_TMC_PARAMS:
+		    tmc_store_settings();
 		break;
                 
         default:
