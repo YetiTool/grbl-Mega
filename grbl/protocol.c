@@ -578,8 +578,20 @@ void protocol_exec_rt_system()
       if (rt_exec & TMC_CALIBRATION_REPORT) {
           tmc_report_calibration(); 
       }
+
+      /* print out calibration data */
+      if (rt_exec & TMC_REGISTERS_REPORT) {
+          tmc_report_registers();
+      }
+
+      /* print out calibration data */
+      if (rt_exec & TMC_STATISTICS_REPORT) {
+          tmc_print_statistics();          
+      }
       
   } //if rt_exec = sys_rt_exec_tmc_cal_command;
+  
+  
 
 
 

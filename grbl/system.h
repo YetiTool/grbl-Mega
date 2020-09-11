@@ -137,9 +137,8 @@
 #define TMC_CALIBRATION_INIT            bit(0)       /* 1: reset all calibrations and prepare for new one,               */
 #define TMC_CALIBRATION_COMPUTE         bit(1)       /* 2: complete calibration, compute cal tables and apply correction,*/
 #define TMC_CALIBRATION_REPORT          bit(2)       /* 4: print calibration coefficients                                */
-
-
-
+#define TMC_REGISTERS_REPORT            bit(3)       /* 8 print TMC registers to UART */
+#define TMC_STATISTICS_REPORT           bit(4)       /* 16 print GRBL statisticss to UART */
 
 
 // Define global system variables

@@ -263,24 +263,6 @@ void process_individual_command(uint8_t controller_id, uint8_t command, uint32_t
         }			            
 		break;
         
-		/* print out register state for this motor */
-		case GET_REGISTERS:        
-        {
-            printPgmString(PSTR("^TREG:"));
-            printInteger( tmc2590->thisMotor );
-            uint8_t idx;
-            for (idx=TMC2590_DRVCTRL; idx <= TMC2590_DRVCONF; idx++){
-                printPgmString(PSTR(","));
-                printInteger( tmc2590->shadowRegister[idx] );                
-            }
-            printPgmString(PSTR(","));
-            printInteger( tmc2590->currentScale );
-            printPgmString(PSTR(","));
-            printInteger( tmc2590->standStillCurrentScale );
-      	    printPgmString(PSTR("v\n"));            
-        }   
-		break;
-
         default:
             report_status_message(ASMCNC_COMMAND_ERROR);        
 		break;
@@ -311,27 +293,12 @@ void process_global_command(uint8_t command, uint32_t value){
 
 		/* print out 2560 statistics */
 		case GET_STATISTICS:
-		{
-    		printPgmString(PSTR("^STAT:"));
-      		printInteger(flashStatistics.TOT_cnt                ); printPgmString(PSTR(", "));
-      		printInteger(flashStatistics.JTRF_cnt               ); printPgmString(PSTR(", "));
-      		printInteger(flashStatistics.WDRF_cnt               ); printPgmString(PSTR(", "));
-      		printInteger(flashStatistics.BORF_cnt               ); printPgmString(PSTR(", "));
-      		printInteger(flashStatistics.EXTRF_cnt              ); printPgmString(PSTR(", "));
-      		printInteger(flashStatistics.PORF_cnt               ); printPgmString(PSTR(", "));
-      		printInteger(flashStatistics.totalRunTimeSeconds    ); printPgmString(PSTR(", "));
-      		printInteger(flashStatistics.totalTravelMillimeters ); printPgmString(PSTR(", "));
-      		printInteger(flashStatistics.totalStallsDetected    ); 
-    		printPgmString(PSTR("v\n"));
-		}
+            system_set_exec_tmc_cal_command_flag(TMC_STATISTICS_REPORT);
 		break;
-
-		/* print out register state for this motor */
-		case GET_TMC_STATUS:
-		{
-    		printPgmString(PSTR("^Status:"));
-    		printPgmString(PSTR("v\n"));
-		}
+        
+		/* print out register state for all motors */
+		case GET_REGISTERS:
+            system_set_exec_tmc_cal_command_flag(TMC_REGISTERS_REPORT);
 		break;
 
 		/* restore all TMC default settings from flash */
@@ -698,3 +665,38 @@ void tmc_store_settings(void){
 
 }
 
+void tmc_print_statistics(void)
+{
+    printPgmString(PSTR("^STAT:"));
+    printInteger(flashStatistics.TOT_cnt                ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.JTRF_cnt               ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.WDRF_cnt               ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.BORF_cnt               ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.EXTRF_cnt              ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.PORF_cnt               ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.totalRunTimeSeconds    ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.totalTravelMillimeters ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.totalStallsDetected    );
+    printPgmString(PSTR("v\n"));
+}
+
+
+void tmc_report_registers(void)
+{
+    uint8_t controller_id;
+    uint8_t reg_idx;
+    for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+        /* print out register state for this motor */        
+        printPgmString(PSTR("^TREG:"));
+        printInteger( tmc[controller_id].thisMotor );
+        for (reg_idx=TMC2590_DRVCTRL; reg_idx <= TMC2590_DRVCONF; reg_idx++){
+            printPgmString(PSTR(","));
+            printInteger( tmc[controller_id].shadowRegister[reg_idx] );
+        }
+        printPgmString(PSTR(","));
+        printInteger( tmc[controller_id].currentScale );
+        printPgmString(PSTR(","));
+        printInteger( tmc[controller_id].standStillCurrentScale );
+        printPgmString(PSTR("v\n"));
+    }        
+}

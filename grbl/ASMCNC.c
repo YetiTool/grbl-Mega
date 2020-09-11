@@ -682,6 +682,8 @@ void asmcnc_init(void)
     #endif
 
     init_TMC(); /* initialise TMC motor controllers */
+    /* report TMC registers */
+    system_set_exec_tmc_cal_command_flag(TMC_REGISTERS_REPORT);
 
 #ifdef FLASH_DEBUG_ENABLED
 //debug_pin_write(1, DEBUG_0_PIN);

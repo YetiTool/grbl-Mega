@@ -142,7 +142,6 @@ typedef struct {
 #define SET_DRVCONF            TMC2590_DRVCONF 
 #define SET_IDLE_CURRENT       5  // set the current scale applied when no pulses are detected on the given axis
 #define SET_MOTOR_ENERGIZED    6  // energize or shut off the motor completely, for example to let user move turret easier
-#define GET_REGISTERS          7
 
 // common commands to be applied to whole system
 #define SET_SG_ALARM           100  // desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm
@@ -151,6 +150,7 @@ typedef struct {
 #define GET_TMC_STATUS         103  
 #define RESTORE_TMC_DEFAULTS   104  // restore all TMC default settings from flash - safety net in case parameters are completely bollocked
 #define STORE_TMC_PARAMS       105  // store existing (tuned) paraeters to the flash
+#define GET_REGISTERS          106
 
 #define SET_MRES            1   /* Microstep resolution for STEP/DIR mode. Microsteps per fullstep: %0000: 256; %0001: 128; %0010: 64; %0011: 32; %0100: 16; %0101: 8; %0110: 4; %0111: 2 (halfstep); %1000: 1 (fullstep) */
 #define SET_DEDGE           2   /*  */
@@ -221,5 +221,7 @@ void tmc_store_settings(void);
 void restore_TMC_defaults(void);
 void apply_TMC_settings_from_flash(void);
 
+void tmc_print_statistics(void);
+void tmc_report_registers(void);
 
 #endif /* TMC_INTERFACE_H_ */
