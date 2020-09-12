@@ -168,6 +168,9 @@ typedef struct {
     uint32_t totalStallsDetected;                                   /* total number of stalls detected */
     /* fifo with statistic on stall: total distance, feed, */
     uint32_t lastStallsTravels[4];                                  /* fifo buffer for when last stalls were happening */
+    uint8_t  lastStallsMotor[4];                                    /* fifo buffer for which motor stalled */
+    uint16_t lastStallsSG[4];                                       /* fifo buffer for Stall Guard reading at last stalls */
+    uint16_t lastStallsSGdelta[4];                                  /* fifo buffer for SG delta to calibration at last stalls */
     uint16_t lastStallsFeeds[4];                                    /* fifo buffer for feed rates at last stalls */
 } FlashStat;
 extern FlashStat flashStatistics;
@@ -185,6 +188,10 @@ void asmcnc_RGB_setup(void);
 uint8_t asmcnc_execute_line(char *line);
 
 uint8_t crc8x_fast(uint8_t crc, uint8_t *mem, uint16_t len); /* fast crc8 calculator */
+
+void enable_watchdog(void);
+
+void dumpMemory(void);
 
 #define UNUSED_VARIABLE(X)  ((void)(X))
 #define UNUSED_PARAMETER(X) UNUSED_VARIABLE(X)

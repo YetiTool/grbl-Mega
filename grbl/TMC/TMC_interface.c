@@ -327,6 +327,30 @@ void process_global_command(uint8_t command, uint32_t value){
 		    tmc_store_settings();
 		break;
                 
+        /*  value = 0x10: disable WD feed; other value: report EEPROM dump */                 
+        case WDT_TMC_TEST:
+            value = value & 0xFF;
+            if (value == 0x10){
+                TIMSK2 &= ~(1<<OCIE2A); // disable timer that feeds the dog
+                //stay here forever emulating stuck in a loop
+                while(1) {;}
+            }
+            else{
+                printPgmString(PSTR("dump:\n"));
+                uint32_t addr = EEPROM_ADDR_STACK_DUMP;
+                unsigned char data;
+                for (addr = EEPROM_ADDR_STACK_DUMP; addr<EEPROM_ADDR_STACK_DUMP+10; addr++){
+                    data = eeprom_get_char(addr);
+                    printInteger(data);
+                    printPgmString(PSTR(":"));
+                }
+                dumpMemory();
+            }
+            
+        break;
+                
+                
+                
         default:
             report_status_message(ASMCNC_COMMAND_ERROR);        
 		break;
@@ -476,9 +500,8 @@ void tmc_homing_reset_limits(void){
 - set current scale to working level
 */
 void tmc_homing_mode_set(uint8_t mode){
-    if (mode == TMC_MODE_HOMING){
-        /* disable timer2 Interrupt for home cycle duration*/
-        TIMSK2 &=~(1<<OCIE2A); //Timer/Counter2 Output Compare Match A Interrupt   
+    if (mode == TMC_MODE_HOMING){        
+        allow_periodic_TMC_poll(0); /* disable TMC polls for home cycle duration*/
         /* apply operational current to motor */
         st_tmc.current_scale_state = CURRENT_SCALE_ACTIVE;
         tmc_all_current_scale_apply(); /* set operational Current scale on all motors */
@@ -487,9 +510,7 @@ void tmc_homing_mode_set(uint8_t mode){
         st_tmc.current_scale_state = CURRENT_SCALE_STANDSTILL;
         /* reenable SPI engine timer */
         tmc_all_current_scale_apply(); /* set standstill Current scale on all motors */              
-        /* reenable SPI engine timer */
-        /* Enable timer2 Interrupt */
-        TIMSK2 |= (1<<OCIE2A); //Timer/Counter2 Output Compare Match A Interrupt Enable
+        allow_periodic_TMC_poll(1); /* reenable SPI TMC polls for home cycle duration*/
     }
   
 }  

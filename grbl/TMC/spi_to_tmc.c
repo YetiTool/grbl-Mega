@@ -129,6 +129,7 @@ static tx_spi_msg_t	m_spi_tx_buffer[SPI_TX_BUFFER_SIZE];  				/* Transmit buffer
 static uint32_t    	m_spi_tx_insert_index		= 0;        			/* Current index in the transmit buffer where the next message should be inserted. */
 static uint32_t    	m_spi_tx_index        		= 0;        			/* Current index in the transmit buffer containing the next message to be transmitted. */
 static uint8_t      current_transfer_type       = 0;                    /* 3 for single or 5 for dual */
+static uint8_t      periodic_TMC_poll_allowed   = 1;                    /* global variable allowing or blocking periodic polls */
 uint8_t m_spi_rx_data[TX_BUF_SIZE_DUAL]; 						        /* buffer storage for Rx data */
 
 
@@ -354,12 +355,21 @@ ISR(SPI_STC_vect)
 #endif
 }
 
+/* set global variable allowing or blocking periodic polls */
+void allow_periodic_TMC_poll(uint8_t allowed){
+    periodic_TMC_poll_allowed = allowed;
+}
+
+
 
 /*  Function for passing any pending request from the buffer to the SPI hardware.*/
 ISR(TIMER2_COMPA_vect)
 {
 	sei(); // Re-enable interrupts to allow Stepper Interrupt to fire on-time.
     
+	/* feed the dog */
+	asm("WDR");
+
 #ifdef DEBUG_PINS_ENABLED
 debug_pin_write(1, DEBUG_0_PIN);
 #endif
@@ -373,7 +383,8 @@ debug_pin_write(1, DEBUG_0_PIN);
         uptime_count = 0;
     }
     
-    if (++skip_count % ((SPI_READ_ALL_PERIOD_MS*1000UL)/SPI_READ_OCR_PERIOD_US) == 0)  { /* set SPI poll interval to 1s */
+    if ( ( ++skip_count % ((SPI_READ_ALL_PERIOD_MS*1000UL)/SPI_READ_OCR_PERIOD_US) == 0 ) && 
+         ( periodic_TMC_poll_allowed ) )  { /* set SPI poll interval to 1s */
         #ifdef DEBUG_PINS_ENABLED
         debug_pin_write(0, DEBUG_0_PIN);
         #endif        

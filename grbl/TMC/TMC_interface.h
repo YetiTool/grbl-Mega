@@ -151,6 +151,7 @@ typedef struct {
 #define RESTORE_TMC_DEFAULTS   104  // restore all TMC default settings from flash - safety net in case parameters are completely bollocked
 #define STORE_TMC_PARAMS       105  // store existing (tuned) paraeters to the flash
 #define GET_REGISTERS          106
+#define WDT_TMC_TEST           107 // value = 0x10: disable WD feed; other value: report EEPROM dump
 
 #define SET_MRES            1   /* Microstep resolution for STEP/DIR mode. Microsteps per fullstep: %0000: 256; %0001: 128; %0010: 64; %0011: 32; %0100: 16; %0101: 8; %0110: 4; %0111: 2 (halfstep); %1000: 1 (fullstep) */
 #define SET_DEDGE           2   /*  */

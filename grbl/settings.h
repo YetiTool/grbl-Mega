@@ -64,6 +64,7 @@
 #define EEPROM_ADDR_TMC_CALIBRATION 1792U //TMC calibration		0x700 // Calibration for Trinamics drivers. 128 16-bit entries for 5 drivers + crc. 1281bytes
 #define EEPROM_ADDR_STATISTICS      3088U //statistics	        0xC10
 #define EEPROM_ADDR_STACK_DUMP      3338U //stack dump	        0xD0A
+#define EEPROM_STACK_HDR_SIZE       8U
 
 // Define EEPROM address indexing for coordinate parameters
 #define N_COORDINATE_SYSTEM 6  // Number of supported work coordinate systems (from index 1)

@@ -469,6 +469,7 @@ void log_resetreason(void)
     else if ( resetReason & ( 1<<BORF ) )   { flashStatistics.BORF_cnt++;  printPgmString(PSTR("Brown out\n")); }
     else if ( resetReason & ( 1<<WDRF ) )   { flashStatistics.WDRF_cnt++;  printPgmString(PSTR("Watch Dog\n")); }
     else if ( resetReason & ( 1<<JTRF ) )   { flashStatistics.JTRF_cnt++;  printPgmString(PSTR("JTAG\n")); }
+    else    { printInteger( resetReason );    flashStatistics.WDRF_cnt++;  printPgmString(PSTR(": Watch Dog?\n")); } /* apparently WDR is not showing in the MCUSR, so if anything else then likely it is it. Also bootloader uses WD to reset status, watch out for it later */
 
     /* clear status register after reading as it is sticky */
     MCUSR = 0;
@@ -696,6 +697,9 @@ void asmcnc_init(void)
     #endif
 
     init_TMC(); /* initialise TMC motor controllers */
+    
+    enable_watchdog();    
+    
     /* report TMC registers */
     system_set_exec_tmc_cal_command_flag(TMC_REGISTERS_REPORT);
 

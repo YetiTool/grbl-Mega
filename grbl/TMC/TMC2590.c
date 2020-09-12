@@ -414,8 +414,8 @@ debug_pin_write(0, DEBUG_1_PIN);
 void tmc_calibration_init(void){
     st_tmc.calibration_enabled = 1;
     st_tmc.stall_alarm_enabled  = false;                  /* global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm      */    
-    /* disable timer2 Interrupt for calibration cycle duration*/
-    TIMSK2 &=~(1<<OCIE2A); //Timer/Counter2 Output Compare Match A Interrupt    
+
+    allow_periodic_TMC_poll(0); /* disable TMC polls for home cycle duration*/
 
     /* lower the max step period for calibration purposes */ 
     min_step_period_idx_compute();
@@ -472,8 +472,8 @@ void tmc_compute_and_apply_calibration(void){
     /* restore the max step period after calibration */
     min_step_period_idx_compute();
     
-    /* reenable SPI engine timer : Enable timer2 Interrupt */
-    TIMSK2 |= (1<<OCIE2A); //Timer/Counter2 Output Compare Match A Interrupt Enable    
+    allow_periodic_TMC_poll(1); /* reenable SPI TMC polls for home cycle duration*/
+
 }
 
 /* print out calibration data */

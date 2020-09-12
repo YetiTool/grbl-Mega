@@ -124,5 +124,6 @@ void tmc2590_single_write_route(uint8_t controller_id, uint8_t address);
 void tmc_hw_init(void);
 void tmc_kick_spi_processing(void); /* flush the SPI queue starting from next SPI transfer */
 void tmc_load_stall_guard_calibration(void);
+void allow_periodic_TMC_poll(uint8_t allowed); /* set global variable allowing or blocking periodic polls */
 
 #endif /* TMC_IC_TMC2590_H_ */
