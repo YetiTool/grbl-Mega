@@ -648,6 +648,20 @@ debug_pin_write(0, DEBUG_0_PIN);
     
 }
 
+void report_statistics(void)
+{
+    printPgmString(PSTR("^STAT:"));
+    printInteger(flashStatistics.TOT_cnt                ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.JTRF_cnt               ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.WDRF_cnt               ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.BORF_cnt               ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.EXTRF_cnt              ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.PORF_cnt               ); printPgmString(PSTR(", "));
+    printInteger(localRunTimeSeconds                    ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.totalTravelMillimeters ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.totalStallsDetected    );
+    printPgmString(PSTR("v\n"));
+}
 
 
 void asmcnc_init(void)
@@ -699,3 +713,4 @@ void asmcnc_init(void)
 #endif
 
 }
+

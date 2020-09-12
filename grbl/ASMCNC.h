@@ -197,4 +197,6 @@ int get_spindle_load_volts(void);
 
 void uptime_increment(void);
 
+void report_statistics(void);
+
 #endif /* ASMCNC_h */

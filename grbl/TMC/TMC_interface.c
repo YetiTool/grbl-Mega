@@ -665,22 +665,6 @@ void tmc_store_settings(void){
 
 }
 
-void tmc_print_statistics(void)
-{
-    printPgmString(PSTR("^STAT:"));
-    printInteger(flashStatistics.TOT_cnt                ); printPgmString(PSTR(", "));
-    printInteger(flashStatistics.JTRF_cnt               ); printPgmString(PSTR(", "));
-    printInteger(flashStatistics.WDRF_cnt               ); printPgmString(PSTR(", "));
-    printInteger(flashStatistics.BORF_cnt               ); printPgmString(PSTR(", "));
-    printInteger(flashStatistics.EXTRF_cnt              ); printPgmString(PSTR(", "));
-    printInteger(flashStatistics.PORF_cnt               ); printPgmString(PSTR(", "));
-    printInteger(flashStatistics.totalRunTimeSeconds    ); printPgmString(PSTR(", "));
-    printInteger(flashStatistics.totalTravelMillimeters ); printPgmString(PSTR(", "));
-    printInteger(flashStatistics.totalStallsDetected    );
-    printPgmString(PSTR("v\n"));
-}
-
-
 void tmc_report_registers(void)
 {
     uint8_t controller_id;

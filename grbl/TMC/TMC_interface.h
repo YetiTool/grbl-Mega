@@ -221,7 +221,6 @@ void tmc_store_settings(void);
 void restore_TMC_defaults(void);
 void apply_TMC_settings_from_flash(void);
 
-void tmc_print_statistics(void);
 void tmc_report_registers(void);
 
 #endif /* TMC_INTERFACE_H_ */

@@ -586,7 +586,7 @@ void protocol_exec_rt_system()
 
       /* print out calibration data */
       if (rt_exec & TMC_STATISTICS_REPORT) {
-          tmc_print_statistics();          
+          report_statistics();          
       }
       
   } //if rt_exec = sys_rt_exec_tmc_cal_command;
