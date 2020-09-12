@@ -8,8 +8,8 @@
 #ifndef ASMCNC_h
 #define ASMCNC_h
 
-#define ASMCNC_VERSION			"2.0.7"
-#define ASMCNC_VERSION_BUILD	"20200907"
+#define ASMCNC_VERSION			"2.0.8"
+#define ASMCNC_VERSION_BUILD	"20200912"
 
 /* proprietary error codes */
 #define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
@@ -124,7 +124,7 @@ enum rgbHexStates{
 //#define MSTEP_READING_ENABLED // good to have a temporal view of MSTEP for debug purposes
 //#define SG_SKIP_DEBUG_ENABLED // enable to debug stall guard masking engine
 //#define SG_CAL_DEBUG_ENABLED // enable to debug stall guard calibration engine
-#define FLASH_DEBUG_ENABLED // enable to debug EEPROM storage
+//#define FLASH_DEBUG_ENABLED // enable to debug EEPROM storage
 
 #if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED) || defined(SG_CAL_DEBUG_ENABLED) || defined(FLASH_DEBUG_ENABLED)
 #define ANY_DEBUG_PINS_ENABLED // 
