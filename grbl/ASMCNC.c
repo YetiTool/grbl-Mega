@@ -489,22 +489,25 @@ void manage_rst_reasons(void){
     printPgmString(PSTR(" WDT + "));     printInteger( flashStatistics.JTRF_cnt);
     printPgmString(PSTR(" JTAG\n"));    
 
-    ///* manage last epcs storage*/
-    //int i;
-    ///* shift */
-    //for (i=2; i>=0; i--){
-        //flashConfig.last_epcs[i+1]      = flashConfig.last_epcs[i];
-        //flashConfig.last_exccauses[i+1] = flashConfig.last_exccauses[i];
-    //}
-    //flashConfig.last_epcs[0]        = rst_info->epc1;
-    //flashConfig.last_exccauses[0]   = rst_info->exccause;
-//
-    ///* print */
-    //os_printf("last epcs(cause):");
-    //for (i=0; i<4; i++){
-        //os_printf(" 0x%08x (%d), ", flashConfig.last_epcs[i], flashConfig.last_exccauses[i]);
-    //}
-    //os_printf("\n");
+    /* manage last exception storage: if address in different from what was stored in flashStatistics then store it */
+    int i;
+    uint32_t return_addr;
+    return_addr = get_return_addr(); /* return address from the latest stack dump */
+    if (flashStatistics.lastReturnAddresses[0] != return_addr){
+        /* shift fifo */
+        for (i=2; i>=0; i--){
+            flashStatistics.lastReturnAddresses[i+1]    = flashStatistics.lastReturnAddresses[i];
+        }        
+        flashStatistics.lastReturnAddresses[0]          = return_addr;
+        
+        /* print */
+        printPgmString(PSTR(" last WDT addresses: "));
+        for (i=0; i<4; i++){
+            printInteger( flashStatistics.lastReturnAddresses[i] ); printPgmString(PSTR(", "));
+        }
+        printPgmString(PSTR("\n"));
+        
+    } //if (flashConfig.lastReturnAddresses[0] != return_addr){
 
 }
 

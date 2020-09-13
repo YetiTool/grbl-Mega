@@ -176,6 +176,22 @@ void dumpMemoryIhex(uint16_t addr, uint16_t end, uint16_t sp) {
 
 //inline void dumpMemory() __attribute__((__always_inline__));
 
+uint32_t get_return_addr(void){
+    
+	uint32_t ret_addr;
+	uint32_t addr = EEPROM_ADDR_STACK_DUMP;
+    
+	//ret addres
+	ret_addr  = eeprom_get_char(addr+4);
+	ret_addr <<= 8;
+	ret_addr |= eeprom_get_char(addr+5);
+	ret_addr <<= 8;
+	ret_addr |= eeprom_get_char(addr+6);
+    
+    return ret_addr;
+}    
+
+
 void dumpMemory(void) {
   //uint16_t sp;
   //ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {

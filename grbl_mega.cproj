@@ -178,6 +178,9 @@
     <Compile Include="grbl\TMC\TMC_interface.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="grbl\TMC\watchdog.c">
+      <SubType>compile</SubType>
+    </Compile>
     <Folder Include="grbl" />
     <Compile Include="grbl\ASMCNC.c">
       <SubType>compile</SubType>
