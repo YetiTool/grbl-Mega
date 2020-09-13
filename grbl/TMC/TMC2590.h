@@ -20,6 +20,15 @@ static const uint8_t tmc2590_defaultStandStillCurrentScale[TOTAL_TMCS] =
     5     /* Z motor  */
 };
 
+static const uint8_t tmc2590_defaultActiveCurrentScale[TOTAL_TMCS] =
+{
+    31,   /* X1 motor */
+    31,   /* X2 motor */
+    31,   /* Y1 motor */
+    31,   /* Y2 motor */
+    31     /* Z motor  */
+};
+
 static const uint16_t tmc2590_defaultTemperatureCoefficient[TOTAL_TMCS] =
 {
     11,   /* X1 motor */

@@ -140,7 +140,6 @@ void init_TMC(void){
     for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
         tmc[controller_id].respIdx              = DEFAULT_TMC_READ_SELECT; // very first resp index would be DEFAULT_TMC_READ_SELECT
         tmc[controller_id].SlowDecayDuration    = TMC2590_GET_TOFF(tmc[controller_id].shadowRegister[TMC2590_CHOPCONF]);
-        tmc[controller_id].currentScale         = TMC2590_GET_CS(  tmc[controller_id].shadowRegister[TMC2590_SGCSCONF]);
         tmc[controller_id].thisMotor            = controller_id;
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
 
@@ -244,6 +243,15 @@ void process_individual_command(uint8_t controller_id, uint8_t command, uint32_t
 		case SET_IDLE_CURRENT:
             value = value & 0xFF;
             tmc2590->standStillCurrentScale = value;
+            tmc_all_current_scale_apply();
+			break;
+
+
+		/* set the current scale applied when no pulses are detected on the given axis */
+		case SET_ACTIVE_CURRENT:
+            value = value & 0xFF;
+            tmc2590->activeCurrentScale = value;
+            tmc_all_current_scale_apply();
 			break;
 
 		/* energize or shut off the motor completely, for example to let user move turret easier */
@@ -261,8 +269,18 @@ void process_individual_command(uint8_t controller_id, uint8_t command, uint32_t
 			tmc2590->shadowRegister[TMC2590_CHOPCONF] = register_value;
 			tmc2590_single_write_route(controller_id, TMC2590_CHOPCONF);
         }			            
-		break;
-        
+		    break;
+
+		/* set the stallGuardAlarmThreshold: when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
+		case SET_SG_ALARM_TRSHLD:
+		    tmc2590->stallGuardAlarmThreshold = value;
+		    break;
+
+		/* set the correction for temperatures other than calibration */
+		case SET_THERMAL_COEFF:
+            tmc2590->temperatureCoefficient = value;
+			break;
+
         default:
             report_status_message(ASMCNC_COMMAND_ERROR);        
 		break;
@@ -434,7 +452,7 @@ void tmc_all_current_scale_apply( void ){
 		register_value = tmc2590->shadowRegister[TMC2590_SGCSCONF];
 		register_value &= ~TMC2590_SET_CS(-1);                           // clear Current scale bits
         if (st_tmc.current_scale_state == CURRENT_SCALE_STANDSTILL) register_value |= TMC2590_SET_CS(tmc2590->standStillCurrentScale);  // set standstill Current scale
-        else                                                            register_value |= TMC2590_SET_CS(tmc2590->currentScale);            // set full operational Current scale
+        else                                                            register_value |= TMC2590_SET_CS(tmc2590->activeCurrentScale);            // set full operational Current scale
 		tmc2590->shadowRegister[TMC2590_SGCSCONF] = register_value;
         
         /* below if statement is to ensure both dual controllers are bing written in one transaction to speed up the execution */
@@ -446,7 +464,7 @@ void tmc_all_current_scale_apply( void ){
             register_value = tmc2590->shadowRegister[TMC2590_SGCSCONF];
             register_value &= ~TMC2590_SET_CS(-1);                           // clear Current scale bits
             if (st_tmc.current_scale_state == CURRENT_SCALE_STANDSTILL) register_value |= TMC2590_SET_CS(tmc2590->standStillCurrentScale);  // set standstill Current scale
-            else                                                            register_value |= TMC2590_SET_CS(tmc2590->currentScale);            // set full operational Current scale
+            else                                                            register_value |= TMC2590_SET_CS(tmc2590->activeCurrentScale);            // set full operational Current scale
             tmc2590->shadowRegister[TMC2590_SGCSCONF] = register_value;            
         } //if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
         
@@ -620,6 +638,8 @@ void restore_TMC_defaults(void){
         flashTMCconfig.stallGuardAlarmThreshold[controller_id] = tmc2590_defaultStallGuardAlarmThreshold[controller_id];
         flashTMCconfig.temperatureCoefficient  [controller_id] = tmc2590_defaultTemperatureCoefficient  [controller_id];
         flashTMCconfig.standStillCurrentScale  [controller_id] = tmc2590_defaultStandStillCurrentScale  [controller_id];
+        flashTMCconfig.activeCurrentScale      [controller_id] = tmc2590_defaultActiveCurrentScale      [controller_id];
+        
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){    
 }
 
@@ -637,7 +657,9 @@ void apply_TMC_settings_from_flash(void){
         }
         tmc[controller_id].stallGuardAlarmThreshold = flashTMCconfig.stallGuardAlarmThreshold[controller_id];
         tmc[controller_id].temperatureCoefficient   = flashTMCconfig.temperatureCoefficient  [controller_id];
-        tmc[controller_id].standStillCurrentScale   = flashTMCconfig.standStillCurrentScale  [controller_id];        
+        tmc[controller_id].standStillCurrentScale   = flashTMCconfig.standStillCurrentScale  [controller_id];
+        tmc[controller_id].activeCurrentScale       = flashTMCconfig.activeCurrentScale      [controller_id];
+        
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
     
 }
@@ -676,6 +698,7 @@ void tmc_store_settings(void){
             flashTMCconfig.stallGuardAlarmThreshold[controller_id] = tmc[controller_id].stallGuardAlarmThreshold;
             flashTMCconfig.temperatureCoefficient  [controller_id] = tmc[controller_id].temperatureCoefficient;
             flashTMCconfig.standStillCurrentScale  [controller_id] = tmc[controller_id].standStillCurrentScale;
+            flashTMCconfig.activeCurrentScale      [controller_id] = tmc[controller_id].activeCurrentScale;
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
 
     /* save flashTMCconfig  to eeprom */
@@ -696,9 +719,11 @@ void tmc_report_registers(void)
             printInteger( tmc[controller_id].shadowRegister[reg_idx] );
         }
         printPgmString(PSTR(","));
-        printInteger( tmc[controller_id].currentScale );
+        printInteger( tmc[controller_id].activeCurrentScale );
         printPgmString(PSTR(","));
         printInteger( tmc[controller_id].standStillCurrentScale );
+        printPgmString(PSTR(","));
+        printInteger( tmc[controller_id].stallGuardAlarmThreshold );
         printPgmString(PSTR("v\n"));
     }        
 }

@@ -99,6 +99,7 @@ typedef struct {
 	uint16_t stallGuardAlarmThreshold;              /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
 	uint16_t temperatureCoefficient;                /* correction for temperatures other than calibration */
 	uint8_t standStillCurrentScale;                 /* standstill current - to reduce energy consumption while job is idle */
+    uint8_t activeCurrentScale;                     /* active current 0 - 31 where 31 is max */
     
     /* running variables */    
 	uint8_t channel;                                /* pio index defining SPI channel */
@@ -110,7 +111,6 @@ typedef struct {
     int32_t response[TMC2590_RESPONSE3+1];          /* raw response from controllers */
     TMC2590Response resp;                           /* decoded response from controllers */
 
-	uint8_t currentScale;                           /* 0 - 31 where 31 is max */
     uint8_t SlowDecayDuration;                      /* Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 ... %1111: 2 ... 15 */
 
 } TMC2590TypeDef;
@@ -127,6 +127,7 @@ typedef struct {
     uint16_t temperatureCoefficient[TOTAL_TMCS];                    /* coefficient defining thermal offset applied to calibration curve */
     uint16_t stallGuardAlarmThreshold[TOTAL_TMCS];                  /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
     uint8_t standStillCurrentScale[TOTAL_TMCS];                     /* standstill current - to reduce energy consumption while job is idle */
+    uint8_t activeCurrentScale[TOTAL_TMCS];                         /* active current */    
 } FlashTMCconfig;
 
 
@@ -142,7 +143,11 @@ typedef struct {
 #define SET_SGCSCONF           TMC2590_SGCSCONF
 #define SET_DRVCONF            TMC2590_DRVCONF 
 #define SET_IDLE_CURRENT       5  // set the current scale applied when no pulses are detected on the given axis
-#define SET_MOTOR_ENERGIZED    6  // energize or shut off the motor completely, for example to let user move turret easier
+#define SET_ACTIVE_CURRENT     6  // set the active current scale 
+#define SET_MOTOR_ENERGIZED    7  // energize or shut off the motor completely, for example to let user move turret easier
+#define SET_SG_ALARM_TRSHLD    8  // SG alarm threshold: when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered
+#define SET_THERMAL_COEFF      9  // coefficient defining thermal offset applied to calibration curve
+
 
 // common commands to be applied to whole system
 #define SET_SG_ALARM           100  // desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm
@@ -196,6 +201,8 @@ void tmc_standstill_off(void); /* bump the current through energized motors back
 
 void stall_guard_statistics_reset(void); /* statistics is collected for the whole period between consecutive UART polls so that lost step is not missed between. Reset the statistics on all motors */
 void tmc2590_schedule_read_sg(uint8_t axis); /* read Stall Guard on axis. Stepper interrupt signals to main loop that SG_READ_STEP_COUNT steps have happened and it is time to read sg on given motor*/
+
+void tmc_all_current_scale_apply( void );
 
 /*homing engine functions */
 void tmc_spi_queue_drain_complete(void);  /* indicate to TMC2590 loops that reading is completed (required for homing cycle) */
