@@ -45,19 +45,6 @@ void min_step_period_idx_compute(void){
 
 }
 
-void tmc2590_init(TMC2590TypeDef *tmc2590, const int32_t *registerResetState)
-{
-  	//uint32_t value;    
-
-	for(size_t i = 0; i < TMC2590_REGISTER_COUNT; i++)
-	{
-        tmc2590->shadowRegister[ i] = registerResetState[i];
-	}
-
-    min_step_period_idx_compute(); 
-}
-
-
 /************************************************ single motor ***********************************************/
 
 void tmc2590_single_writeInt(TMC2590TypeDef *tmc2590_1, uint8_t address)
@@ -750,6 +737,7 @@ void tmc2590_single_write_route(uint8_t controller_id, uint8_t address){
 /* initialise SPI hardware */
 void tmc_hw_init(void){
     spi_hw_init();
+    min_step_period_idx_compute(); 
 }
 
 /* start SPI transfers flushing the queue */
