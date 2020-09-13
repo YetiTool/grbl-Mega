@@ -476,6 +476,16 @@ void log_resetreason(void)
 }
 
 
+void report_last_wdt_addresses(void){
+    /* print */
+    uint8_t i;
+    printPgmString(PSTR("Last WDT addresses: "));
+    for (i=0; i<FLASH_STAT_FIFO_SIZE; i++){
+        printInteger( flashStatistics.lastReturnAddresses[i] ); printPgmString(PSTR(", "));
+    }
+    printPgmString(PSTR("\n"));    
+}
+
 void manage_rst_reasons(void){
 
     log_resetreason();
@@ -490,22 +500,17 @@ void manage_rst_reasons(void){
     printPgmString(PSTR(" JTAG\n"));    
 
     /* manage last exception storage: if address in different from what was stored in flashStatistics then store it */
-    int i;
+    int8_t i;
     uint32_t return_addr;
     return_addr = get_return_addr(); /* return address from the latest stack dump */
     if (flashStatistics.lastReturnAddresses[0] != return_addr){
         /* shift fifo */
-        for (i=2; i>=0; i--){
+        for (i=FLASH_STAT_FIFO_SIZE-2; i>=0; i--){
             flashStatistics.lastReturnAddresses[i+1]    = flashStatistics.lastReturnAddresses[i];
         }        
         flashStatistics.lastReturnAddresses[0]          = return_addr;
         
-        /* print */
-        printPgmString(PSTR(" last WDT addresses: "));
-        for (i=0; i<4; i++){
-            printInteger( flashStatistics.lastReturnAddresses[i] ); printPgmString(PSTR(", "));
-        }
-        printPgmString(PSTR("\n"));
+        report_last_wdt_addresses();
         
     } //if (flashConfig.lastReturnAddresses[0] != return_addr){
 
@@ -665,6 +670,38 @@ void report_statistics(void)
     printInteger(flashStatistics.totalTravelMillimeters ); printPgmString(PSTR(", "));
     printInteger(flashStatistics.totalStallsDetected    );
     printPgmString(PSTR("v\n"));
+}
+
+
+void store_stall_info(uint8_t  lastStallsMotor, uint16_t lastStallsSG, uint16_t lastStallsSGcalibrated,  uint16_t lastStallsStepUs){
+    /* manage fifo storage*/
+    int8_t i;
+    for (i=FLASH_STAT_FIFO_SIZE-2; i>=0; i--){
+        flashStatistics.lastStallsMotor[i+1]        = flashStatistics.lastStallsMotor[i];
+        flashStatistics.lastStallsSG[i+1]           = flashStatistics.lastStallsSG[i];
+        flashStatistics.lastStallsSGcalibrated[i+1] = flashStatistics.lastStallsSGcalibrated[i];
+        flashStatistics.lastStallsStepUs[i+1]       = flashStatistics.lastStallsStepUs[i];
+        flashStatistics.lastStallsTravel[i+1]       = flashStatistics.lastStallsTravel[i];
+    }
+    flashStatistics.lastStallsMotor[0]          =lastStallsMotor;
+    flashStatistics.lastStallsSG[0]             =lastStallsSG;
+    flashStatistics.lastStallsSGcalibrated[0]   =lastStallsSGcalibrated;
+    flashStatistics.lastStallsStepUs[0]         =lastStallsStepUs;
+    flashStatistics.lastStallsTravel[0]         = flashStatistics.totalTravelMillimeters + totalTravelMillimeters;
+    flashStatistics.totalStallsDetected++; /* increment total reset count */
+}
+
+void report_stall_info(void){
+    printPgmString(PSTR("Stalls statistics:\n"));
+    uint8_t i;
+    for (i=0; i<FLASH_STAT_FIFO_SIZE; i++){
+        printPgmString(PSTR("M: "));        printInteger(flashStatistics.lastStallsMotor[i]);           printPgmString(PSTR(", "));
+        printPgmString(PSTR("SG: "));       printInteger(flashStatistics.lastStallsSG[i]);              printPgmString(PSTR(", "));
+        printPgmString(PSTR("calibr: "));   printInteger(flashStatistics.lastStallsSGcalibrated[i]);    printPgmString(PSTR(", "));
+        printPgmString(PSTR("step: "));     printInteger(flashStatistics.lastStallsStepUs[i]);          printPgmString(PSTR("us, "));
+        printPgmString(PSTR("travel: "));   printInteger(flashStatistics.lastStallsTravel[i]);          printPgmString(PSTR("mm, "));
+        printPgmString(PSTR("\n"));
+    }
 }
 
 

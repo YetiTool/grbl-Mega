@@ -336,20 +336,17 @@ void process_global_command(uint8_t command, uint32_t value){
                 while(1) {;}
             }
             else{
-                printPgmString(PSTR("dump:\n"));
-                uint32_t addr = EEPROM_ADDR_STACK_DUMP;
-                unsigned char data;
-                for (addr = EEPROM_ADDR_STACK_DUMP; addr<EEPROM_ADDR_STACK_DUMP+10; addr++){
-                    data = eeprom_get_char(addr);
-                    printInteger(data);
-                    printPgmString(PSTR(":"));
-                }
+                printPgmString(PSTR("Dump:\n"));
+                report_last_wdt_addresses();
                 dumpMemory();
             }
             
         break;
-                
-                
+        
+        /* report list of last stalls with associated freeze frame */
+        case REPORT_STALLS:
+            report_stall_info();        
+        break;  
                 
         default:
             report_status_message(ASMCNC_COMMAND_ERROR);        
@@ -704,4 +701,12 @@ void tmc_report_registers(void)
         printInteger( tmc[controller_id].standStillCurrentScale );
         printPgmString(PSTR("v\n"));
     }        
+}
+
+
+void tmc_store_stall_info(uint8_t  lastStallsMotor, uint16_t lastStallsSG, uint16_t lastStallsSGcalibrated,  uint16_t lastStallsStepUs){
+    if ( !homing_sg_read_ongoing ) {
+        /* store stall only if it is not due to homing, where stall is used to detect the end stop */
+        store_stall_info(lastStallsMotor, lastStallsSG, lastStallsSGcalibrated,  lastStallsStepUs);        
+    }//if ( !homing_sg_read_ongoing ) {   
 }

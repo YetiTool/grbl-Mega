@@ -89,6 +89,7 @@ typedef struct {
   #endif
   uint16_t spindle_pwm;
   uint8_t step_period_idx[N_AXIS]; /* index into LUT "SG_step_periods_us" step time in microseconds, max 64ms which is 1s per full step or 1rev per 200s (0.3rpm), slowest speed for SG detection is 1rpm, so should be good enough for London */
+  uint16_t step_period[N_AXIS];   /*  step time in microseconds, max 64ms which is 1s per full step or 1rev per 200s (0.3rpm), slowest speed for SG detection is 1rpm, so should be good enough for London */
 } segment_t;
 static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
 
@@ -325,8 +326,9 @@ debug_pin_write(1, DEBUG_0_PIN);
     /* schedule SG read every SG_READ_STEP_COUNT steps */
     if (st_tmc.step_counter[axis]++ >= SG_READ_STEP_COUNT) 
     {
-        st_tmc.step_period_idx[axis] = st.exec_segment->step_period_idx[axis];
-        st_tmc.step_counter[axis] = 0;
+        st_tmc.step_period_idx[axis]    = st.exec_segment->step_period_idx[axis];
+        st_tmc.step_period[axis]        = st.exec_segment->step_period[axis];       
+        st_tmc.step_counter[axis]       = 0;
         system_set_exec_tmc_command_flag(command);  
     }
 #ifdef SG_SKIP_DEBUG_ENABLED
@@ -1223,16 +1225,17 @@ void st_prep_buffer()
         ratio = st_prep_block->step_event_count / steps;    /* all this ratio business is to keep calculation within 32 bit*/     
         ratio = ratio * (1 << prep_segment->amass_level);        
         us_per_step = (prep_segment->cycles_per_tick * ratio) / 16 ; /* timer cycles per step divided by timer speed (16M) */
-        if (us_per_step < (1UL << 16)) { step_period_us = us_per_step; } // < 65536: 64ms which is 1s per full step or 1rev per 200s (0.3rpm), slowest speed for SG detection is 1rpm, so should be good enough for London 
+        if (us_per_step < (1UL << 16)) { step_period_us = us_per_step; } // < 65536: 64ms which is 1s per full step or 1rev per 200s (0.3rpm), slowest speed for SG detection is 1rpm, so should be good enough 
         else { step_period_us = 0xffff; } // Just set the max period possible                           
            
         /* using LUT is improving real-time execution time as only computation is required in planning (here). Later only index is used to look into the LUT and extract the GS calibrated values */
         
         /* find entry in step_period_us lookup table corresponding to this step size. function takes up to 500ms to execute */    
         prep_segment->step_period_idx[thisAxis] = TMC_SG_PROFILE_POINTS-1; /* init the table with max index value, this will ensure anything above max feed would fall in the last bin */
+        prep_segment->step_period[thisAxis] = step_period_us;
         for (uint8_t idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
             if ( step_period_us > pgm_read_word_near(SG_step_periods_us + idx) ){ //if storing in PROGMEM then use this: if ( st_tmc.step_period_us[thisAxis] > pgm_read_word_near(SG_step_periods_us + idx) ){
-                prep_segment->step_period_idx[thisAxis] = idx;
+                prep_segment->step_period_idx[thisAxis] = idx;                
                 break; /* for loop */
             } // if ( prep_segment->step_period_us[thisAxis] > pgm_read_word_near(SG_step_periods_us + idx) ){
         } //for (uint8_t idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){

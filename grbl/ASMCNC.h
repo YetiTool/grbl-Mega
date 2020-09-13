@@ -153,6 +153,8 @@ enum adc_states{
 #define UPTIME_FIFO_SIZE_BYTES          32
 
 // Flash statistics
+#define FLASH_STAT_FIFO_SIZE            8
+
 typedef struct {
     /* reset source from MCUSR – MCU Status Register */
     uint32_t TOT_cnt;                                               /* total count of resets */
@@ -167,13 +169,13 @@ typedef struct {
     uint32_t totalTravelMillimeters;                                /* total travelled distance in mm. (using mm_var) */
     uint32_t totalStallsDetected;                                   /* total number of stalls detected */
     /* fifo with last exception addresses causing WD to trigger*/
-    uint32_t lastReturnAddresses[4];                                /* return address from the latest stack dump */
+    uint32_t lastReturnAddresses[FLASH_STAT_FIFO_SIZE];             /* return address from the latest stack dump */
     /* fifo with statistic on stall: total distance, feed, */
-    uint32_t lastStallsTravel[4];                                   /* fifo buffer for when last stalls were happening */
-    uint8_t  lastStallsMotor[4];                                    /* fifo buffer for which motor stalled */
-    uint16_t lastStallsSG[4];                                       /* fifo buffer for Stall Guard reading at last stalls */
-    uint16_t lastStallsSGdelta[4];                                  /* fifo buffer for SG delta to calibration at last stalls */
-    uint16_t lastStallsFeed[4];                                     /* fifo buffer for feed rates at last stalls */
+    uint32_t lastStallsTravel[FLASH_STAT_FIFO_SIZE];                /* fifo buffer for when last stalls were happening */
+    uint8_t  lastStallsMotor[FLASH_STAT_FIFO_SIZE];                 /* fifo buffer for which motor stalled */
+    uint16_t lastStallsSG[FLASH_STAT_FIFO_SIZE];                    /* fifo buffer for Stall Guard reading at last stalls */
+    uint16_t lastStallsSGcalibrated[FLASH_STAT_FIFO_SIZE];               /* fifo buffer for SG delta to calibration at last stalls */
+    uint16_t lastStallsStepUs[FLASH_STAT_FIFO_SIZE];                  /* fifo buffer for feed rates at last stalls */
 } FlashStat;
 extern FlashStat flashStatistics;
 extern float totalTravelMillimeters;                                /* accumulator for accurate tracking of the distance */
@@ -207,5 +209,9 @@ int get_spindle_load_volts(void);
 void uptime_increment(void);
 
 void report_statistics(void);
+
+void store_stall_info(uint8_t  lastStallsMotor, uint16_t lastStallsSG, uint16_t lastStallsSGcalibrated,  uint16_t lastStallsStepUs);
+void report_stall_info(void);
+void report_last_wdt_addresses(void);
 
 #endif /* ASMCNC_h */

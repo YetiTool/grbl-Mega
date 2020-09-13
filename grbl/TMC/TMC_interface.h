@@ -68,7 +68,8 @@ typedef enum
 
 // Stepper ISR data struct. Contains the running data for the main stepper ISR.
 typedef struct {
-    uint16_t step_period_idx[N_AXIS];      // variables to hold the step period which is direct reflection of shaft rotational speed at the time when SG read was fired.
+    uint16_t step_period[N_AXIS];         // variables to hold the step period which is direct reflection of shaft rotational speed at the time when SG read was fired.
+    uint8_t  step_period_idx[N_AXIS];     // variables to hold the step period index which is direct mapping of step period, used to maximise computational speed.
     uint8_t  step_counter[N_AXIS];        // Counter variables for firing SG read. TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled
     uint8_t  SG_skips_counter[N_AXIS];    // Counter variables for blocking stall analysis due to preceding slow speed. Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis */
     uint8_t  current_scale_state;         // global holding effective current scale 
@@ -152,6 +153,7 @@ typedef struct {
 #define STORE_TMC_PARAMS       105  // store existing (tuned) paraeters to the flash
 #define GET_REGISTERS          106
 #define WDT_TMC_TEST           107 // value = 0x10: disable WD feed; other value: report EEPROM dump
+#define REPORT_STALLS          108 // report list of last stalls with associated freeze frame
 
 #define SET_MRES            1   /* Microstep resolution for STEP/DIR mode. Microsteps per fullstep: %0000: 256; %0001: 128; %0010: 64; %0011: 32; %0100: 16; %0101: 8; %0110: 4; %0111: 2 (halfstep); %1000: 1 (fullstep) */
 #define SET_DEDGE           2   /*  */
@@ -223,5 +225,7 @@ void restore_TMC_defaults(void);
 void apply_TMC_settings_from_flash(void);
 
 void tmc_report_registers(void);
+
+void tmc_store_stall_info(uint8_t  lastStallsMotor, uint16_t lastStallsSG, uint16_t lastStallsSGcalibrated, uint16_t lastStallsStepUs);
 
 #endif /* TMC_INTERFACE_H_ */
