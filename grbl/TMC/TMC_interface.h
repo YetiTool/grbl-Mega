@@ -44,7 +44,7 @@ typedef enum
 //#define RIGGY
 #define TMC_SG_PROFILE_POINTS               128
 #define SG_READ_STEP_COUNT                  32 // TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled. UART reads could halt the readings up to 6ms, so many unfiltered samples could be missed at high speed. So for now read filtered SG twice per change.
-#define SG_READING_SKIPS_AFTER_SLOW_FEED    6        /* Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis. Actually means 5 reads for dual axis and 10 for single */
+#define SG_READING_SKIPS_AFTER_SLOW_FEED    7        /* Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis. Actually means 5 reads for dual axis and 10 for single */
 #define DEFAULT_TMC_READ_SELECT             1 /* read of the SG is default state of the system */
 
 #define REPORT_TMC_REFRESH_COUNT            10 /* how often print full TMC statistics on UART */
@@ -53,11 +53,11 @@ typedef enum
 #ifdef RIGGY
 #define SG_MAX_VALID_PERIOD_X_US            8000    /* 2.3rpm (132mm/min feed). for riggy: X motor 17HS15-0404S - 100 rpm */
 #define SG_MAX_VALID_PERIOD_Y_US            8000    /* 2.3rpm (132mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
-#define SG_MAX_VALID_PERIOD_Z_US            1000    /* 12.5rpm (37.5mm/min feed). Z motor 17HS19-2004S1*/
+#define SG_MAX_VALID_PERIOD_Z_US            4000    /* 12.5rpm (37.5mm/min feed). Z motor 17HS19-2004S1*/
 #else
 #define SG_MAX_VALID_PERIOD_X_US            8000    /* 2.3rpm (132mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 #define SG_MAX_VALID_PERIOD_Y_US            8000    /* 2.3rpm (132mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
-#define SG_MAX_VALID_PERIOD_Z_US            1000    /* 18.7rpm (56mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+#define SG_MAX_VALID_PERIOD_Z_US            4000    /* 18.7rpm (56mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 #endif
 
 /* max step period for calibration purposes */
@@ -68,14 +68,16 @@ typedef enum
 
 // Stepper ISR data struct. Contains the running data for the main stepper ISR.
 typedef struct {
-    uint16_t step_period[N_AXIS];         // variables to hold the step period which is direct reflection of shaft rotational speed at the time when SG read was fired.
-    uint8_t  step_period_idx[N_AXIS];     // variables to hold the step period index which is direct mapping of step period, used to maximise computational speed.
-    uint8_t  step_counter[N_AXIS];        // Counter variables for firing SG read. TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled
-    uint8_t  SG_skips_counter[N_AXIS];    // Counter variables for blocking stall analysis due to preceding slow speed. Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis */
-    uint8_t  current_scale_state;         // global holding effective current scale 
-    uint8_t  sg_read_active_axes;         // global variable to hold list of axes that is being read
-    uint8_t  stall_alarm_enabled;         // global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm
-    uint8_t  calibration_enabled;         // SG calibration ongoing
+    uint16_t step_period[N_AXIS];           // variables to hold the step period which is direct reflection of shaft rotational speed at the time when SG read was fired.
+    uint8_t  step_period_idx[N_AXIS];       // variables to hold the step period index which is direct mapping of step period, used to maximise computational speed.
+    uint8_t  this_reading_direction[N_AXIS];// variables to hold the direction applied at current SG reading, used to reset SG reading skip counter under direction change
+    uint8_t  last_reading_direction[N_AXIS];// variables to hold the direction applied at last SG reading, used to reset SG reading skip counter under direction change
+    uint8_t  step_counter[N_AXIS];          // Counter variables for firing SG read. TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled
+    uint8_t  SG_skips_counter[N_AXIS];      // Counter variables for blocking stall analysis due to preceding slow speed. Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis */
+    uint8_t  current_scale_state;           // global holding effective current scale 
+    uint8_t  sg_read_active_axes;           // global variable to hold list of axes that is being read
+    uint8_t  stall_alarm_enabled;           // global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm
+    uint8_t  calibration_enabled;           // SG calibration ongoing
 } stepper_tmc_t;
 
 

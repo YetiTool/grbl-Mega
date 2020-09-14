@@ -119,7 +119,7 @@ enum rgbHexStates{
 
 /* setup debug port. Designed for monitoring real time performance of individual functions to identify potential weaknesses and clashes in the code*/
 //#define DEBUG_PINS_ENABLED // comment out to remove debug pins functionality - remove for production version
-//#define DEBUG_STEPPER_ENABLED // comment out to remove debug pins functionality - remove for production version
+#define DEBUG_STEPPER_ENABLED // comment out to remove debug pins functionality - remove for production version
 //#define DEBUG_ADC_ENABLED // comment out to remove ADC debug pins functionality - remove for production version
 //#define MSTEP_READING_ENABLED // good to have a temporal view of MSTEP for debug purposes
 //#define SG_SKIP_DEBUG_ENABLED // enable to debug stall guard masking engine

@@ -276,6 +276,14 @@ void st_wake_up()
 // Stepper shutdown
 void st_go_idle()
 {
+    
+  // BK: stepper shutdown happens in short periods for example under direction change. Only applicable for single axis, for multiaxis more complex accumulation of step time is required
+  //debug_pin_write(1, DEBUG_1_PIN);
+  // reset skip counters for all axes:
+  st_tmc.SG_skips_counter[X_AXIS] = 0;
+  st_tmc.SG_skips_counter[Y_AXIS] = 0;
+  st_tmc.SG_skips_counter[Z_AXIS] = 0; 
+
   // Disable Stepper Driver Interrupt. Allow Stepper Port Reset Interrupt to finish, if active.
   TIMSK1 &= ~(1<<OCIE1A); // Disable Timer1 interrupt
   TCCR1B = (TCCR1B & ~((1<<CS12) | (1<<CS11))) | (1<<CS10); // Reset clock to no prescaling.
@@ -305,6 +313,7 @@ void st_go_idle()
     //else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
     //system_set_exec_tmc_command_flag(TMC_STANDSTILL_COMMAND);
   #endif // Ramps Board
+  //debug_pin_write(0, DEBUG_1_PIN);    
 }
 
 
@@ -326,9 +335,10 @@ debug_pin_write(1, DEBUG_0_PIN);
     /* schedule SG read every SG_READ_STEP_COUNT steps */
     if (st_tmc.step_counter[axis]++ >= SG_READ_STEP_COUNT) 
     {
-        st_tmc.step_period_idx[axis]    = st.exec_segment->step_period_idx[axis];
-        st_tmc.step_period[axis]        = st.exec_segment->step_period[axis];       
-        st_tmc.step_counter[axis]       = 0;
+        st_tmc.this_reading_direction[axis] = st.dir_outbits;        
+        st_tmc.step_period_idx[axis]        = st.exec_segment->step_period_idx[axis];
+        st_tmc.step_period[axis]            = st.exec_segment->step_period[axis];       
+        st_tmc.step_counter[axis]           = 0;
         system_set_exec_tmc_command_flag(command);  
     }
 #ifdef SG_SKIP_DEBUG_ENABLED
@@ -441,7 +451,7 @@ ISR(TIMER1_COMPA_vect)
          //     This ISR execution time is ~15us, so pulse cannot be shorter than that.
 
    
-   /* finish step pulse. TMC step pulse should be longer than 20ns, so 630ns is good to cover all corners, including optos delays and bandwidth*/
+   /* BK: finish step pulse. TMC2590 step pulse should be longer than 20ns, so 630ns is good to cover all corners, including optos delays and bandwidth*/
    //delay_us(1);
    STEP_PORT = (STEP_PORT & ~STEP_MASK) | (step_port_invert_mask & STEP_MASK);
 
