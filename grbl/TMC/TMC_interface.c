@@ -619,8 +619,8 @@ void stall_guard_statistics_reset(void ){
     /* reset SG min value in each TMC controller */
     for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
         tmc2590 = get_TMC_controller(controller_id);
-        tmc2590->resp.stallGuardMinValue = 1023;
-    }
+        tmc2590->stallGuardDelta = -999;
+    }    
 }
 
 void restore_TMC_defaults(void){

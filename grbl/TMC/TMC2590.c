@@ -596,7 +596,7 @@ debug_pin_write(1, DEBUG_1_PIN);
         }
     }        
 
-    tmc2590->stallGuardDelta = -999; /* default to invalid SG reading */
+    int16_t stallGuardDelta = -999; /* default to invalid SG delta reading */
     
     if ( ( st_tmc.stall_alarm_enabled ) && ( st_tmc.current_scale_state == CURRENT_SCALE_ACTIVE ) ){
 
@@ -647,12 +647,13 @@ debug_pin_write(1, DEBUG_1_PIN);
                 /* keep track of how far the current SG value is from the calibrated level, this is printed to UART and used to indicate the current load. The bigger the value-> the higher the load.*/
                 if (stallGuardAlarmValue > 0){
                     /* SG reading is valid and enough headroom is remaining below calibrated value*/
-                    tmc2590->stallGuardDelta = SG_calibration_value[tmc2590->thisMotor][idx] - tmc2590->resp.stallGuardCurrentValue;
+                    stallGuardDelta = SG_calibration_value[tmc2590->thisMotor][idx] - tmc2590->resp.stallGuardCurrentValue;
                 }
                 
+                /* find maximum stallGuardDelta over reporting period */
+                if (tmc2590->stallGuardDelta < stallGuardDelta) {
+                    tmc2590->stallGuardDelta  = stallGuardDelta;}
                 
-                if (tmc2590->resp.stallGuardCurrentValue < tmc2590->resp.stallGuardMinValue) {
-                tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrentValue;}
                 if (tmc2590->resp.stallGuardCurrentValue    < stallGuardAlarmValue) {
                     /* trigger alarm */
                     tmc_trigger_stall_alarm(tmc2590->thisAxis);
@@ -680,12 +681,13 @@ debug_pin_write(1, DEBUG_1_PIN);
         if ((!st_tmc.stall_alarm_enabled) && (st_tmc.current_scale_state == CURRENT_SCALE_ACTIVE)){ /* only report SG delta when active and when period is shorter then calibration*/
             if ((st_tmc.step_period_idx[tmc2590->thisAxis] > min_step_period_idx_to_read_SG[tmc2590->thisAxis])&&(st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED)){ 
                 uint8_t idx = st_tmc.step_period_idx[tmc2590->thisAxis];
-                tmc2590->stallGuardDelta = SG_calibration_value[tmc2590->thisMotor][idx] - tmc2590->resp.stallGuardCurrentValue;
+                stallGuardDelta = SG_calibration_value[tmc2590->thisMotor][idx] - tmc2590->resp.stallGuardCurrentValue;
+                /* find maximum stallGuardDelta over reporting period */
+                if (tmc2590->stallGuardDelta < stallGuardDelta) {
+                    tmc2590->stallGuardDelta  = stallGuardDelta;}                
             }
         }
 
-        if (tmc2590->resp.stallGuardCurrentValue < tmc2590->resp.stallGuardMinValue) {
-            tmc2590->resp.stallGuardMinValue    = tmc2590->resp.stallGuardCurrentValue;}
     }
 
 #ifdef SG_SKIP_DEBUG_ENABLED

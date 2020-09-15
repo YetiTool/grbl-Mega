@@ -86,7 +86,6 @@ typedef struct {
 	uint8_t coolStepCurrentValue;
 	uint8_t stallGuardShortValue;
 	uint16_t stallGuardCurrentValue;
-	uint16_t stallGuardMinValue;
 	uint16_t StatusBits;
 	uint16_t DiagnosticBits;
 } TMC2590Response;
