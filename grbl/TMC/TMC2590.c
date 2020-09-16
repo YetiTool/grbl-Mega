@@ -387,10 +387,24 @@ debug_pin_write(1, DEBUG_1_PIN);
 #endif    
     /* find entry in calibration table based on step_period_idx and add it */
     uint8_t idx = st_tmc.step_period_idx[thisAxis];
-    if (SG_calibration_read_cnt[thisMotor][idx] < TMC_SG_MAX_AVERAGE) { /* only accumulate until max average is reached to keep 10bit SG value in 16 bit accumulator */
-        SG_calibration_value[thisMotor][idx] += stallGuardCurrentValue;
-        SG_calibration_read_cnt[thisMotor][idx] ++;
+    
+    /* option 1: calibration is based on average value */
+    //if (SG_calibration_read_cnt[thisMotor][idx] < TMC_SG_MAX_AVERAGE) { /* only accumulate until max average is reached to keep 10bit SG value in 16 bit accumulator */
+        //SG_calibration_value[thisMotor][idx] += stallGuardCurrentValue;
+        //SG_calibration_read_cnt[thisMotor][idx] ++;
+    //} /* end ot option 1 */ 
+    
+    /* option 2: calibration is based on minimum value - better for harmonic distortions */
+    if (SG_calibration_read_cnt[thisMotor][idx]==0){/* first entry */
+        SG_calibration_value[thisMotor][idx] = stallGuardCurrentValue;
+        SG_calibration_read_cnt[thisMotor][idx] = 1;
     }
+    else{ /* keep mimimum */
+        if (SG_calibration_value[thisMotor][idx] > stallGuardCurrentValue){
+            SG_calibration_value[thisMotor][idx] = stallGuardCurrentValue;    
+        }        
+    } /* end ot option 2 */ 
+    
 #ifdef SG_CAL_DEBUG_ENABLED
 debug_pin_write(0, DEBUG_1_PIN);
 #endif
@@ -423,7 +437,7 @@ void tmc_compute_and_apply_calibration(void){
         /* first apply averaging and fill 0 entires with lower values */             
         for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
             if ( SG_calibration_read_cnt[controller_id][idx] > 0 ) { /* catch divide by 0 */
-                SG_calibration_value[controller_id][idx] /= SG_calibration_read_cnt[controller_id][idx]; /* find averge SG value */
+                SG_calibration_value[controller_id][idx] /= SG_calibration_read_cnt[controller_id][idx]; /* find average SG value */
                 last_SG_read = SG_calibration_value[controller_id][idx]; /* keep last entry in cache in case next entry is empty */
                 SG_calibration_read_cnt[controller_id][idx] = 1; /*reset count to 1 to keep correct values in case that averaging is accidentally requested once again */
             }
@@ -681,6 +695,19 @@ debug_pin_write(1, DEBUG_1_PIN);
         if ((!st_tmc.stall_alarm_enabled) && (st_tmc.current_scale_state == CURRENT_SCALE_ACTIVE)){ /* only report SG delta when active and when period is shorter then calibration*/
             if ((st_tmc.step_period_idx[tmc2590->thisAxis] > min_step_period_idx_to_read_SG[tmc2590->thisAxis])&&(st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED)){ 
                 uint8_t idx = st_tmc.step_period_idx[tmc2590->thisAxis];
+                
+                ///* linear interpolation between calibration points: */
+                //int32_t y, y1, y2, x, x1, x2; 
+                //// BK TODO: make sure index is within valid range of TMC_SG_PROFILE_POINTS
+                //x = st_tmc.step_period[tmc2590->thisAxis]; /* actual step in us */
+                //x1 = pgm_read_word_near(SG_step_periods_us+idx-1); /* step in us */
+                //x2 = pgm_read_word_near(SG_step_periods_us+idx);   /* step in us */
+                //y1 = SG_calibration_value[tmc2590->thisMotor][idx-1]; /* SG calibration reading */
+                //y2 = SG_calibration_value[tmc2590->thisMotor][idx];   /* SG calibration reading */                
+                ///* linear interpolation */
+                //y = y1 + (y2-y1)*(x-x1)/(x2-x1); /* interpolated SG calibration reading */                                                                    
+                //stallGuardDelta = y - tmc2590->resp.stallGuardCurrentValue;
+                
                 stallGuardDelta = SG_calibration_value[tmc2590->thisMotor][idx] - tmc2590->resp.stallGuardCurrentValue;
                 /* find maximum stallGuardDelta over reporting period */
                 if (tmc2590->stallGuardDelta < stallGuardDelta) {
