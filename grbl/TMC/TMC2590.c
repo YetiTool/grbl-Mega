@@ -675,13 +675,18 @@ debug_pin_write(1, DEBUG_1_PIN);
                     tmc_store_stall_info(tmc2590->thisMotor, tmc2590->resp.stallGuardCurrentValue, stallGuardAlarmValue + tmc2590->stallGuardAlarmThreshold, st_tmc.step_period[tmc2590->thisAxis]);
                     /* reset SG period to max as alarm will immediately stop the stepper and period will remain as it was at the point of trigger */
                     st_tmc.step_period_idx[tmc2590->thisAxis] = 0;
-                    printPgmString(PSTR("\nSG ALARM, motor "));
+                    
+                    printPgmString(PSTR(BK_INITIATOR));
+                    printPgmString(PSTR("SGALARM:"));
                     printInteger( tmc2590->thisMotor);
-                    printPgmString(PSTR(", SG: "));
+                    printPgmString(PSTR(","));
+                    printInteger( st_tmc.step_period[tmc2590->thisAxis] ); /* actual step in us */
+                    printPgmString(PSTR(","));
                     printInteger( tmc2590->resp.stallGuardCurrentValue);
-                    printPgmString(PSTR("<"));
+                    printPgmString(PSTR(","));
                     printInteger( stallGuardAlarmValue );
-                    printPgmString(PSTR("\n"));
+                    printPgmString(PSTR(BK_TERMINATOR));
+                    
                 } //if (tmc2590->resp.stallGuardCurrentValue    < tmc2590->stallGuardAlarmValue) {
    
             } //if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )

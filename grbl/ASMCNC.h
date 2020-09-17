@@ -19,6 +19,8 @@
 #define ASMCNC_COMMAND_ERROR            43 //ASM Error code 43. Command supplied to the function is outside wanted range
 #define ASMCNC_PARAM_ERROR              44 //ASM Error code 44. Parameter supplied to the function is outside wanted range
 
+#define BK_INITIATOR "^"
+#define BK_TERMINATOR "v\n"
 
 // Z-head PCB has two options for spindle control:
 // 1) FET and resistive divider based filter (non-linear and power hungry)

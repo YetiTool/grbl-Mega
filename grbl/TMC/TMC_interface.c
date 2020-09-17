@@ -712,7 +712,8 @@ void tmc_report_registers(void)
     uint8_t reg_idx;
     for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
         /* print out register state for this motor */        
-        printPgmString(PSTR("^TREG:"));
+        printPgmString(PSTR(BK_INITIATOR));
+        printPgmString(PSTR("TREG:"));
         printInteger( tmc[controller_id].thisMotor );
         for (reg_idx=TMC2590_DRVCTRL; reg_idx <= TMC2590_DRVCONF; reg_idx++){
             printPgmString(PSTR(","));
@@ -724,7 +725,7 @@ void tmc_report_registers(void)
         printInteger( tmc[controller_id].standStillCurrentScale );
         printPgmString(PSTR(","));
         printInteger( tmc[controller_id].stallGuardAlarmThreshold );
-        printPgmString(PSTR("v\n"));
+        printPgmString(PSTR(BK_TERMINATOR));
     }        
 }
 

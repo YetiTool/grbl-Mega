@@ -656,10 +656,10 @@ debug_pin_write(0, DEBUG_0_PIN);
 #endif
     
 }
-
 void report_statistics(void)
 {
-    printPgmString(PSTR("^STAT:"));
+    printPgmString(PSTR(BK_INITIATOR));
+    printPgmString(PSTR("STAT:"));
     printInteger(flashStatistics.TOT_cnt                ); printPgmString(PSTR(", "));
     printInteger(flashStatistics.JTRF_cnt               ); printPgmString(PSTR(", "));
     printInteger(flashStatistics.WDRF_cnt               ); printPgmString(PSTR(", "));
@@ -669,7 +669,7 @@ void report_statistics(void)
     printInteger(localRunTimeSeconds                    ); printPgmString(PSTR(", "));
     printInteger(flashStatistics.totalTravelMillimeters ); printPgmString(PSTR(", "));
     printInteger(flashStatistics.totalStallsDetected    );
-    printPgmString(PSTR("v\n"));
+    printPgmString(PSTR(BK_TERMINATOR));
 }
 
 
