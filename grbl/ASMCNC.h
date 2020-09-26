@@ -120,7 +120,7 @@ enum rgbHexStates{
 #define TMC_PORT_MASK	( (1<<SPI_SCK_PIN) | (1<<SPI_MOSI_PIN) | (1<<SPI_CS_X_PIN) | (1<<SPI_CS_Y_PIN) | (1<<SPI_CS_Z_PIN) | (1<<SPI_SS_PIN) );
 
 /* setup debug port. Designed for monitoring real time performance of individual functions to identify potential weaknesses and clashes in the code*/
-//#define DEBUG_PINS_ENABLED // comment out to remove debug pins functionality - remove for production version
+//#define DEBUG_SPI_ENABLED // comment out to remove debug pins functionality - remove for production version
 //#define DEBUG_STEPPER_ENABLED // comment out to remove debug pins functionality - remove for production version
 //#define DEBUG_ADC_ENABLED // comment out to remove ADC debug pins functionality - remove for production version
 //#define MSTEP_READING_ENABLED // good to have a temporal view of MSTEP for debug purposes
@@ -128,11 +128,11 @@ enum rgbHexStates{
 //#define SG_CAL_DEBUG_ENABLED // enable to debug stall guard calibration engine
 //#define FLASH_DEBUG_ENABLED // enable to debug EEPROM storage
 
-#if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED) || defined(SG_CAL_DEBUG_ENABLED) || defined(FLASH_DEBUG_ENABLED)
-#define ANY_DEBUG_PINS_ENABLED // 
+#if defined(DEBUG_SPI_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED) || defined(SG_CAL_DEBUG_ENABLED) || defined(FLASH_DEBUG_ENABLED)
+#define ANY_DEBUG_SPI_ENABLED // 
 #endif
 
-#ifdef ANY_DEBUG_PINS_ENABLED 
+#ifdef ANY_DEBUG_SPI_ENABLED 
 #define DEBUG_DDR			DDRK
 #define DEBUG_PORT			PORTK
 // Port bits

@@ -406,7 +406,7 @@ int get_spindle_load_volts(void){
     return spindle_load_volts;
 }
 
-#ifdef ANY_DEBUG_PINS_ENABLED 
+#ifdef ANY_DEBUG_SPI_ENABLED 
 /* function including jumps in out takes 5 cycles = 310ns */
 void debug_pin_write(uint32_t level, uint32_t pin){
 	if (level==0) DEBUG_PORT &=~(1<<pin); /* clear pin */
@@ -716,7 +716,7 @@ void asmcnc_init(void)
     AC_ACCS_DDR			|=AC_ACCS_MASK;
     AC_DOOR_DDR			|=AC_DOOR_RED_MASK;
     AC_RGB_DDR 			|=AC_RGB_MASK;
-    #if defined(DEBUG_PINS_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED)
+    #if defined(DEBUG_SPI_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED)
     DEBUG_DDR  			|=DEBUG_PORT_MASK;
     #endif
     AC_PROBE_HOLDER_DDR	&=~AC_PROBE_HOLDER_MASK; //Set as input

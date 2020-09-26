@@ -224,7 +224,7 @@ ISR(SPI_STC_vect)
 
 	sei(); // Re-enable interrupts to allow Stepper Interrupt to fire on-time.
 
-#ifdef DEBUG_PINS_ENABLED
+#ifdef DEBUG_SPI_ENABLED
 	debug_pin_write(1, DEBUG_1_PIN);
 #endif
     switch (SPI_current_state)
@@ -263,7 +263,7 @@ ISR(SPI_STC_vect)
                 // state 4: read the RX byte_z3 from SPDR, pull SSz high                    
                 /* deconstruct response */
             	int32_t a;
-#ifdef DEBUG_PINS_ENABLED
+#ifdef DEBUG_SPI_ENABLED
     debug_pin_write(1, DEBUG_2_PIN);
     debug_pin_write(0, DEBUG_2_PIN);
 #endif
@@ -271,13 +271,13 @@ ISR(SPI_STC_vect)
 
     			/* BK profiling: 6.3us */
     			a = TMC2590_VALUE(_8_32(m_spi_rx_data[0], m_spi_rx_data[1], m_spi_rx_data[2], 0) >> 12);
-#ifdef DEBUG_PINS_ENABLED
+#ifdef DEBUG_SPI_ENABLED
     debug_pin_write(1, DEBUG_2_PIN);
     debug_pin_write(0, DEBUG_2_PIN);
 #endif
     			/* BK profiling: 2.7us */
     			m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->response[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] = a;
-#ifdef DEBUG_PINS_ENABLED
+#ifdef DEBUG_SPI_ENABLED
     debug_pin_write(1, DEBUG_2_PIN);
     debug_pin_write(0, DEBUG_2_PIN);
 #endif
@@ -285,7 +285,7 @@ ISR(SPI_STC_vect)
                 // set virtual read address for next reply given by RDSEL on given motor, can only change by setting RDSEL in DRVCONF
                 //if(m_spi_tx_buffer[m_spi_tx_index].addressIsDrvConf == 1)
                 m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx = m_spi_tx_buffer[m_spi_tx_index].rdsel;
-#ifdef DEBUG_PINS_ENABLED
+#ifdef DEBUG_SPI_ENABLED
     debug_pin_write(1, DEBUG_2_PIN);
     debug_pin_write(0, DEBUG_2_PIN);
 #endif
@@ -350,7 +350,7 @@ ISR(SPI_STC_vect)
             break;
 
     } // switch (SPI_current_state)
-#ifdef DEBUG_PINS_ENABLED
+#ifdef DEBUG_SPI_ENABLED
     debug_pin_write(0, DEBUG_1_PIN);
 #endif
 }
@@ -370,8 +370,8 @@ ISR(TIMER2_COMPA_vect)
 	/* feed the dog */
 	asm("WDR");
 
-#ifdef DEBUG_PINS_ENABLED
-debug_pin_write(1, DEBUG_0_PIN);
+#ifdef DEBUG_SPI_ENABLED
+debug_pin_write(1, DEBUG_0_PIN); /* whole ISR routine 18-22us */
 #endif
     
 	/* slow down polling the drivers, 1 is 16ms , 61 is around 1s */
@@ -385,7 +385,7 @@ debug_pin_write(1, DEBUG_0_PIN);
     
     if ( ( ++skip_count % ((SPI_READ_ALL_PERIOD_MS*1000UL)/SPI_READ_OCR_PERIOD_US) == 0 ) && 
          ( periodic_TMC_poll_allowed ) )  { /* set SPI poll interval to 1s */
-        #ifdef DEBUG_PINS_ENABLED
+        #ifdef DEBUG_SPI_ENABLED
         debug_pin_write(0, DEBUG_0_PIN);
         #endif        
         skip_count = 0;
@@ -407,7 +407,7 @@ debug_pin_write(1, DEBUG_0_PIN);
     } //if (++skip_count % ((SPI_READ_ALL_PERIOD_MS*1000UL)/SPI_READ_OCR_PERIOD_US) == 0)  { /* set SPI poll interval to 1s */
     
     
-#ifdef DEBUG_PINS_ENABLED
+#ifdef DEBUG_SPI_ENABLED
     debug_pin_write(0, DEBUG_0_PIN);
     debug_pin_write(1, DEBUG_0_PIN); /* second cycle to indicate that this time the "if (++skip_count" came through */
     debug_pin_write(0, DEBUG_0_PIN);
