@@ -272,17 +272,17 @@ void asmcnc_init_ADC(void)
  */
 
 int filter_fir_int16(long in_global_16, long in_16) {
-    return (int)(((FIR_COEFF_TEMPC * in_16) + (256 - FIR_COEFF_TEMPC) * in_global_16)/256);
+    return (int)( ((FIR_COEFF_TEMPC * in_16) + ( (1<<8) - FIR_COEFF_TEMPC) * in_global_16)>>8 );
 }
 
 /* temperature coefficients */ 
-long k[] = { 176   ,
-			-1370 ,
-			7292  ,
+long k[] = {   176,
+			 -1370,
+			  7292,
 			-21280,
-			32853 ,
+			 32853,
 			-25245,
-			  7590};
+			  7590 };
 
 /* function takes 270us ~ 4320 cycles */
 void convert_temperature (void){
@@ -305,7 +305,11 @@ debug_pin_write(0, DEBUG_1_PIN);
 		}
 		temperature_instantaneous += tmp;
 	}	
-    temperature_cent_celsius = filter_fir_int16(temperature_cent_celsius, temperature_instantaneous*100);
+#ifdef DEBUG_ADC_ENABLED
+debug_pin_write(1, DEBUG_1_PIN);
+debug_pin_write(0, DEBUG_1_PIN);
+#endif
+    temperature_cent_celsius = filter_fir_int16(temperature_cent_celsius, temperature_instantaneous*100); /* 7ms */
 #ifdef DEBUG_ADC_ENABLED
 debug_pin_write(1, DEBUG_1_PIN);
 #endif    
