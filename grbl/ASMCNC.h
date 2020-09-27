@@ -22,6 +22,15 @@
 #define BK_INITIATOR "^"
 #define BK_TERMINATOR "v\n"
 
+//#define SPI_TIMER_CYCLE_PER_READ 0x26   /* 2.496ms with prescaler 1024*/
+//#define SPI_TIMER_CYCLE_PER_READ 0xF    /* 1.024ms with prescaler 1024*/
+//#define SPI_TIMER_CYCLE_PER_READ 0x5D   /* 6.016ms with prescaler 1024*/
+#define SPI_TIMER_CYCLE_PER_READ 0xFF   /* 16.384ms with prescaler 1024*/
+#define SPI_READ_OCR_PERIOD_US ((1+SPI_TIMER_CYCLE_PER_READ)<<6) /* SPI timer period, typically 16384us with prescaler 1024*/
+#define SPI_READ_ALL_PERIOD_MS 1500     /* how often SPI engine should read all values from each controller, typically 1s */
+#define UPTIME_TICK_PERIOD_MS 1000      /* how often SPI engine should signal to main loop to increment uptime */
+
+
 // Z-head PCB has two options for spindle control:
 // 1) FET and resistive divider based filter (non-linear and power hungry)
 // 2) OpAmp based filter (linear)
@@ -85,7 +94,7 @@
 #define SPINDLE_LOAD_MONITOR 1    /* MEGA2560 Analog Pin PF1, spindle load 0-5V signal monitor*/
 #define THERMISTOR_MONITOR   3    /* MEGA2560 Analog Pin PF3, 2k NTC thermistor monitor*/
 //Spindle spare pin
-#define SPINDLE_SPARE 5           /* MEGA2560 Analog Pin PF5, for future use, for example low when brushes are ok, high when brushes are worn */
+#define SPINDLE_SPARE 2           /* MEGA2560 Analog Pin PF2, for future use, for example low when brushes are ok, high when brushes are worn */
 #define SPINDLE_SPARE_MASK		(1<<SPINDLE_SPARE)
 
 #define ENABLE_SPINDLE_LOAD_MONITOR // enable spindle load monitoring, apply to Mafell spindles
@@ -143,13 +152,6 @@ enum rgbHexStates{
 void debug_pin_write(uint32_t level, uint32_t pin);
 #endif
 
-/* ADC state machine states */
-enum adc_states{
-	ADC_IDLE, // normal state, ADC is off
-	ADC_CH1,  // ADC is running conversion on Channel 1
-	ADC_CH2,  // ADC is running conversion on Channel 2	
-};
-
 
 #define CURRENT_FLASH_STAT_VER			20090614 //0x18100600 
 #define UPTIME_FIFO_SIZE_BYTES          32
@@ -202,11 +204,7 @@ uint32_t get_return_addr(void); /* return address from the latest stack dump */
 #define UNUSED_VARIABLE(X)  ((void)(X))
 #define UNUSED_PARAMETER(X) UNUSED_VARIABLE(X)
 
-void asmcnc_init_ADC(void);         /* initialise ADC for spindle load monitoring */
-void asmcnc_start_ADC(void);        /* start ADC state machine from channel 1 */
 uint8_t char2intValidate(char);     /* convert hex char to int and validate result (return 0xFF if character is not hex byte code */
-int get_temperature (void);
-int get_spindle_load_volts(void);
 
 void uptime_increment(void);
 

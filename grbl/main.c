@@ -34,6 +34,7 @@ volatile uint8_t sys_rt_exec_accessory_override; // Global realtime executor bit
 volatile uint8_t sys_rt_exec_rtl_command; // Global realtime executor bitflag variable for Yeti commands: real-time commands arrived from UART buffer (RGB, TMC etc).
 volatile uint8_t sys_rt_exec_tmc_command; // Global realtime executor bitflag variable for Yeti commands: internal SPI - TMC flags to pass execution from SPI ISRs to main loop.
 volatile uint8_t sys_rt_exec_tmc_cal_command; // Global realtime executor bitflag variable for Yeti commands: internal SPI - TMC flags to pass execution of TMC calibration commands.
+volatile uint8_t sys_rt_exec_heartbeat_command; // Global realtime executor bitflag variable for Yeti commands: internal SPI - TMC flags to pass execution of periodic heartbeat commands.
 #ifdef DEBUG
   volatile uint8_t sys_rt_exec_debug;
 #endif
@@ -90,6 +91,8 @@ int main(void)
     sys_rt_exec_rtl_command = 0;
     sys_rt_exec_tmc_command = 0;    
     //sys_rt_exec_tmc_cal_command = 0;
+//sys_rt_exec_heartbeat_command; // Global realtime executor bitflag variable for Yeti commands: internal SPI - TMC flags to pass execution of periodic heartbeat commands.
+
 
     // Reset Grbl primary systems.
     serial_reset_read_buffer(); // Clear serial read buffer

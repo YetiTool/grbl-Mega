@@ -63,6 +63,7 @@
 #include "sleep.h"
 #include "ASMCNC.h"
 #include "TMC_interface.h"
+#include "ADC_utils.h"
 
 
 // ---------------------------------------------------------------------------------------

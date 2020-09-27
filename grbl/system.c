@@ -428,3 +428,11 @@ void system_clear_exec_tmc_cal_flags() {
     sys_rt_exec_tmc_cal_command = 0;
 }
 
+void system_set_exec_heartbeat_command_flag(uint8_t mask) {
+    sys_rt_exec_heartbeat_command |= (mask);
+}
+
+void system_clear_exec_heartbeat_flags() {
+    sys_rt_exec_heartbeat_command = 0;
+}
+

@@ -585,13 +585,13 @@ debug_pin_write(0, DEBUG_2_PIN);
 
   #ifdef ENABLE_SPINDLE_LOAD_MONITOR
       printPgmString(PSTR("|Ld:"));
-      int spindle_load_volts = get_spindle_load_volts();
-      printInteger( spindle_load_volts );
+      int spindle_load_mV = get_spindle_load_mV();
+      printInteger( spindle_load_mV );
   #endif //#ifdef ENABLE_SPINDLE_LOAD_MONITOR
   
   #ifdef ENABLE_TEMPERATURE_MONITOR
       printPgmString(PSTR("|TC:"));
-      int temperature = get_temperature();
+      int temperature = get_TMC_temperature();
       printInteger( temperature );
   #endif //#ifdef ENABLE_TEMPERATURE_MONITOR
   

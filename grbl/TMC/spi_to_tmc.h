@@ -9,15 +9,6 @@
 #include "TMC_interface.h"
 
 
-//#define SPI_TIMER_CYCLE_PER_READ 0x26   /* 2.496ms with prescaler 1024*/
-//#define SPI_TIMER_CYCLE_PER_READ 0xF    /* 1.024ms with prescaler 1024*/
-//#define SPI_TIMER_CYCLE_PER_READ 0x5D   /* 6.016ms with prescaler 1024*/
-#define SPI_TIMER_CYCLE_PER_READ 0xFF   /* 16.384ms with prescaler 1024*/
-#define SPI_READ_OCR_PERIOD_US ((1+SPI_TIMER_CYCLE_PER_READ)<<6) /* SPI timer period, typically 16384us with prescaler 1024*/
-#define SPI_READ_ALL_PERIOD_MS 1500     /* how ofter SPI engine should read all values from each controller, typically 1s */
-#define UPTIME_TICK_PERIOD_MS 1000      /* how ofter SPI engine should signal to main loop to increment uptime */
-
-
 /* SPI_TX_BUFFER holds the outgoing SPI commands, worst case - required for single motors - in that case number initial SPI transactions
  * could be 5x5+5x5 = 50. In dual motor case it is 5x3 + 5x3 = max 30 transactions*/
 #define SPI_TX_BUFFER_MASK 						0x3F                 	/**< TX Buffer mask, must be a mask of contiguous zeroes, followed by contiguous sequence of ones: 000...111. */

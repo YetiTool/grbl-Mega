@@ -375,11 +375,14 @@ debug_pin_write(1, DEBUG_0_PIN); /* whole ISR routine 18-22us */
 #endif
     
 	/* slow down polling the drivers, 1 is 16ms , 61 is around 1s */
-    static uint8_t skip_count = ((UPTIME_TICK_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US)-2 ;
-    static uint8_t uptime_count = ((SPI_READ_ALL_PERIOD_MS*1000UL)/SPI_READ_OCR_PERIOD_US)-2;
+    static uint8_t skip_count   = ((UPTIME_TICK_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US)-2; /* initialize with max-2 to ensure read soon after boot*/
+    static uint8_t uptime_count = ((SPI_READ_ALL_PERIOD_MS*1000UL)/SPI_READ_OCR_PERIOD_US)-2; /* initialize with max-2 to ensure read soon after boot*/
+
+    /* notify main loop that ADC state machine tick need to be incremented */    
+    system_set_exec_heartbeat_command_flag(ADC_SET_AND_FIRE_COMMAND);    
     
     if (++uptime_count % ((UPTIME_TICK_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US) == 0)  { /* set uptime interval to 1s */
-        system_set_exec_tmc_command_flag(UPTIME_INCREMENT_COMMAND);
+        system_set_exec_heartbeat_command_flag(UPTIME_INCREMENT_COMMAND);
         uptime_count = 0;
     }
     
@@ -391,7 +394,7 @@ debug_pin_write(1, DEBUG_0_PIN); /* whole ISR routine 18-22us */
         skip_count = 0;
 
         /* schedule next SPI transfer: indicate to main loop that there is a time to prepare SPI buffer and send it */
-        system_set_exec_tmc_command_flag(TMC_SPI_READ_ALL_COMMAND);
+        system_set_exec_heartbeat_command_flag(TMC_READ_ALL_COMMAND);
 
         /* if for some reason the SPI was not released (HW glitch or comms loss) wait for 30 timer cycles and reset the busy flag */
         static uint8_t busy_reset_count = 0;
