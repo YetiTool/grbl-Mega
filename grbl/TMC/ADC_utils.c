@@ -7,7 +7,11 @@
 
 #include "grbl.h"
 
-#define 				FIR_COEFF_TEMPC 					30		/**< 0-255 defines how quickly FIR converges 255-fastest */
+#define     FIR_COEFF_TEMPC 					    30		/**< 0-255 defines how quickly FIR converges 255-fastest */
+#define     SPINDLE_SPEED_FEEDBACK_N_CONVERGES      10      /* how many times to read and nudge spindle speed signal */
+#define     SPINDLE_SIG_MAX_MILLIVOLTS              10000   
+#define     SPINDLE_SIG_MIN_MILLIVOLTS              0   
+#define     SPINDLE_SIG_CONVERGENCE_DAMPING_FACTOR  0.5
 
 uint16_t spindle_load_mV                = 0;            // global variable for latest spindle load value
 uint16_t VDD_5V_Atmega_mV               = 0;            // global variable for latest VDD_5V_Atmega value
@@ -19,6 +23,7 @@ uint16_t temperature_TMC_cent_celsius   = 2500;  // global variable for latest t
 uint16_t temperature_PCB_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
 uint16_t temperature_MOT_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
 
+static float spindle_sig_gradient; // Precalulated value to speed up rpm to PWM conversions.
 
 /* Mafell spindles provide very nice feature: it will stop if load on the spindle is too high.
  * But how do we know that it has stopped !? Well there is another nice feature - overload signal (coming
@@ -96,7 +101,10 @@ void asmcnc_init_ADC(void)
 	//enable ADC interrupt
 	ADCSRA |= (1<<ADIE);
 
-  asmcnc_start_ADC();
+
+    spindle_sig_gradient = (SPINDLE_SIG_MAX_MILLIVOLTS-SPINDLE_SIG_MIN_MILLIVOLTS)/(settings.rpm_max-settings.rpm_min);
+    
+    asmcnc_start_ADC();
 
 }
 
@@ -154,6 +162,8 @@ void convert_TMC_temperature (uint16_t temperature_ADC_reading){
 debug_pin_write(0, DEBUG_2_PIN);
 debug_pin_write(1, DEBUG_2_PIN);
 #endif
+    //printInteger( temperature_TMC_cent_celsius );
+    //printPgmString(PSTR(","));
 }
 
 void convert_PCB_temperature (uint16_t temperature_ADC_reading){
@@ -179,7 +189,7 @@ uint16_t convert_adc_10V_at_1V1(uint16_t ADC_reading){
     * therefore for 10V input the output is 0.968mV. With 1.1V bandgap reference 10 V will be corresponded to ADC code 900
     * to convert the ADC code to voltage: V_out_mV = ADC_code * 1.1*10*(10+1)/(10*1023*1)*1000 =
     * = ADC*1100*(10+1)/(1023*1) = ADC * 123200 / 12276 */
-    return (uint16_t) ( ( (long)ADC_reading * 123200 ) / 12276 );    
+    return (uint16_t) ( ( (long)ADC_reading * 121000 ) / 10230 );    
 }
 
 uint16_t convert_adc_24V_at_1V1(uint16_t ADC_reading){
@@ -216,9 +226,56 @@ void convert_VDD_24V_mV (uint16_t ADC_reading){
     VDD_24V_mV = convert_adc_24V_at_1V1(ADC_reading);
 }
 
+float currentSpindleSpeedRPM, correctedSpindleSpeedRPM;
+int16_t currentSpindleSpeedNreadings = 0; /* counter of number of readings for spindle speed convergence routine */
+uint16_t currentSpindleSpeedSignalTargetmV = 0;
+
+
+void spindle_speed_feedback_rpm_updated(float rpm){
+    if (currentSpindleSpeedRPM != rpm){
+        currentSpindleSpeedNreadings = SPINDLE_SPEED_FEEDBACK_N_CONVERGES; /* reset convergence state machine */
+        /* enable ADC readings of spindle speed signal channel */        
+        ADCstMachine.max_count[ADC_7_SPINDLE_SPEED  ] = ((SPINDLE_SPEED_ADC_PERIOD_MS   *1000UL)/SPI_READ_OCR_PERIOD_US) ;
+    }
+    currentSpindleSpeedRPM = rpm;
+    correctedSpindleSpeedRPM = rpm;
+    
+	if ((settings.rpm_min >= settings.rpm_max) || (rpm >= settings.rpm_max)) {
+	  // No PWM range possible. Set simple on/off spindle control pin state.
+	  currentSpindleSpeedSignalTargetmV = SPINDLE_SIG_MAX_MILLIVOLTS;
+	} else if (rpm <= settings.rpm_min) {
+		currentSpindleSpeedSignalTargetmV = SPINDLE_SIG_MIN_MILLIVOLTS;
+	} else { 
+	  // Compute intermediate value with linear spindle speed model.
+	  // NOTE: A nonlinear model could be installed here, if required, but keep it VERY light-weight.
+	  currentSpindleSpeedSignalTargetmV = (uint16_t) ( ((rpm-settings.rpm_min) * spindle_sig_gradient) + SPINDLE_SIG_MIN_MILLIVOLTS ) ;
+	}    
+    
+}
+
 void convert_Spindle_speed_Signal_mV (uint16_t ADC_reading){
-    /* output range is 0-5V, convert 10bits ADC output into mV: */
-    Spindle_speed_Signal_mV = convert_adc_10V_at_1V1(ADC_reading);
+    
+    /* spindle speed convergence is based on feedback mechanism 
+       spindle speed feedback is read SPINDLE_SPEED_FEEDBACK_N_CONVERGES times after any speed change and corresponded nudges are made to ensure exact expected voltage for the given speed is set.
+    */
+    float rpm_delta_update = 0.0;    
+    /* output range is 0-10V, convert 10bits ADC output into mV: */
+    uint16_t Spindle_speed_Signal_mV_instantaneous = convert_adc_10V_at_1V1(ADC_reading);
+    Spindle_speed_Signal_mV = Spindle_speed_Signal_mV_instantaneous;
+    //Spindle_speed_Signal_mV = filter_fir_int16(Spindle_speed_Signal_mV, Spindle_speed_Signal_mV_instantaneous); /* 7us */
+
+    rpm_delta_update = ((float)Spindle_speed_Signal_mV_instantaneous - (float)currentSpindleSpeedSignalTargetmV)/spindle_sig_gradient;
+    correctedSpindleSpeedRPM -= rpm_delta_update * SPINDLE_SIG_CONVERGENCE_DAMPING_FACTOR;
+    spindle_nudge_pwm(correctedSpindleSpeedRPM);
+        
+    printInteger( correctedSpindleSpeedRPM );
+    printPgmString(PSTR("\n"));
+    
+    currentSpindleSpeedNreadings--;
+    if ( currentSpindleSpeedNreadings <= 0 ) {
+        /* finish convergence, disable channel set PERIOD_MS to 0xFFFF */ 
+        ADCstMachine.max_count[ADC_7_SPINDLE_SPEED  ] = ((ADC_PERIOD_DISABLE *1000UL)/SPI_READ_OCR_PERIOD_US) ;
+    }
 }
 
 
@@ -237,6 +294,9 @@ void asmcnc_start_ADC_single(void){
 		ADCchannel -= 8;
 		ADCSRB |= (1<<MUX5);
 	}
+    else{
+        ADCSRB &=~(1<<MUX5);
+    }        
 	ADMUX = (ADMUX & 0xF0) | (ADCchannel & 0x0F);
 
 	//start conversion in Single Conversion Mode
@@ -348,7 +408,7 @@ void adc_process_all_channels(void){
             /* reset measure request flag */
             ADCstMachine.measure_channel[adc_ch_idx] = 0;    
             
-            switch (ADCstMachine.channel[adc_ch_idx]){
+            switch (adc_ch_idx){
                 case ADC_0_SPINDLE_LOAD:
                     convert_spindle_load(ADCstMachine.result[adc_ch_idx]);
                 break;
@@ -414,6 +474,7 @@ int get_MOT_temperature(void){
 
 /* return global variable calculated earlier */
 int get_spindle_load_mV(void){    
-    return spindle_load_mV;
+    //return spindle_load_mV;
+    return Spindle_speed_Signal_mV;
 }
 

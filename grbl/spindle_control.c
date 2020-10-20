@@ -202,6 +202,7 @@ void spindle_set_state(uint8_t state, float rpm)
       if (state == SPINDLE_ENABLE_CCW) { rpm = 0.0; } // TODO: May need to be rpm_min*(100/MAX_SPINDLE_SPEED_OVERRIDE);
     }
     spindle_set_speed(spindle_compute_pwm_value(rpm));
+    spindle_speed_feedback_rpm_updated(rpm);
 
     #ifndef SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED
       #ifdef INVERT_SPINDLE_ENABLE_PIN
@@ -225,3 +226,9 @@ void spindle_sync(uint8_t state, float rpm)
   protocol_buffer_synchronize(); // Empty planner buffer to ensure spindle is set when programmed.
   spindle_set_state(state,rpm);
 }
+
+/* spindle signal feedback loop update */
+void spindle_nudge_pwm(float correctedSpindleSpeedRPM){
+    spindle_set_speed(spindle_compute_pwm_value(correctedSpindleSpeedRPM));
+}
+

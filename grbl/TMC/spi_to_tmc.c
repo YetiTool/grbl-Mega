@@ -93,10 +93,12 @@ void SPI_MasterInit(void)
 
     /* SPI clocking options: */
     /* option 1: set clock rate fck/4 = 4MHz - defautl config - nothing to be written */
+    
     /* option 2: set clock rate fck/16 = 1MHz*/
-    SPCR |= (1<<SPR0);
+    //SPCR |= (1<<SPR0);
+    
     /* option 3: set clock rate fck/64 = 0.25MHz*/
-    //SPCR |= (1<<SPR1);
+    SPCR |= (1<<SPR1);
 
 	/* Set phase and polarity to mode3 */
 	SPCR |= ( (1<<CPOL)|(1<<CPHA) );

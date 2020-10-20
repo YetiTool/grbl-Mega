@@ -56,5 +56,6 @@ uint16_t spindle_compute_pwm_value(float rpm);
 // Stop and start spindle routines. Called by all spindle routines and stepper ISR.
 void spindle_stop();
 
+void spindle_nudge_pwm(float rpm_delta_update); /* spindle signal feedback loop update */
 
 #endif

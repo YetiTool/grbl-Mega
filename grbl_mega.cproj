@@ -137,7 +137,7 @@
             <Value>../grbl/TMC</Value>
           </ListValues>
         </avrgcc.compiler.directories.IncludePaths>
-        <avrgcc.compiler.optimization.level>Optimize for size (-Os)</avrgcc.compiler.optimization.level>
+        <avrgcc.compiler.optimization.level>Optimize debugging experience (-Og)</avrgcc.compiler.optimization.level>
         <avrgcc.compiler.optimization.PackStructureMembers>True</avrgcc.compiler.optimization.PackStructureMembers>
         <avrgcc.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcc.compiler.optimization.AllocateBytesNeededForEnum>
         <avrgcc.compiler.optimization.DebugLevel>Default (-g2)</avrgcc.compiler.optimization.DebugLevel>
@@ -163,6 +163,12 @@
   </PropertyGroup>
   <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets" />
   <ItemGroup>
+    <Compile Include="grbl\TMC\ADC_utils.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="grbl\TMC\ADC_utils.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="grbl\TMC\CRC.c">
       <SubType>compile</SubType>
     </Compile>
