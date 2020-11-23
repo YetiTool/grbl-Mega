@@ -592,7 +592,8 @@ debug_pin_write(1, DEBUG_1_PIN);
 #endif
     
     /* TMC2590_RESPONSE0 #define TMC2590_GET_MSTEP(X)  (0x3FF & ((X) >> 10)) */     
-    tmc2590->resp.mStepCurrentValue = TMC2590_GET_MSTEP(tmc2590->response[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
+    //tmc2590->resp.mStepCurrentValue = TMC2590_GET_MSTEP(tmc2590->response[TMC2590_RESPONSE0]) & 0x1FF; /* bit 9 is polarity bit, ignore it*/
+    tmc2590->resp.mStepCurrentValue = TMC2590_GET_MSTEP(tmc2590->response[TMC2590_RESPONSE0]);
     tmc2590->resp.stallGuardCurrentValue = TMC2590_GET_SG(tmc2590->response[TMC2590_RESPONSE1]);
 
     /* TMC2590_RESPONSE2 #define TMC2590_GET_SGU(X)    (0x1F & ((X) >> 15)) #define TMC2590_GET_SE(X)     (0x1F & ((X) >> 10))    */

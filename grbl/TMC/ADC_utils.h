@@ -21,7 +21,7 @@
 #define TEMPERATURE_TMC_ADC_PERIOD_MS       100                     /* how often ADC should measure temperature 1 channel */
 #define TEMPERATURE_PCB_ADC_PERIOD_MS       ADC_PERIOD_DISABLE      /* how often ADC should measure temperature 2 channel */
 #define TEMPERATURE_MOT_ADC_PERIOD_MS       ADC_PERIOD_DISABLE      /* how often ADC should measure temperature 2 channel */
-#define SPINDLE_SPEED_ADC_PERIOD_MS         100                     /* how often ADC should measure Spindle speed channel */
+#define SPINDLE_SPEED_ADC_PERIOD_MS         20                     /* how often ADC should measure Spindle speed channel */
 #define AC_LOSS_ADC_PERIOD_MS               10                      /* how often ADC should measure AC loss channel */
 
 #define SPINDLE_LOAD_ADC_CHANNEL            SPINDLE_LOAD_MONITOR // 1
@@ -78,5 +78,19 @@ void adc_setup_and_fire(void); /* define ADC channels to be measured and start A
 void adc_process_all_channels(void);/* Process results of all ADC channels */
 
 void spindle_speed_feedback_rpm_updated(float rpm);
+
+
+typedef struct
+{
+    uint8_t is_present;
+    uint16_t RPM;
+    uint32_t uptime;
+    uint32_t brush_uptime;
+    uint32_t load;
+    uint32_t temperature;
+} digitalSpindleStruct;
+
+digitalSpindleStruct digitalSpindle;
+
 
 #endif /* ADC_UTILS_H_ */

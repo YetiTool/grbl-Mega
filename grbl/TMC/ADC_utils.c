@@ -9,7 +9,7 @@
 
 #define     FIR_COEFF_TEMPC 					    30		/**< 0-255 defines how quickly FIR converges 255-fastest */
 #define     SPINDLE_SPEED_FEEDBACK_N_CONVERGES      10      /* how many times to read and nudge spindle speed signal */
-#define     SPINDLE_SIG_MAX_MILLIVOLTS              10000   
+#define     SPINDLE_SIG_MAX_MILLIVOLTS              10300   
 #define     SPINDLE_SIG_MIN_MILLIVOLTS              0   
 #define     SPINDLE_SIG_CONVERGENCE_DAMPING_FACTOR  0.5
 
@@ -25,6 +25,8 @@ uint16_t temperature_MOT_cent_celsius   = 2500;  // global variable for latest t
 
 static float spindle_sig_gradient; // Precalulated value to speed up rpm to PWM conversions.
 
+static uint8_t spindle_speed_feedback_update_is_enabled = 0; /* change to 1 to enable spindle feedback auto-adaptation */ 
+
 /* Mafell spindles provide very nice feature: it will stop if load on the spindle is too high.
  * But how do we know that it has stopped !? Well there is another nice feature - overload signal (coming
  * through control cable) that informs the state of internal spindle circuitry by the voltage level (from
@@ -39,7 +41,7 @@ static float spindle_sig_gradient; // Precalulated value to speed up rpm to PWM 
 void asmcnc_init_ADC(void)
 {
 
-	/* there are 2 ports on mega2560, port F (channels 0-7) and power K (channels 8-15).
+	/* there are 2 ports on mega2560, port F (channels 0-7) and port K (channels 8-15).
 	 * On Z-head HW ver < 5 pin 89 (channel 8) is used. For this channel MSB of the MUX (MUX5) need to be used
 	 * it is located in register B: ADCSRB. Therefore if channel Number is higher than 7 then ADCSRB need to be written */
 
@@ -106,12 +108,19 @@ void asmcnc_init_ADC(void)
     
     asmcnc_start_ADC();
 
+    digitalSpindle.is_present   = 0;
+    digitalSpindle.RPM          = 0;
+    digitalSpindle.uptime       = 0;
+    digitalSpindle.brush_uptime = 0;
+    digitalSpindle.load         = 0;
+    digitalSpindle.temperature  = 0;
+
 }
 
 /* function to calculate temperature based on ADC value 
  * written as a loop to keep calculation within 32 bit integer number
  * based on 6th order interpolation for the datasheet scaling factors 
- * of Thermistor_0402_Panasonic_2kOhm_ERT-J0EG202GM
+ * of Thermistor_0402_Panasonic_2kOhm_ERT-J0EG202GM, or ERT-J0EG202HM
  */
 
 int filter_fir_int16(long in_global_16, long in_16) {
@@ -230,41 +239,57 @@ float currentSpindleSpeedRPM, correctedSpindleSpeedRPM;
 int16_t currentSpindleSpeedNreadings = 0; /* counter of number of readings for spindle speed convergence routine */
 uint16_t currentSpindleSpeedSignalTargetmV = 0;
 
+/* three options are implemented:
+ * 1. No spindle RPM feedback: ignore feedback functions and keep static settings from direct PWM control 
+ * 2. Analogue feedback: 10V from the speed control output circuit is fed back to the Atmega ADC and adjustment to the speed is made in SPINDLE_SPEED_FEEDBACK_N_CONVERGES steps 
+ * 3. Digital feedback: Digital Mafel spindle is reporting it's speed over UART2 and PWM signal is adjusted accordingly in SPINDLE_SPEED_FEEDBACK_N_CONVERGES steps 
 
+*/
 void spindle_speed_feedback_rpm_updated(float rpm){
-    if (currentSpindleSpeedRPM != rpm){
-        currentSpindleSpeedNreadings = SPINDLE_SPEED_FEEDBACK_N_CONVERGES; /* reset convergence state machine */
-        /* enable ADC readings of spindle speed signal channel */        
-        ADCstMachine.max_count[ADC_7_SPINDLE_SPEED  ] = ((SPINDLE_SPEED_ADC_PERIOD_MS   *1000UL)/SPI_READ_OCR_PERIOD_US) ;
-    }
-    currentSpindleSpeedRPM = rpm;
-    correctedSpindleSpeedRPM = rpm;
+    if ( ( spindle_speed_feedback_update_is_enabled == 1) || (digitalSpindle.is_present)){
+        if (currentSpindleSpeedRPM != rpm){
+            currentSpindleSpeedNreadings = SPINDLE_SPEED_FEEDBACK_N_CONVERGES; /* reset convergence state machine */
+            /* enable ADC readings of spindle speed signal channel */
+            ADCstMachine.max_count[ADC_7_SPINDLE_SPEED  ] = ((SPINDLE_SPEED_ADC_PERIOD_MS   *1000UL)/SPI_READ_OCR_PERIOD_US) ;
+        }
+        currentSpindleSpeedRPM = rpm;
+        correctedSpindleSpeedRPM = rpm;
     
-	if ((settings.rpm_min >= settings.rpm_max) || (rpm >= settings.rpm_max)) {
-	  // No PWM range possible. Set simple on/off spindle control pin state.
-	  currentSpindleSpeedSignalTargetmV = SPINDLE_SIG_MAX_MILLIVOLTS;
-	} else if (rpm <= settings.rpm_min) {
-		currentSpindleSpeedSignalTargetmV = SPINDLE_SIG_MIN_MILLIVOLTS;
-	} else { 
-	  // Compute intermediate value with linear spindle speed model.
-	  // NOTE: A nonlinear model could be installed here, if required, but keep it VERY light-weight.
-	  currentSpindleSpeedSignalTargetmV = (uint16_t) ( ((rpm-settings.rpm_min) * spindle_sig_gradient) + SPINDLE_SIG_MIN_MILLIVOLTS ) ;
-	}    
-    
+        if ((settings.rpm_min >= settings.rpm_max) || (rpm >= settings.rpm_max)) {
+            // No PWM range possible. Set simple on/off spindle control pin state.
+            currentSpindleSpeedSignalTargetmV = SPINDLE_SIG_MAX_MILLIVOLTS;
+            } else if (rpm <= settings.rpm_min) {
+            currentSpindleSpeedSignalTargetmV = SPINDLE_SIG_MIN_MILLIVOLTS;
+            } else {
+            // Compute intermediate value with linear spindle speed model.
+            // NOTE: A nonlinear model could be installed here, if required, but keep it VERY light-weight.
+            currentSpindleSpeedSignalTargetmV = (uint16_t) ( ((rpm-settings.rpm_min) * spindle_sig_gradient) + SPINDLE_SIG_MIN_MILLIVOLTS ) ;
+        } // if ((settings.rpm_min >= settings.rpm_max) || (rpm >= settings.rpm_max)) {
+                   
+    } // if ( ( spindle_speed_feedback_update_is_enabled == 1) || (digitalSpindle.is_present)){    
+        
 }
 
 void convert_Spindle_speed_Signal_mV (uint16_t ADC_reading){
     
     /* spindle speed convergence is based on feedback mechanism 
-       spindle speed feedback is read SPINDLE_SPEED_FEEDBACK_N_CONVERGES times after any speed change and corresponded nudges are made to ensure exact expected voltage for the given speed is set.
+       spindle speed feedback is read SPINDLE_SPEED_FEEDBACK_N_CONVERGES times after any speed change request and corresponded nudges are made to ensure exact expected voltage for the given speed is set.
     */
     float rpm_delta_update = 0.0;    
     /* output range is 0-10V, convert 10bits ADC output into mV: */
     uint16_t Spindle_speed_Signal_mV_instantaneous = convert_adc_10V_at_1V1(ADC_reading);
     Spindle_speed_Signal_mV = Spindle_speed_Signal_mV_instantaneous;
     //Spindle_speed_Signal_mV = filter_fir_int16(Spindle_speed_Signal_mV, Spindle_speed_Signal_mV_instantaneous); /* 7us */
+    
+    /* if digital spindle is installed use actual RPM to correct the spindle speed */
+    if (digitalSpindle.is_present){
+        rpm_delta_update = digitalSpindle.RPM - correctedSpindleSpeedRPM;        
+    }
+    else
+    {
+        rpm_delta_update = ((float)Spindle_speed_Signal_mV_instantaneous - (float)currentSpindleSpeedSignalTargetmV)/spindle_sig_gradient;        
+    }
 
-    rpm_delta_update = ((float)Spindle_speed_Signal_mV_instantaneous - (float)currentSpindleSpeedSignalTargetmV)/spindle_sig_gradient;
     correctedSpindleSpeedRPM -= rpm_delta_update * SPINDLE_SIG_CONVERGENCE_DAMPING_FACTOR;
     spindle_nudge_pwm(correctedSpindleSpeedRPM);
         
@@ -342,7 +367,7 @@ void asmcnc_start_ADC(void){
         
         ADCstMachine.adc_state = ADC_0_SPINDLE_LOAD;
         
-        /* check is any of channels are to be measured and fire measurement on first required channel, other remaining channels will be managed by ADC ISR */
+        /* check if any of channels are to be measured and fire measurement on first required channel, other remaining channels will be managed by ADC ISR */
         while ( ADCstMachine.adc_state < ADC_TOTAL_CHANNELS ){
             if (ADCstMachine.measure_channel[ADCstMachine.adc_state] == 1)
             { /* start next conversion */ 
@@ -354,7 +379,7 @@ void asmcnc_start_ADC(void){
         
     }
     else{
-        /* should not really come here, but if happened, reset state to idle, so next cycle will initialise ADC correctly */
+        /* should not really come here, but if happened, reset state to idle, so next cycle will initialize ADC correctly */
         ADCstMachine.adc_state = ADC_TOTAL_CHANNELS;
     }
 }
