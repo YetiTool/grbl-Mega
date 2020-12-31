@@ -24,6 +24,10 @@ void asmcnc_init(void)
 	AC_ACCS_DDR			|=AC_ACCS_MASK;
 	AC_DOOR_DDR			|=AC_DOOR_RED_MASK;
 	AC_RGB_DDR 			|=AC_RGB_MASK;
+    #ifdef ANY_DEBUG_ENABLED
+    DEBUG_DDR  			|=DEBUG_PORT_MASK; /* enable output direction of the port */
+	DEBUG_PORT			|=DEBUG_PORT_MASK; /* default pin state high*/	
+    #endif	
 	AC_PROBE_HOLDER_DDR	&=~AC_PROBE_HOLDER_MASK; //Set as input
 
 	PORTL |= AC_LIM_RED_MASK_XZ;
@@ -45,8 +49,23 @@ void asmcnc_init(void)
 
 #if defined(ENABLE_SPINDLE_LOAD_MONITOR) || defined(ENABLE_TEMPERATURE_MONITOR)
 	asmcnc_init_ADC();
+	
+	#ifdef DEBUG_ADC_ENABLED
+	debug_pin_write(0, DEBUG_0_PIN);
+	debug_pin_write(1, DEBUG_0_PIN);
+	debug_pin_write(0, DEBUG_1_PIN);
+	debug_pin_write(1, DEBUG_1_PIN);
+	debug_pin_write(0, DEBUG_2_PIN);
+	debug_pin_write(1, DEBUG_2_PIN);
+	debug_pin_write(0, DEBUG_3_PIN);
+	debug_pin_write(1, DEBUG_3_PIN);
+	#endif		
+	
 #endif
 
+  /* AC live enable pin interrupt. Using sleep module to utilise TIMER5 */
+  asmcnc_enable_AC_live_detection();
+  
 }
 
 /* convert hex char to int */
@@ -240,6 +259,15 @@ void asmcnc_RGB_setup(void){
 	TCCR3A &=~(1<<WGM31); /* unset bit set in RGB_red_flash function */
 	TCCR3A |= (1<<WGM30);
 }
+
+#ifdef ANY_DEBUG_ENABLED
+/* function including jumps in out takes 5 cycles = 310ns */
+void debug_pin_write(uint8_t level, uint8_t pin){
+	if (level==0) DEBUG_PORT &=~(1<<pin); /* clear pin */
+	else          DEBUG_PORT |= (1<<pin); /* set pin */
+}
+#endif
+
 
 /* Mafell spindles provide very nice feature: it will stop if load on the spindle is too high.
  * But how do we know that it has stopped !? Well there is another nice feature - overload signal (coming
