@@ -596,7 +596,7 @@
 // NOTE: Sleep mode is a safety feature, primarily to address communication disconnect problems. To 
 // keep Grbl from sleeping, employ a stream of '?' status report commands as a connection "heartbeat".
 //#define SLEEP_ENABLE  // Default disabled. Uncomment to enable.
-#define SLEEP_DURATION 5.0 // Float (0.25 - 61.0) seconds before sleep mode is executed.
+#define SLEEP_DURATION 5.0 // Float (0.25 - 8.5) seconds before sleep mode is executed.
 
 // This option will automatically disable the laser during a feed hold by invoking a spindle stop
 // override immediately after coming to a stop. However, this also means that the laser still may

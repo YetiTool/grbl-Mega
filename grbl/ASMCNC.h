@@ -90,6 +90,16 @@
 //Live loss pin
 #define AC_LIVE_SENSE 1           /* MEGA2560 Analog Pin 1 on port F, low when live is present, high when live is lost, only for Z-head HW >= Rev H */
 #define AC_LIVE_SENSE_MASK		(1<<AC_LIVE_SENSE)
+
+#define AC_LIVE_DDR       DDRL
+#define AC_LIVE_PIN       PINL
+#define AC_LIVE_PORT      PORTL
+#define AC_LIVE_BIT       1 //pin PL1 (ICP5), pin 36
+#define AC_LIVE_INT_vect  TIMER5_CAPT_vect
+#define AC_LIVE_TIMSK     TIMSK5 // Pin change interrupt register
+#define AC_LIVE_MASK      (1<<AC_LIVE_BIT)
+
+
 //Spindle load monitor pin
 #define SPINDLE_LOAD_MONITOR 1    /* MEGA2560 Analog Pin PF1, spindle load 0-5V signal monitor*/
 #define THERMISTOR_MONITOR   3    /* MEGA2560 Analog Pin PF3, 2k NTC thermistor monitor*/
@@ -131,25 +141,27 @@ enum rgbHexStates{
 /* setup debug port. Designed for monitoring real time performance of individual functions to identify potential weaknesses and clashes in the code*/
 //#define DEBUG_SPI_ENABLED // comment out to remove debug pins functionality - remove for production version
 //#define DEBUG_STEPPER_ENABLED // comment out to remove debug pins functionality - remove for production version
-#define DEBUG_ADC_ENABLED // comment out to remove ADC debug pins functionality - remove for production version
+//#define DEBUG_ADC_ENABLED // comment out to remove ADC debug pins functionality - remove for production version
 //#define MSTEP_READING_ENABLED // good to have a temporal view of MSTEP for debug purposes
 //#define SG_SKIP_DEBUG_ENABLED // enable to debug stall guard masking engine
 //#define SG_CAL_DEBUG_ENABLED // enable to debug stall guard calibration engine
 //#define FLASH_DEBUG_ENABLED // enable to debug EEPROM storage
+#define DEBUG_LED_ENABLED // enable to debug EEPROM storage
 
-#if defined(DEBUG_SPI_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED) || defined(SG_CAL_DEBUG_ENABLED) || defined(FLASH_DEBUG_ENABLED)
-#define ANY_DEBUG_SPI_ENABLED // 
+#if defined(DEBUG_SPI_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED) || defined(SG_CAL_DEBUG_ENABLED) || defined(FLASH_DEBUG_ENABLED) || defined(DEBUG_LED_ENABLED) 
+#define ANY_DEBUG_ENABLED //
 #endif
 
-#ifdef ANY_DEBUG_SPI_ENABLED 
-#define DEBUG_DDR			DDRK
-#define DEBUG_PORT			PORTK
+#ifdef ANY_DEBUG_ENABLED
+#define DEBUG_DDR			DDRC
+#define DEBUG_PORT			PORTC
 // Port bits
-#define DEBUG_0_PIN			0 //PK0 / RXD2
-#define DEBUG_1_PIN			1 //PK1
-#define DEBUG_2_PIN			5 //PK5
-#define DEBUG_PORT_MASK	( (1<<DEBUG_0_PIN) | (1<<DEBUG_1_PIN) | (1<<DEBUG_2_PIN) );
-void debug_pin_write(uint32_t level, uint32_t pin);
+#define DEBUG_0_PIN			0 //PC0, Blue debug LED
+#define DEBUG_1_PIN			1 //PC1, Red debug LED
+#define DEBUG_2_PIN			2 //PC2
+#define DEBUG_3_PIN			3 //PC3, Green debug LED
+#define DEBUG_PORT_MASK	( (1<<DEBUG_0_PIN) | (1<<DEBUG_1_PIN) | (1<<DEBUG_2_PIN) | (1<<DEBUG_3_PIN) )
+void debug_pin_write(uint8_t level, uint8_t pin);
 #endif
 
 
@@ -213,5 +225,8 @@ void report_statistics(void);
 void store_stall_info(uint8_t  lastStallsMotor, uint16_t lastStallsSG, uint16_t lastStallsSGcalibrated,  uint16_t lastStallsStepUs);
 void report_stall_info(void);
 void report_last_wdt_addresses(void);
+
+void asmcnc_enable_AC_live_detection(void);
+uint8_t get_AC_lost_state(void);
 
 #endif /* ASMCNC_h */

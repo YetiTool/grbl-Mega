@@ -21,10 +21,12 @@
 #include "grbl.h" 
 
 
-#define SLEEP_SEC_PER_OVERFLOW (65535.0*64.0/F_CPU) // With 16-bit timer size and prescaler
+#define SLEEP_SEC_PER_OVERFLOW (65535.0*8.0/F_CPU) // With 16-bit timer size and prescaler
 #define SLEEP_COUNT_MAX (SLEEP_DURATION/SLEEP_SEC_PER_OVERFLOW)
 
 volatile uint8_t sleep_counter;
+volatile uint8_t AC_live_counter = 0;
+volatile uint8_t AC_live_lost = 0;
 
 
 // Initialize sleep counters and enable timer.
@@ -36,7 +38,9 @@ static void sleep_enable() {
 
 
 // Disable sleep timer.
-static void sleep_disable() {  TIMSK5 &= ~(1<<TOIE5); } // Disable timer overflow interrupt
+static void sleep_disable() {  
+	//TIMSK5 &= ~(1<<TOIE5); /* BK: never stop timer 5 as is it also used for AC loss detection*/
+	} // Disable timer overflow interrupt
 
 
 // Initialization routine for sleep timer.
@@ -46,17 +50,31 @@ void sleep_init()
   // NOTE: By using an overflow interrupt, the timer is automatically reloaded upon overflow.
   TCCR5B = 0; // Normal operation. Overflow.
   TCCR5A = 0;
-  TCCR5B = (TCCR5B & ~((1<<CS52) | (1<<CS51))) | (1<<CS50); // Stop timer
-  // TCCR5B |= (1<<CS52); // Enable timer with 1/256 prescaler. ~4.4min max with uint8 and 1.05sec/tick
-  // TCCR5B |= (1<<CS51); // Enable timer with 1/8 prescaler. ~8.3sec max with uint8 and 32.7msec/tick
-  TCCR5B |= (1<<CS51)|(1<<CS50); // Enable timer with 1/64 prescaler. ~66.8sec max with uint8 and 0.262sec/tick
+  TCCR5B = (TCCR5B & ~((1<<CS52) | (1<<CS51) | (1<<CS50)) ); // Stop timer
+  //TCCR5B |= (1<<CS52); // Enable timer with 1/256 prescaler. ~4.4min max with uint8 and 1.05sec/tick
+  TCCR5B |= (1<<CS51); // Enable timer with 1/8 prescaler. ~8.3sec max with uint8 and 32.7msec/tick
+  //TCCR5B |= (1<<CS51)|(1<<CS50); // Enable timer with 1/64 prescaler. ~66.8sec max with uint8 and 0.262sec/tick
   // TCCR5B |= (1<<CS52)|(1<<CS50); // Enable timer with 1/1024 prescaler. ~17.8min max with uint8 and 4.19sec/tick
-  sleep_disable();
+  sleep_enable();
 }
 
 
 // Increment sleep counter with each timer overflow.
-ISR(TIMER5_OVF_vect) { sleep_counter++; }
+ISR(TIMER5_OVF_vect) { 
+	sleep_counter++; 
+	if ( AC_live_counter < 2 ){
+		AC_live_lost = 1;
+		//printPgmString(PSTR("-lost"));
+		#ifdef DEBUG_LED_ENABLED
+		debug_pin_write(0, DEBUG_1_PIN); /* Red debug LED when AC live is lost */
+		#endif		
+	}
+	else{
+		AC_live_lost = 0;
+		//printPgmString(PSTR("+"));	
+	}
+	AC_live_counter = 0;
+}
 
 //    /* BK debug sleep feature */
 //uint8_t temp = 0;
@@ -112,3 +130,28 @@ void sleep_check()
     }
   }
 }  
+
+/* AC live enable pin interrupt. Using sleep module to utilise TIMER5. 
+ * how it works:
+ * AC opto will generate pulse every 10ms (8ms in Americas)
+ * This pulse triggers Input Capture Interrupt on timer 5 (no particular reason to use this pin, just wanted to contain it within Timer5 and also it only triggers on one edge) 
+ * ICR increments ACliveCounter
+ * in parallel there is a Timer5 overflow interrupt that comes every 32ms
+ * This timer checks the ACliveCounter and resets it if >3, if ACliveCounter is less than 3 then AC is lost and this need to be flagged to main code 
+ * */  
+
+void asmcnc_enable_AC_live_detection(void){
+  AC_LIVE_DDR   &= ~(AC_LIVE_MASK); // Configure AC_Live pin as input pin
+  AC_LIVE_PORT  |= AC_LIVE_MASK;	// Enable internal 20K pull-up resistors. Normal high operation.    
+  AC_LIVE_TIMSK |= (1<<ICIE5);		//enable input capture interrupt:  Bit 5 – ICIEn: Timer/Countern, Input Capture Interrupt Enable  
+}
+
+
+ISR(AC_LIVE_INT_vect) { 
+	//printPgmString(PSTR("!"));	
+	AC_live_counter++;
+}
+
+uint8_t get_AC_lost_state(void){
+	return AC_live_lost;
+}

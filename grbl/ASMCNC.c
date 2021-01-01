@@ -204,10 +204,9 @@ void asmcnc_RGB_setup(void){
 	TCCR3A |= (1<<WGM30);
 }
 
-
-#ifdef ANY_DEBUG_SPI_ENABLED 
+#ifdef ANY_DEBUG_ENABLED
 /* function including jumps in out takes 5 cycles = 310ns */
-void debug_pin_write(uint32_t level, uint32_t pin){
+void debug_pin_write(uint8_t level, uint8_t pin){
 	if (level==0) DEBUG_PORT &=~(1<<pin); /* clear pin */
 	else          DEBUG_PORT |= (1<<pin); /* set pin */
 }
