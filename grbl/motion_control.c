@@ -224,7 +224,10 @@ void mc_homing_cycle(uint8_t cycle_mask)
   #ifdef HOMING_SINGLE_AXIS_COMMANDS
     if (cycle_mask) { limits_go_home(cycle_mask); } // Perform homing cycle based on mask.
     else
+  #else
+    UNUSED_PARAMETER(cycle_mask); /* BK suppress "warning: unused parameter 'cycle_mask' [-Wunused-parameter]" */
   #endif
+
   {
     // Search to engage all axes limit switches at faster homing seek rate.
     limits_go_home(HOMING_CYCLE_0);  // Homing cycle 0

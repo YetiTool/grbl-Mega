@@ -62,6 +62,10 @@
 #include "jog.h"
 #include "sleep.h"
 #include "ASMCNC.h"
+//#include "TMC_interface.h"
+#include "spi_to_tmc.h"
+#include "ADC_utils.h"
+
 
 // ---------------------------------------------------------------------------------------
 // COMPILE-TIME ERROR CHECKING OF DEFINE VALUES:

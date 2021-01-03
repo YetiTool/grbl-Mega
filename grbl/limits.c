@@ -153,17 +153,12 @@ uint8_t limits_get_state()
     #endif
     if (bit_isfalse(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) { pin ^= LIMIT_MASK; }
     if (pin) {  
-		  if (pin & (1<<X_LIMIT_BIT)){ limit_state |= (1<<X_AXIS); PORTL &=~(1<<AC_XLIM_MIN_RED);}
-		  else {PORTL |=(1<<AC_XLIM_MIN_RED);}
-		  if (pin & (1<<X_LIM_MAX_BIT)){ limit_state |= (1<< X_AXIS_MAX); PORTL &=~(1<<AC_XLIM_MAX_RED);}
-		  else {PORTL |=(1<<AC_XLIM_MAX_RED);}
-		  if (pin & (1<<Y_LIMIT_BIT)){ limit_state |= (1<<Y_AXIS); PORTL &=~(1<<AC_YLIM_MIN_RED);}
-		  else {PORTL |=(1<<AC_YLIM_MIN_RED);}
-		  if (pin & (1<<Y_LIM_MAX_BIT)){ limit_state |= (1<< Y_AXIS_MAX); PORTL &=~(1<<AC_YLIM_MAX_RED);}
-		  else {PORTL |=(1<<AC_YLIM_MAX_RED);}
-		  if (pin & (1<<Z_LIMIT_BIT)){ limit_state |= (1<<Z_AXIS); PORTL &=~(1<<AC_ZLIM_MAX_RED);}
-		  else {PORTL |=(1<<AC_ZLIM_MAX_RED);}
-    } else {PORTL |=AC_LIM_RED_MASK_XZ;} //PORTB |=AC_LIM_RED_MASK_Y;}
+		  if (pin & (1<<X_LIMIT_BIT))  { limit_state |= (1<<X_AXIS);		}		  
+		  if (pin & (1<<X_LIM_MAX_BIT)){ limit_state |= (1<<X_AXIS_MAX);	}		  
+		  if (pin & (1<<Y_LIMIT_BIT))  { limit_state |= (1<<Y_AXIS);		}		  
+		  if (pin & (1<<Y_LIM_MAX_BIT)){ limit_state |= (1<<Y_AXIS_MAX);	}		  
+		  if (pin & (1<<Z_LIMIT_BIT))  { limit_state |= (1<<Z_AXIS);		}		  
+    } 
     return(limit_state);
   #endif //DEFAULTS_RAMPS_BOARD
 }
@@ -398,9 +393,9 @@ void limits_go_home(uint8_t cycle_mask)
         homing_rate = settings.homing_seek_rate;
       }
     } while (n_cycle-- > 0);
-  #else
+  #else // #ifdef DEFAULTS_RAMPS_BOARD
     uint8_t limit_state, axislock, n_active_axis;
-    do {
+    do { //} while (n_cycle-- > 0);
 
       system_convert_array_steps_to_mpos(target,sys_position);
 
@@ -449,7 +444,8 @@ void limits_go_home(uint8_t cycle_mask)
       sys.step_control = STEP_CONTROL_EXECUTE_SYS_MOTION; // Set to execute homing motion and clear existing flags.
       st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
       st_wake_up(); // Initiate motion
-      do {
+
+      do { //} while (STEP_MASK & axislock);
         if (approach) {
           // Check limit state. Lock out cycle axes when they change.
           limit_state = limits_get_state();
@@ -463,8 +459,8 @@ void limits_go_home(uint8_t cycle_mask)
                   axislock &= ~(step_pin[idx]);	//TODO: Add de-acceleration for homing
                 #endif
               }
-            }
-          }
+            } //if (axislock & step_pin[idx]) {
+          } //for (idx=0; idx<N_AXIS; idx++) {
           sys.homing_axis_lock = axislock;
         }
 

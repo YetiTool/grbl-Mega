@@ -584,24 +584,48 @@ void report_realtime_status()
         if (bit_istrue(ctrl_pin_state,CONTROL_PIN_INDEX_CYCLE_START)) { serial_write('S'); }
       } //if (ctrl_pin_state) {
     } //if (lim_pin_state | ctrl_pin_state | prb_pin_state | prb_hold_state | enclosure_state | spare1_state | ac_sense_state ) {
+  #endif //#ifdef REPORT_FIELD_PIN_STATE
 
   #ifdef ENABLE_SPINDLE_LOAD_MONITOR
-  printPgmString(PSTR("|Ld:"));
-  int spindle_load_volts = get_spindle_load_volts();
-  printInteger( spindle_load_volts );
+      printPgmString(PSTR("|Ld:"));
+      int spindle_load_mV = get_spindle_load_mV();
+      printInteger( spindle_load_mV );
   #endif //#ifdef ENABLE_SPINDLE_LOAD_MONITOR
-
+  
   #ifdef ENABLE_TEMPERATURE_MONITOR
-  printPgmString(PSTR("|TC:"));
-  int temperature = get_temperature();
-  printInteger( temperature );
+      printPgmString(PSTR("|TC:"));
+      int temperature = get_TMC_temperature();
+      printInteger( temperature );
+      printPgmString(PSTR(","));
+      temperature = get_PCB_temperature();
+      printInteger( temperature );
+      printPgmString(PSTR("|V:"));
+      int VDD_mv = get_VDD_5V_Atmega_mV();
+      printInteger( VDD_mv );
+      printPgmString(PSTR(","));
+      VDD_mv = get_VDD_5V_dustshoe_mV();
+      printInteger( VDD_mv );
+      printPgmString(PSTR(","));
+      VDD_mv = get_VDD_24V_mV();
+      printInteger( VDD_mv );
+      printPgmString(PSTR(","));
+      VDD_mv = get_Spindle_speed_Signal_mV();
+      printInteger( VDD_mv );
+
   #endif //#ifdef ENABLE_TEMPERATURE_MONITOR
   
-  #if defined(ENABLE_SPINDLE_LOAD_MONITOR) || defined(ENABLE_TEMPERATURE_MONITOR)
-  asmcnc_start_ADC(); /* start next measurement */
-  #endif //#if defined(ENABLE_SPINDLE_LOAD_MONITOR) || defined(ENABLE_TEMPERATURE_MONITOR)
-
-  #endif //#ifdef REPORT_FIELD_PIN_STATE
+  #ifdef ENABLE_TMC_FEEDBACK_MONITOR
+    if (sys.report_tmc_counter > 0) { 
+        sys.report_tmc_counter--;         
+        /* just report SG deltas */
+        tmc_report_SG_delta();
+    }
+    else{ /* full TMC statistics report */
+        sys.report_tmc_counter = (REPORT_TMC_REFRESH_COUNT-1); // Reset counter for slow refresh
+        printPgmString(PSTR("|T:"));
+        tmc_report_status();
+    }        
+  #endif //#ifdef ENABLE_TMC_FEEDBACK_MONITOR
 
   #ifdef REPORT_FIELD_WORK_COORD_OFFSET
     if (sys.report_wco_counter > 0) { sys.report_wco_counter--; }

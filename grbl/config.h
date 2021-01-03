@@ -59,6 +59,7 @@
 #define CMD_FEED_HOLD '!'
 #define CMD_RGB_WHITE '&' //ASM Mod allow control of the RGB LED while in alarm state
 #define CMD_RGB_HEX '_'   //ASM Mod allow control of the RGB LED while bypassing serial buffer
+#define CMD_TMC_HEX '^'   //BK Mod allow control of the TMC motor controllers while bypassing serial buffer
 
 // NOTE: All override realtime commands must be in the extended ASCII character set, starting
 // at character value 128 (0x80) and up to 255 (0xFF). If the normal set of realtime commands,
@@ -472,7 +473,7 @@
 // electrical interference on the signal cables from external sources. It's recommended to first
 // use shielded signal cables with their shielding connected to ground (old USB/computer cables 
 // work well and are cheap to find) and wire in a low-pass circuit into each limit pin.
- #define ENABLE_SOFTWARE_DEBOUNCE // Default disabled. Uncomment to enable.
+#define ENABLE_SOFTWARE_DEBOUNCE // Default disabled. Uncomment to enable.
 
 // Configures the position after a probing cycle during Grbl's check mode. Disabled sets
 // the position to the probe target, when enabled sets the position to the start position.
@@ -594,7 +595,7 @@
 // well. While in sleep mode, only a hard/soft reset will exit it and the job will be unrecoverable.
 // NOTE: Sleep mode is a safety feature, primarily to address communication disconnect problems. To 
 // keep Grbl from sleeping, employ a stream of '?' status report commands as a connection "heartbeat".
-#define SLEEP_ENABLE  // Default disabled. Uncomment to enable.
+//#define SLEEP_ENABLE  // Default disabled. Uncomment to enable.
 #define SLEEP_DURATION 5.0 // Float (0.25 - 8.5) seconds before sleep mode is executed.
 
 // This option will automatically disable the laser during a feed hold by invoking a spindle stop

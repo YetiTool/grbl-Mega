@@ -114,6 +114,35 @@
 #define SPINDLE_STOP_OVR_RESTORE        bit(2)
 #define SPINDLE_STOP_OVR_RESTORE_CYCLE  bit(3)
 
+// Override bit maps. Realtime bitflags to control Yeti downstream real time commands.
+#define RTL_TMC_COMMAND                 bit(0)
+#define RTL_RGB_COMMAND                 bit(1)
+#define RTL_VAC_COMMAND                 bit(2)
+#define RTL_LASER_DATUM_COMMAND         bit(3)
+#define RTL_STAT_REPORT_COMMAND			bit(4)
+
+// Define TMC SPI control states.
+#define TMC_STANDSTILL_COMMAND          bit(0)
+#define TMC_ACTIVE_COMMAND              bit(1)
+#define TMC_SPI_PROCESS_COMMAND         bit(3)
+#define TMC_SPI_READ_SG_X_COMMAND       bit(4)
+#define TMC_SPI_READ_SG_Y_COMMAND       bit(5)
+#define TMC_SPI_READ_SG_Z_COMMAND       bit(6)
+
+// Override bit maps. Realtime bitflags to execute heartbeat related actions.
+#define TMC_READ_ALL_COMMAND            bit(0)
+#define UPTIME_INCREMENT_COMMAND        bit(1)
+#define ADC_SET_AND_FIRE_COMMAND        bit(2)
+#define ADC_CONVERGENCE_COMPLETED       bit(3)
+#define ADC_PROCESS_ALL_COMMAND         bit(4)
+
+// Override bit maps. Realtime bitflags to execute calibration and TMC reporting related actions. 
+#define TMC_CALIBRATION_INIT            bit(0)       /* 1: reset all calibrations and prepare for new one,               */
+#define TMC_CALIBRATION_COMPUTE         bit(1)       /* 2: complete calibration, compute cal tables and apply correction,*/
+#define TMC_CALIBRATION_REPORT          bit(2)       /* 4: print calibration coefficients                                */
+#define TMC_REGISTERS_REPORT            bit(3)       /* 8 print TMC registers to UART */
+#define TMC_STATISTICS_REPORT           bit(4)       /* 16 print GRBL statisticss to UART */
+
 
 // Define global system variables
 typedef struct {
@@ -150,6 +179,11 @@ extern volatile uint8_t sys_rt_exec_state;   // Global realtime executor bitflag
 extern volatile uint8_t sys_rt_exec_alarm;   // Global realtime executor bitflag variable for setting various alarms.
 extern volatile uint8_t sys_rt_exec_motion_override; // Global realtime executor bitflag variable for motion-based overrides.
 extern volatile uint8_t sys_rt_exec_accessory_override; // Global realtime executor bitflag variable for spindle/coolant overrides.
+extern volatile uint8_t sys_rt_exec_rtl_command; // Global realtime executor bitflag variable for Yeti commands: real-time commands arrived from UART buffer (RGB, TMC etc).
+extern volatile uint8_t sys_rt_exec_tmc_command; // Global realtime executor bitflag variable for Yeti commands: internal SPI - TMC flags to pass execution from SPI ISRs to main loop.
+extern volatile uint8_t sys_rt_exec_tmc_cal_command; // Global realtime executor bitflag variable for Yeti commands: internal SPI - TMC flags to pass execution of TMC calibration commands.
+extern volatile uint8_t sys_rt_exec_heartbeat_command; // Global realtime executor bitflag variable for Yeti commands: internal SPI - TMC flags to pass execution of periodic heartbeat commands.
+
 
 #ifdef DEBUG
   #define EXEC_DEBUG_REPORT  bit(0)
@@ -198,6 +232,14 @@ void system_set_exec_motion_override_flag(uint8_t mask);
 void system_set_exec_accessory_override_flag(uint8_t mask);
 void system_clear_exec_motion_overrides();
 void system_clear_exec_accessory_overrides();
+void system_set_exec_rtl_command_flag(uint8_t mask);
+void system_clear_exec_rtl_flags();
+void system_set_exec_tmc_command_flag(uint8_t mask);
+void system_clear_exec_tmc_flags();
+void system_set_exec_tmc_cal_command_flag(uint8_t mask);
+void system_clear_exec_tmc_cal_flags();
+void system_set_exec_heartbeat_command_flag(uint8_t mask);
+void system_clear_exec_heartbeat_flags();
 
 
 #endif

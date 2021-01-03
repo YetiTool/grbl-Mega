@@ -11,7 +11,25 @@
 #define ASMCNC_VERSION			"1.2.2"
 #define ASMCNC_VERSION_BUILD	"20200806"
 
+/* proprietary error codes */
 #define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
+#define ASMCNC_INVALID_MOTOR_ID	        40 //ASM Error code 40. TMC command received for wrong motor
+#define ASMCNC_CRC8_ERROR	            41 //ASM Error code 41. TMC command received but crc8 does not match
+#define ASMCNC_INVALID_HEX_CODE         42 //ASM Error code 42. Non "hex code" character received
+#define ASMCNC_COMMAND_ERROR            43 //ASM Error code 43. Command supplied to the function is outside wanted range
+#define ASMCNC_PARAM_ERROR              44 //ASM Error code 44. Parameter supplied to the function is outside wanted range
+
+#define BK_INITIATOR "^"
+#define BK_TERMINATOR "v\n"
+
+//#define SPI_TIMER_CYCLE_PER_READ 0x26   /* 2.496ms with prescaler 1024*/
+//#define SPI_TIMER_CYCLE_PER_READ 0xF    /* 1.024ms with prescaler 1024*/
+//#define SPI_TIMER_CYCLE_PER_READ 0x5D   /* 6.016ms with prescaler 1024*/
+#define SPI_TIMER_CYCLE_PER_READ 0xFF   /* 16.384ms with prescaler 1024*/
+#define SPI_READ_OCR_PERIOD_US ((1+SPI_TIMER_CYCLE_PER_READ)<<6) /* SPI timer period, typically 16384us with prescaler 1024*/
+#define SPI_READ_ALL_PERIOD_MS 1500     /* how often SPI engine should read all values from each controller, typically 1s */
+#define UPTIME_TICK_PERIOD_MS 1000      /* how often SPI engine should signal to main loop to increment uptime */
+
 
 // Z-head PCB has two options for spindle control:
 // 1) FET and resistive divider based filter (non-linear and power hungry)
@@ -21,23 +39,22 @@
 
 // LIMITS defines
 // Port direction pins
-#define AC_YLIM_XLIM_DDRB	DDRB
-#define AC_YLIM_XLIM_DDRL 	DDRL
-#define AC_DOOR_DDR			DDRL
+//#define AC_YLIM_XLIM_DDRL 	DDRL
+//#define AC_DOOR_DDR			DDRL
 // Port bits
-#define AC_YLIM_MIN_RED		5
-#define AC_YLIM_MAX_RED		1
-#define AC_XLIM_MAX_RED		2
-#define AC_XLIM_MIN_RED		4
-#define AC_ZLIM_MAX_RED		0
-#define AC_DOOR_RED			6
+//#define AC_YLIM_MIN_RED		5
+//#define AC_YLIM_MAX_RED		1
+//#define AC_XLIM_MAX_RED		2
+//#define AC_XLIM_MIN_RED		4
+//#define AC_ZLIM_MAX_RED		0
+//#define AC_DOOR_RED			6
 // Used to add to AXIS number for reporting the correct limit switch
 #define X_AXIS_MAX		4
 #define Y_AXIS_MAX		5
 // TODO: Move all LED's to Port L to simplify the code
 //#define AC_LIM_RED_MASK_Y	((1<<AC_YLIM_MIN_RED)|(1<<AC_YLIM_MAX_RED))
-#define AC_LIM_RED_MASK_XZ	((1<<AC_XLIM_MIN_RED)|(1<<AC_XLIM_MAX_RED)|(1<<AC_ZLIM_MAX_RED)|(1<<AC_YLIM_MIN_RED)|(1<<AC_YLIM_MAX_RED))
-#define AC_DOOR_RED_MASK	(1<<AC_DOOR_RED)
+//#define AC_LIM_RED_MASK_XZ	((1<<AC_XLIM_MIN_RED)|(1<<AC_XLIM_MAX_RED)|(1<<AC_ZLIM_MAX_RED)|(1<<AC_YLIM_MIN_RED)|(1<<AC_YLIM_MAX_RED))
+//#define AC_DOOR_RED_MASK	(1<<AC_DOOR_RED)
 
 // RGB defines
 // Port direction pins
@@ -94,6 +111,7 @@
 #define ENABLE_TEMPERATURE_MONITOR  // enable temperatuer monitoring, apply to ZH2 and newer
 
 #define ENABLE_LASER_POINTER_CONTROL // Laser cross unit control
+//#define ENABLE_TMC_FEEDBACK_MONITOR  // print feedback from TMC motor controllers
 
 /* RGB HEX Rx state machine state */
 enum rgbHexStates{
@@ -102,12 +120,22 @@ enum rgbHexStates{
 	RGB_HEX_RTL_ERR   // FAULT - other than "0123456789ABCDEF" char received
 };
 
-/* ADC state machine states */
-enum adc_states{
-	ADC_IDLE, // normal state, ADC is off
-	ADC_CH1,  // ADC is running conversion on Channel 1
-	ADC_CH2,  // ADC is running conversion on Channel 2	
-};
+#define RTL_TMC_COMMAND_SIZE 7 /* 7 bytes: len, command, value, crc */
+#define RTL_RGB_COMMAND_SIZE 6 /* 6 hex bytes: 2xR, 2xG, 2xB */
+
+
+/* setup TMC port */
+#define TMC_DDR			DDRB
+#define TMC_PORT		PORTB
+// Port bits
+#define SPI_SS_PIN			0 //PB0
+#define SPI_SCK_PIN			1 //PB1
+#define SPI_MOSI_PIN		2 //PB2
+#define SPI_MISO_PIN		3 //PB3 //this need to be input pin
+#define SPI_CS_X_PIN		4 //PB4
+#define SPI_CS_Y_PIN		5 //PB5
+#define SPI_CS_Z_PIN		6 //PB6
+#define TMC_PORT_MASK	( (1<<SPI_SCK_PIN) | (1<<SPI_MOSI_PIN) | (1<<SPI_CS_X_PIN) | (1<<SPI_CS_Y_PIN) | (1<<SPI_CS_Z_PIN) | (1<<SPI_SS_PIN) );
 
 /* setup debug port. Designed for monitoring real time performance of individual functions to identify potential weaknesses and clashes in the code*/
 //#define DEBUG_SPI_ENABLED // comment out to remove debug pins functionality - remove for production version
@@ -136,6 +164,7 @@ void debug_pin_write(uint8_t level, uint8_t pin);
 #endif
 
 
+
 void asmcnc_init(void);
 //void asmcnc_TMR3_init();
 void asmcnc_RGB_off(void);
@@ -143,12 +172,14 @@ void asmcnc_RGB_white(void);
 void asmcnc_RGB_red_flash(void);
 void asmcnc_RGB_setup(void);
 uint8_t asmcnc_execute_line(char *line);
-void asmcnc_init_ADC(void);         /* initialise ADC for spindle load monitoring */
-void asmcnc_start_ADC(void);        /* start ADC state machine from channel 1 */
+
+#define UNUSED_VARIABLE(X)  ((void)(X))
+#define UNUSED_PARAMETER(X) UNUSED_VARIABLE(X)
+
 uint8_t char2intValidate(char);     /* convert hex char to int and validate result (return 0xFF if character is not hex byte code */
-int get_temperature (void);
-int get_spindle_load_volts(void);
+
+
 void asmcnc_enable_AC_live_detection(void);
 uint8_t get_AC_lost_state(void);
-	
+
 #endif /* ASMCNC_h */

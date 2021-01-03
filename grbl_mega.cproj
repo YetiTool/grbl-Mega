@@ -165,18 +165,15 @@
   </PropertyGroup>
   <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets" />
   <ItemGroup>
-    <None Include="grbl\TMC\CRC.c">
+    <Compile Include="grbl\TMC\ADC_utils.c">
       <SubType>compile</SubType>
-    </None>
-    <None Include="grbl\TMC\Functions.c">
+    </Compile>
+    <Compile Include="grbl\TMC\spi_to_tmc.c">
       <SubType>compile</SubType>
-    </None>
-    <None Include="grbl\TMC\spi_to_tmc.c">
+    </Compile>
+    <Compile Include="grbl\TMC\watchdog.c">
       <SubType>compile</SubType>
-    </None>
-    <None Include="grbl\TMC\TMC2590.c">
-      <SubType>compile</SubType>
-    </None>
+    </Compile>
     <Folder Include="grbl" />
     <Compile Include="grbl\ASMCNC.c">
       <SubType>compile</SubType>

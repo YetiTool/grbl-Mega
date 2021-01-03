@@ -33,7 +33,7 @@ void spindle_init()
   SPINDLE_TCCRB_REGISTER = SPINDLE_TCCRB_INIT_MASK;
   SPINDLE_OCRA_REGISTER = SPINDLE_OCRA_TOP_VALUE; // Set the top value for 16-bit fast PWM mode
   SPINDLE_ENABLE_DDR |= (1<<SPINDLE_ENABLE_BIT); // Configure as output pin.
-  SPINDLE_DIRECTION_DDR |= (1<<SPINDLE_DIRECTION_BIT); // Configure as output pin.
+  //SPINDLE_DIRECTION_DDR |= (1<<SPINDLE_DIRECTION_BIT); // Configure as output pin.
 
   pwm_gradient = SPINDLE_PWM_RANGE/(settings.rpm_max-settings.rpm_min);
   spindle_stop();
@@ -47,8 +47,9 @@ uint8_t spindle_get_state()
   #else
     if (bit_istrue(SPINDLE_ENABLE_PORT,(1<<SPINDLE_ENABLE_BIT)) && (SPINDLE_TCCRA_REGISTER & (1<<SPINDLE_COMB_BIT))) {
   #endif
-    if (SPINDLE_DIRECTION_PORT & (1<<SPINDLE_DIRECTION_BIT)) { return(SPINDLE_STATE_CCW); }
-    else { return(SPINDLE_STATE_CW); }
+    //if (SPINDLE_DIRECTION_PORT & (1<<SPINDLE_DIRECTION_BIT)) { return(SPINDLE_STATE_CCW); }
+    //else { return(SPINDLE_STATE_CW); }
+    return(SPINDLE_STATE_CW);
   }
 	return(SPINDLE_STATE_DISABLE);
 }
@@ -190,17 +191,18 @@ void spindle_set_state(uint8_t state, float rpm)
   
   } else {
   
-    if (state == SPINDLE_ENABLE_CW) {
-      SPINDLE_DIRECTION_PORT &= ~(1<<SPINDLE_DIRECTION_BIT);
-    } else {
-      SPINDLE_DIRECTION_PORT |= (1<<SPINDLE_DIRECTION_BIT);
-    }
+//    if (state == SPINDLE_ENABLE_CW) {
+//      SPINDLE_DIRECTION_PORT &= ~(1<<SPINDLE_DIRECTION_BIT);
+//    } else {
+//      SPINDLE_DIRECTION_PORT |= (1<<SPINDLE_DIRECTION_BIT);
+//    }
 
     // NOTE: Assumes all calls to this function is when Grbl is not moving or must remain off.
     if (settings.flags & BITFLAG_LASER_MODE) { 
       if (state == SPINDLE_ENABLE_CCW) { rpm = 0.0; } // TODO: May need to be rpm_min*(100/MAX_SPINDLE_SPEED_OVERRIDE);
     }
     spindle_set_speed(spindle_compute_pwm_value(rpm));
+    //spindle_speed_feedback_rpm_updated(rpm);
 
     #ifndef SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED
       #ifdef INVERT_SPINDLE_ENABLE_PIN
@@ -224,3 +226,9 @@ void spindle_sync(uint8_t state, float rpm)
   protocol_buffer_synchronize(); // Empty planner buffer to ensure spindle is set when programmed.
   spindle_set_state(state,rpm);
 }
+
+/* spindle signal feedback loop update */
+void spindle_nudge_pwm(float correctedSpindleSpeedRPM){
+    spindle_set_speed(spindle_compute_pwm_value(correctedSpindleSpeedRPM));
+}
+

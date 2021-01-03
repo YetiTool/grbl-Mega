@@ -385,6 +385,7 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
   // NOTE: This calculation assumes all axes are orthogonal (Cartesian) and works with ABC-axes,
   // if they are also orthogonal/independent. Operates on the absolute value of the unit vector.
   block->millimeters = convert_delta_vector_to_unit_vector(unit_vec);
+  totalTravelMillimeters += block->millimeters;
   block->acceleration = limit_value_by_axis_maximum(settings.acceleration, unit_vec);
   block->rapid_rate = limit_value_by_axis_maximum(settings.max_rate, unit_vec);
 

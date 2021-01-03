@@ -44,12 +44,12 @@ uint8_t system_control_get_state()
   #ifdef INVERT_CONTROL_PIN_MASK
     pin ^= INVERT_CONTROL_PIN_MASK;
   #endif
-  if (pin) {
+  //if (pin) { //BUG: this "if" will be false if all pins are triggered, for exaple in case when only SAFETY_DOOR pin is configured
     if (bit_isfalse(pin,(1<<CONTROL_SAFETY_DOOR_BIT))) { control_state |= CONTROL_PIN_INDEX_SAFETY_DOOR; }
-    if (bit_isfalse(pin,(1<<CONTROL_RESET_BIT))) { control_state |= CONTROL_PIN_INDEX_RESET; }
-    if (bit_isfalse(pin,(1<<CONTROL_FEED_HOLD_BIT))) { control_state |= CONTROL_PIN_INDEX_FEED_HOLD; }
-    if (bit_isfalse(pin,(1<<CONTROL_CYCLE_START_BIT))) { control_state |= CONTROL_PIN_INDEX_CYCLE_START; }
-  }
+    //if (bit_isfalse(pin,(1<<CONTROL_RESET_BIT))) { control_state |= CONTROL_PIN_INDEX_RESET; }
+    //if (bit_isfalse(pin,(1<<CONTROL_FEED_HOLD_BIT))) { control_state |= CONTROL_PIN_INDEX_FEED_HOLD; }
+    //if (bit_isfalse(pin,(1<<CONTROL_CYCLE_START_BIT))) { control_state |= CONTROL_PIN_INDEX_CYCLE_START; }
+  //}
   return(control_state);
 }
 
@@ -82,8 +82,8 @@ ISR(CONTROL_INT_vect)
 uint8_t system_check_safety_door_ajar()
 {
 //ASM Mod to turn on door red LED on door open & flash RGB red
-	if(system_control_get_state() & CONTROL_PIN_INDEX_SAFETY_DOOR){ PORTL &=~(1<<AC_DOOR_RED); }
-	else { PORTL |=(1<<AC_DOOR_RED);}
+	//if(system_control_get_state() & CONTROL_PIN_INDEX_SAFETY_DOOR){ PORTL &=~(1<<AC_DOOR_RED); }
+	//else { PORTL |=(1<<AC_DOOR_RED);}
     return(system_control_get_state() & CONTROL_PIN_INDEX_SAFETY_DOOR);
 }
 
@@ -403,3 +403,36 @@ void system_clear_exec_accessory_overrides() {
   sys_rt_exec_accessory_override = 0;
   SREG = sreg;
 }
+
+void system_set_exec_rtl_command_flag(uint8_t mask) {
+  sys_rt_exec_rtl_command |= (mask);
+}
+
+void system_clear_exec_rtl_flags() {
+  sys_rt_exec_rtl_command = 0;
+}
+
+void system_set_exec_tmc_command_flag(uint8_t mask) {
+    sys_rt_exec_tmc_command |= (mask);
+}
+
+void system_clear_exec_tmc_flags() {
+    sys_rt_exec_tmc_command = 0;
+}
+
+void system_set_exec_tmc_cal_command_flag(uint8_t mask) {
+    sys_rt_exec_tmc_cal_command |= (mask);
+}
+
+void system_clear_exec_tmc_cal_flags() {
+    sys_rt_exec_tmc_cal_command = 0;
+}
+
+void system_set_exec_heartbeat_command_flag(uint8_t mask) {
+    sys_rt_exec_heartbeat_command |= (mask);
+}
+
+void system_clear_exec_heartbeat_flags() {
+    sys_rt_exec_heartbeat_command = 0;
+}
+

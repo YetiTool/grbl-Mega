@@ -492,6 +492,71 @@ void protocol_exec_rt_system()
     }
   }
 
+
+
+  // Execute real-time Yeti control commands that arrived to the UART buffer
+  rt_exec = sys_rt_exec_rtl_command;
+  if (rt_exec) {
+    system_clear_exec_rtl_flags(); // Clear all accessory override flags. Shall be done after last command in the buffer is processed
+
+    /* process RTL commands arrived in the serial buffer */
+    if (rt_exec & RTL_TMC_COMMAND) {
+        //execute_TMC_command();
+    }
+	
+    /* print out statistics data */
+    if (rt_exec & RTL_STAT_REPORT_COMMAND) {
+	    report_statistics();
+    }	
+    
+  } //if rt_exec = sys_rt_exec_rtl_command;
+
+
+
+
+
+  // Execute Yeti heartbeat functions
+  rt_exec = sys_rt_exec_heartbeat_command;
+  if (rt_exec) {
+
+    system_clear_exec_heartbeat_flags(); // Clear all flags. Shall be done after last command in the buffer is processed
+        
+    /* schedule next SPI read all */
+    if (rt_exec & TMC_READ_ALL_COMMAND) {
+        /* BK profiling: SPI prepare: 900us  + actual SPI reads: 1.2-2.0 ms */
+        //tmc2590_schedule_read_all();
+    }
+                
+    /* schedule uptime increment and EEPROM update if needed */
+    if (rt_exec & UPTIME_INCREMENT_COMMAND) {
+        uptime_increment();
+    }
+                
+    /* define ADC channels to be measured and start ADC conversions */
+    if (rt_exec & ADC_SET_AND_FIRE_COMMAND) {
+        adc_setup_and_fire();
+    }
+
+    /* store result of measured ADC channels and advance the state machine */
+    if (rt_exec & ADC_CONVERGENCE_COMPLETED) {
+        adc_state_machine();
+    }
+                
+    /* Process results of all ADC channels */
+    if (rt_exec & ADC_PROCESS_ALL_COMMAND) {
+        adc_process_all_channels();
+    }
+
+      
+  } //if rt_exec = sys_rt_exec_heartbeat_command;  
+
+
+
+
+
+
+
+
   #ifdef DEBUG
     if (sys_rt_exec_debug) {
       report_realtime_debug();
