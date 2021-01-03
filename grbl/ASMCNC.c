@@ -246,18 +246,7 @@ void asmcnc_init(void)
     /* report TMC registers */
     system_set_exec_tmc_cal_command_flag(TMC_REGISTERS_REPORT);
 
-#ifdef FLASH_DEBUG_ENABLED
-//debug_pin_write(1, DEBUG_0_PIN);
-#endif    
-    flashStatisticsRestore();
-    manage_rst_reasons();
-    manage_psflash_updates();
-    printPgmString(PSTR("Up time: "));  printInteger( getLocalRunTimeSeconds() ); printPgmString(PSTR("seconds\n"));
-    printPgmString(PSTR("total distance: "));  printInteger( flashStatistics.totalTravelMillimeters); printPgmString(PSTR("mm\n"));    
-    flashStatisticsSave();
-#ifdef FLASH_DEBUG_ENABLED
-//debug_pin_write(0, DEBUG_0_PIN);
-#endif
+	flashStatisticsInit();
 
 	asmcnc_enable_AC_live_detection();
 

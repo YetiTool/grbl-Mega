@@ -73,5 +73,6 @@ void flashStatisticsSave(void);
 void manage_psflash_updates(void);
 void manage_rst_reasons(void);
 uint32_t getLocalRunTimeSeconds(void);
+void flashStatisticsInit(void);
 	
 #endif
