@@ -510,17 +510,18 @@ void report_stall_info(void){
 void asmcnc_init(void)
 {
     
-    AC_YLIM_XLIM_DDRL 	|=AC_LIM_RED_MASK_XZ;
+    //AC_YLIM_XLIM_DDRL 	|=AC_LIM_RED_MASK_XZ;
     AC_ACCS_DDR			|=AC_ACCS_MASK;
-    AC_DOOR_DDR			|=AC_DOOR_RED_MASK;
+    //AC_DOOR_DDR			|=AC_DOOR_RED_MASK;
     AC_RGB_DDR 			|=AC_RGB_MASK;
-    #if defined(DEBUG_SPI_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED)
-    DEBUG_DDR  			|=DEBUG_PORT_MASK;
-    #endif
+    #ifdef ANY_DEBUG_ENABLED
+    DEBUG_DDR  			|=DEBUG_PORT_MASK; /* enable output direction of the port */
+    DEBUG_PORT			|=DEBUG_PORT_MASK; /* default pin state high*/
+    #endif	
     AC_PROBE_HOLDER_DDR	&=~AC_PROBE_HOLDER_MASK; //Set as input
 
-    PORTL |= AC_LIM_RED_MASK_XZ;
-    PORTL |= AC_DOOR_RED_MASK;
+    //PORTL |= AC_LIM_RED_MASK_XZ;
+    //PORTL |= AC_DOOR_RED_MASK;
     PORTG &=~(1<<AC_EXTRACTOR);
     PORTG &=~(1<<AC_LIGHT);
 
@@ -557,6 +558,8 @@ void asmcnc_init(void)
 #ifdef FLASH_DEBUG_ENABLED
 //debug_pin_write(0, DEBUG_0_PIN);
 #endif
+
+	asmcnc_enable_AC_live_detection();
 
 }
 

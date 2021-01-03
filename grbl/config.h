@@ -595,7 +595,7 @@
 // well. While in sleep mode, only a hard/soft reset will exit it and the job will be unrecoverable.
 // NOTE: Sleep mode is a safety feature, primarily to address communication disconnect problems. To 
 // keep Grbl from sleeping, employ a stream of '?' status report commands as a connection "heartbeat".
-//#define SLEEP_ENABLE  // Default disabled. Uncomment to enable.
+#define SLEEP_ENABLE  // Default disabled. Uncomment to enable.
 #define SLEEP_DURATION 5.0 // Float (0.25 - 8.5) seconds before sleep mode is executed.
 
 // This option will automatically disable the laser during a feed hold by invoking a spindle stop
@@ -607,7 +607,7 @@
 // Enables a piecewise linear model of the spindle PWM/speed output. Requires a solution by the
 // 'fit_nonlinear_spindle.py' script in the /doc/script folder of the repo. See file comments 
 // on how to gather spindle data and run the script to generate a solution.
-#define ENABLE_PIECEWISE_LINEAR_SPINDLE  // Default disabled. Uncomment to enable.
+//#define ENABLE_PIECEWISE_LINEAR_SPINDLE  // Default disabled. Uncomment to enable.
 
 // N_PIECES, RPM_MAX, RPM_MIN, RPM_POINTxx, and RPM_LINE_XX constants are all set and given by
 // the 'fit_nonlinear_spindle.py' script solution. Used only when ENABLE_PIECEWISE_LINEAR_SPINDLE

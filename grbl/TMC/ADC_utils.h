@@ -15,23 +15,23 @@
  * To disable channel set PERIOD_MS to 0xFFFF */
 #define ADC_PERIOD_DISABLE                  0xFFFF
 #define SPINDLE_LOAD_ADC_PERIOD_MS          20                      /* how often ADC should measure Spindle load channel */
-#define VDD_5V_ATMEGA_ADC_PERIOD_MS         ADC_PERIOD_DISABLE      /* how often ADC should measure 5V Atmega channel */
-#define VDD_5V_DUSTSHOE_ADC_PERIOD_MS       200                     /* how often ADC should measure 5V dustshoe channel */
-#define VDD_24V_ADC_PERIOD_MS               ADC_PERIOD_DISABLE      /* how often ADC should measure 24V mains channel */
+#define VDD_5V_ATMEGA_ADC_PERIOD_MS         1000					/* how often ADC should measure 5V Atmega channel */
+#define VDD_5V_DUSTSHOE_ADC_PERIOD_MS       1000                    /* how often ADC should measure 5V dustshoe channel */
+#define VDD_24V_ADC_PERIOD_MS               200						/* how often ADC should measure 24V mains channel */
 #define TEMPERATURE_TMC_ADC_PERIOD_MS       100                     /* how often ADC should measure temperature 1 channel */
-#define TEMPERATURE_PCB_ADC_PERIOD_MS       ADC_PERIOD_DISABLE      /* how often ADC should measure temperature 2 channel */
+#define TEMPERATURE_PCB_ADC_PERIOD_MS       100						/* how often ADC should measure temperature 2 channel */
 #define TEMPERATURE_MOT_ADC_PERIOD_MS       ADC_PERIOD_DISABLE      /* how often ADC should measure temperature 2 channel */
-#define SPINDLE_SPEED_ADC_PERIOD_MS         20                     /* how often ADC should measure Spindle speed channel */
-#define AC_LOSS_ADC_PERIOD_MS               10                      /* how often ADC should measure AC loss channel */
+#define SPINDLE_SPEED_ADC_PERIOD_MS         20                      /* how often ADC should measure Spindle speed channel */
+#define AC_LOSS_ADC_PERIOD_MS               ADC_PERIOD_DISABLE      /* how often ADC should measure AC loss channel */
 
-#define SPINDLE_LOAD_ADC_CHANNEL            SPINDLE_LOAD_MONITOR // 1
-#define VDD_5V_ATMEGA_ADC_CHANNEL           9
-#define VDD_5V_DUSTSHOE_ADC_CHANNEL         14
-#define VDD_24V_ADC_CHANNEL                 12
-#define TEMPERATURE_TMC_ADC_CHANNEL         THERMISTOR_MONITOR   // 3
-#define TEMPERATURE_PCB_ADC_CHANNEL         13
-#define TEMPERATURE_MOT_ADC_CHANNEL         8
-#define SPINDLE_SPEED_ADC_CHANNEL           SPINDLE_SPARE        //2
+#define SPINDLE_LOAD_ADC_CHANNEL            SPINDLE_LOAD_MONITOR // ADC1,  PF1
+#define VDD_5V_ATMEGA_ADC_CHANNEL           12					 // ADC12, PK4
+#define VDD_5V_DUSTSHOE_ADC_CHANNEL         13					 // ADC13, PK5
+#define VDD_24V_ADC_CHANNEL                 14					 // ADC14, PK6
+#define TEMPERATURE_TMC_ADC_CHANNEL         THERMISTOR_MONITOR   // ADC3,  PF3
+#define TEMPERATURE_PCB_ADC_CHANNEL         8					 // ADC8,  PK0
+#define TEMPERATURE_MOT_ADC_CHANNEL         9					 // ADC9,  PK1
+#define SPINDLE_SPEED_ADC_CHANNEL           2					 // ADC2,  PF2
 #define AC_LOSS_ADC_CHANNEL                 0
 
 
@@ -56,11 +56,21 @@ enum adc_channels{
 	ADC_TOTAL_CHANNELS,       // normal state, ADC is off
 };
 
+/* temperature coefficients for 2k thermistor and 2.048V ref source */
+#define TEMP_K6  13176
+#define TEMP_K5 -42365
+#define TEMP_K4  52850
+#define TEMP_K3 -32364
+#define TEMP_K2  10221
+#define TEMP_K1 -1684
+#define TEMP_K0  162
+
 /* ADC state machine structure */
 typedef struct {
     uint8_t adc_state;                            /* global ADC state */
-    uint16_t result[ADC_TOTAL_CHANNELS];          /* ADC readings for this round */
+	uint8_t adc_locked;						      /* flag to indicate that the ADC state machine is in running and no conversions should be scheduled until it finished */
     uint8_t channel[ADC_TOTAL_CHANNELS];          /* all ADC channels */
+    uint16_t result[ADC_TOTAL_CHANNELS];          /* ADC readings for this round */
     uint8_t measure_channel[ADC_TOTAL_CHANNELS];  /* ADC channels to be measured in this round */
     uint16_t tick_count[ADC_TOTAL_CHANNELS];      /* counter to define when to fire the conversion on given channel */
     uint16_t max_count[ADC_TOTAL_CHANNELS];       /* max counter value to define when to fire the conversion on given channel */
@@ -74,6 +84,10 @@ int get_TMC_temperature (void);
 int get_PCB_temperature (void);
 int get_MOT_temperature (void);
 int get_spindle_load_mV(void);
+int get_VDD_5V_Atmega_mV(void);
+int get_VDD_5V_dustshoe_mV(void);
+int get_VDD_24V_mV(void);
+int get_Spindle_speed_Signal_mV(void);
 void adc_setup_and_fire(void); /* define ADC channels to be measured and start ADC conversions */
 void adc_process_all_channels(void);/* Process results of all ADC channels */
 

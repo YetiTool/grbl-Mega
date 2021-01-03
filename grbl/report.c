@@ -598,12 +598,24 @@ debug_pin_write(0, DEBUG_2_PIN);
       printPgmString(PSTR("|TC:"));
       int temperature = get_TMC_temperature();
       printInteger( temperature );
+      printPgmString(PSTR(","));
+      temperature = get_PCB_temperature();
+      printInteger( temperature );
+      printPgmString(PSTR("|V:"));
+      int VDD_mv = get_VDD_5V_Atmega_mV();
+      printInteger( VDD_mv );
+      printPgmString(PSTR(","));
+      VDD_mv = get_VDD_5V_dustshoe_mV();
+      printInteger( VDD_mv );
+      printPgmString(PSTR(","));
+      VDD_mv = get_VDD_24V_mV();
+      printInteger( VDD_mv );
+      printPgmString(PSTR(","));
+      VDD_mv = get_Spindle_speed_Signal_mV();
+      printInteger( VDD_mv );
+
   #endif //#ifdef ENABLE_TEMPERATURE_MONITOR
   
-  #if defined(ENABLE_SPINDLE_LOAD_MONITOR) || defined(ENABLE_TEMPERATURE_MONITOR)
-    asmcnc_start_ADC(); /* start next measurement */
-  #endif //#if defined(ENABLE_SPINDLE_LOAD_MONITOR) || defined(ENABLE_TEMPERATURE_MONITOR)
-
   #ifdef ENABLE_TMC_FEEDBACK_MONITOR
     if (sys.report_tmc_counter > 0) { 
         sys.report_tmc_counter--;         

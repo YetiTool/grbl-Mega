@@ -12,6 +12,7 @@
 #define     SPINDLE_SIG_MAX_MILLIVOLTS              10300   
 #define     SPINDLE_SIG_MIN_MILLIVOLTS              0   
 #define     SPINDLE_SIG_CONVERGENCE_DAMPING_FACTOR  0.5
+#define		ADC_EXTERNAL_VREF_2048mV					// either ADC_EXTERNAL_VREF_2048mV or ADC_INTERNAL_VREF_1100mV
 
 uint16_t spindle_load_mV                = 0;            // global variable for latest spindle load value
 uint16_t VDD_5V_Atmega_mV               = 0;            // global variable for latest VDD_5V_Atmega value
@@ -64,6 +65,8 @@ void asmcnc_init_ADC(void)
     	ADC_Spindle_load_channel          = 3;
 	}
 
+	ADCstMachine.adc_state	= ADC_TOTAL_CHANNELS;
+	ADCstMachine.adc_locked = 0;
     ADCstMachine.channel[ADC_0_SPINDLE_LOAD   ] = ADC_Spindle_load_channel ;
     ADCstMachine.channel[ADC_1_VDD_5V_ATMEGA  ] = ADC_5V_Atmega_channel    ;
     ADCstMachine.channel[ADC_2_VDD_5V_DUSTSHOE] = ADC_5V_dustshoe_channel  ;
@@ -89,8 +92,8 @@ void asmcnc_init_ADC(void)
         ADCstMachine.tick_count[adc_ch_idx] = ADCstMachine.max_count[adc_ch_idx] - 2 ; /* -2 to start first conversion soon after boot */
     }
 
-	// reference voltage selection
-	ADMUX |= (1<<REFS1); // Select Internal 1.1V Voltage Reference with external capacitor at AREF pin
+	// reference voltage selection : all commented = external VREF
+	//ADMUX |= (1<<REFS1); // Select Internal 1.1V Voltage Reference with external capacitor at AREF pin
 	//ADMUX |= (1<<REFS0); //both REFS0 a REFS1 pins means 2.56V Voltage Reference
 	//ADMUX |= (1<<REFS0);// Select Vref=AVCC with external capacitor at AREF pin
 
@@ -106,8 +109,6 @@ void asmcnc_init_ADC(void)
 
     spindle_sig_gradient = (SPINDLE_SIG_MAX_MILLIVOLTS-SPINDLE_SIG_MIN_MILLIVOLTS)/(settings.rpm_max-settings.rpm_min);
     
-    asmcnc_start_ADC();
-
     digitalSpindle.is_present   = 0;
     digitalSpindle.RPM          = 0;
     digitalSpindle.uptime       = 0;
@@ -128,13 +129,7 @@ int filter_fir_int16(long in_global_16, long in_16) {
 }
 
 /* temperature coefficients */ 
-long k[] = {   176,
-			 -1370,
-			  7292,
-			-21280,
-			 32853,
-			-25245,
-			  7590 };
+long k[] = {TEMP_K0, TEMP_K1, TEMP_K2, TEMP_K3, TEMP_K4, TEMP_K5, TEMP_K6};
 
 /* function takes 270us ~ 4320 cycles */
 uint16_t convert_temperature (uint16_t temperature_ADC_reading){
@@ -152,6 +147,7 @@ debug_pin_write(0, DEBUG_2_PIN);
 		tmp = k[i];
 		while (pow > 0){
 			tmp *= temperature_ADC_reading;
+			tmp += (1<<9); /* round vs floor*/
 			tmp >>= 10;
 			pow --;
 		}
@@ -185,7 +181,8 @@ void convert_MOT_temperature (uint16_t temperature_ADC_reading){
     temperature_MOT_cent_celsius = filter_fir_int16(temperature_MOT_cent_celsius, temperature_instantaneous); /* 7us */
 }
 
-uint16_t convert_adc_5V_at_1V1(uint16_t ADC_reading){
+#ifdef ADC_INTERNAL_VREF_1100mV
+uint16_t convert_adc_5V(uint16_t ADC_reading){
     /* on latest HW load sense is connected to the ADC pin through resistive divider of 10/2.4 kOhm,
     * therefore for 5V input the output is 0.968mV. With 1.1V bandgap reference 5 V will be corresponded to ADC code 900
     * to convert the ADC code to voltage: V_out_mV = ADC_code * 1.1*5*(10+2.4)/(5*1023*2.4)*1000 =
@@ -193,7 +190,7 @@ uint16_t convert_adc_5V_at_1V1(uint16_t ADC_reading){
     return (uint16_t) ( ( (long)ADC_reading * 136400 ) / 24552 );    
 }
 
-uint16_t convert_adc_10V_at_1V1(uint16_t ADC_reading){
+uint16_t convert_adc_10V(uint16_t ADC_reading){
     /* on latest HW load sense is connected to the ADC pin through resistive divider of 10/1 kOhm,
     * therefore for 10V input the output is 0.968mV. With 1.1V bandgap reference 10 V will be corresponded to ADC code 900
     * to convert the ADC code to voltage: V_out_mV = ADC_code * 1.1*10*(10+1)/(10*1023*1)*1000 =
@@ -201,38 +198,65 @@ uint16_t convert_adc_10V_at_1V1(uint16_t ADC_reading){
     return (uint16_t) ( ( (long)ADC_reading * 121000 ) / 10230 );    
 }
 
-uint16_t convert_adc_24V_at_1V1(uint16_t ADC_reading){
+uint16_t convert_adc_24V(uint16_t ADC_reading){
     /* on latest HW load sense is connected to the ADC pin through resistive divider of 30/1.2 kOhm,
     * therefore for 10V input the output is 0.968mV. With 1.1V bandgap reference 10 V will be corresponded to ADC code 900
     * to convert the ADC code to voltage: V_out_mV = ADC_code * 1.1*10*(10+1.2)/(10*1023*1.2)*1000 =
     * = ADC*1100*(10+1.2)/(1023*1.2) = ADC * 123200 / 12276 */
     return (uint16_t) ( ( (long)ADC_reading * 123200 ) / 12276 );    
 }
+#endif //#ifdef ADC_INTERNAL_VREF_1100mV
+
+#ifdef ADC_EXTERNAL_VREF_2048mV
+uint16_t convert_adc_5V(uint16_t ADC_reading){
+    /* HW load sense is connected to the ADC pin through resistive divider of 10/2.4 kOhm,
+    * therefore for 5V input the output is 0.968mV. With 2.048V reference 5 V will be corresponded to ADC code 483
+    * to convert the ADC code to voltage: V_out_mV = ADC_code * 2.048*5*(10+2.4)/(5*1023*2.4)*1000 =
+    * = ADC*1100*(10+2.4)/(1023*2.4) = ADC * 253952 / 24552 */
+    return (uint16_t) ( ( (long)ADC_reading * 253952 ) / 24552 );    
+}
+
+uint16_t convert_adc_10V(uint16_t ADC_reading){
+    /* on latest HW load sense is connected to the ADC pin through resistive divider of 2000/240 kOhm,
+    * therefore for 10V input the output is 1071mV. With 2.048V reference 10 V will be corresponded to ADC code 535
+    * to convert the ADC code to voltage: V_out_mV = ADC_code * 2048*10*(10+1)/(10*1023*1)*1000 =
+    * = ADC*1100*(10+1)/(1023*1) = ADC * 458752 / 24552 */
+    return (uint16_t) ( ( (long)ADC_reading * 458752 ) / 24552 );    
+}
+
+uint16_t convert_adc_24V(uint16_t ADC_reading){
+    /* on latest HW load sense is connected to the ADC pin through resistive divider of 10/0.47 kOhm,
+    * therefore for 10V input the output is 1077mV. With 2.048V bandgap reference 24 V will be corresponded to ADC code 538
+    * to convert the ADC code to voltage: V_out_mV = ADC_code * 2048*24*(10+1.2)/(10*1023*1.2)*1000 =
+    * = ADC*1100*(10+1.2)/(1023*1.2) = ADC * 214426 / 4808 */
+    return (uint16_t) ( ( (long)ADC_reading * 214426 ) / 4808 );    
+}
+#endif //#ifdef ADC_INTERNAL_VREF_2048mV
 
 void convert_spindle_load (uint16_t ADC_reading){
     /* Mafel load output range is 0-5V, convert 10bits ADC output into mV: */
-    spindle_load_mV = convert_adc_5V_at_1V1(ADC_reading);
+    spindle_load_mV = convert_adc_5V(ADC_reading);
 }
 
 void convert_VDD_5V_Atmega_mV (uint16_t ADC_reading){
     /* output range is 0-5V, convert 10bits ADC output into mV: */
-    VDD_5V_Atmega_mV = convert_adc_5V_at_1V1(ADC_reading);
+    VDD_5V_Atmega_mV = convert_adc_5V(ADC_reading);
 }
 
 void convert_VDD_5V_dustshoe_mV (uint16_t ADC_reading){
     /* output range is 0-5V, convert 10bits ADC output into mV: */
-    VDD_5V_dustshoe_mV = convert_adc_5V_at_1V1(ADC_reading);
+    VDD_5V_dustshoe_mV = convert_adc_5V(ADC_reading);
 }
 
 void convert_AC_loss_Signal_mV (uint16_t ADC_reading){
     /* output range is 0-5V, convert 10bits ADC output into mV: */
-    AC_loss_Signal_mV = convert_adc_5V_at_1V1(ADC_reading);
+    AC_loss_Signal_mV = convert_adc_5V(ADC_reading);
 }
 
 
 void convert_VDD_24V_mV (uint16_t ADC_reading){
     /* output range is 0-5V, convert 10bits ADC output into mV: */
-    VDD_24V_mV = convert_adc_24V_at_1V1(ADC_reading);
+    VDD_24V_mV = convert_adc_24V(ADC_reading);
 }
 
 float currentSpindleSpeedRPM, correctedSpindleSpeedRPM;
@@ -277,7 +301,7 @@ void convert_Spindle_speed_Signal_mV (uint16_t ADC_reading){
     */
     float rpm_delta_update = 0.0;    
     /* output range is 0-10V, convert 10bits ADC output into mV: */
-    uint16_t Spindle_speed_Signal_mV_instantaneous = convert_adc_10V_at_1V1(ADC_reading);
+    uint16_t Spindle_speed_Signal_mV_instantaneous = convert_adc_10V(ADC_reading);
     Spindle_speed_Signal_mV = Spindle_speed_Signal_mV_instantaneous;
     //Spindle_speed_Signal_mV = filter_fir_int16(Spindle_speed_Signal_mV, Spindle_speed_Signal_mV_instantaneous); /* 7us */
     
@@ -291,15 +315,15 @@ void convert_Spindle_speed_Signal_mV (uint16_t ADC_reading){
     }
 
     correctedSpindleSpeedRPM -= rpm_delta_update * SPINDLE_SIG_CONVERGENCE_DAMPING_FACTOR;
-    spindle_nudge_pwm(correctedSpindleSpeedRPM);
+    //spindle_nudge_pwm(correctedSpindleSpeedRPM);
         
-    printInteger( correctedSpindleSpeedRPM );
-    printPgmString(PSTR("\n"));
+    //printInteger( correctedSpindleSpeedRPM );
+    //printPgmString(PSTR("\n"));
     
     currentSpindleSpeedNreadings--;
     if ( currentSpindleSpeedNreadings <= 0 ) {
         /* finish convergence, disable channel set PERIOD_MS to 0xFFFF */ 
-        ADCstMachine.max_count[ADC_7_SPINDLE_SPEED  ] = ((ADC_PERIOD_DISABLE *1000UL)/SPI_READ_OCR_PERIOD_US) ;
+        //ADCstMachine.max_count[ADC_7_SPINDLE_SPEED  ] = ((ADC_PERIOD_DISABLE *1000UL)/SPI_READ_OCR_PERIOD_US) ;
     }
 }
 
@@ -339,7 +363,7 @@ debug_pin_write(0, DEBUG_1_PIN);
 debug_pin_write(1, DEBUG_1_PIN);
 #endif
     /* store results of last conversion */
-    ADCstMachine.result[ADCstMachine.adc_state] = ADC;
+	if ( ADCstMachine.adc_state < ADC_TOTAL_CHANNELS ) ADCstMachine.result[ADCstMachine.adc_state] = ADC;
 
     /* advance to next channel */
     ADCstMachine.adc_state++;
@@ -363,25 +387,28 @@ debug_pin_write(1, DEBUG_1_PIN);
 
 /* start ADC state machine from channel 0 */
 void asmcnc_start_ADC(void){
-    if (ADCstMachine.adc_state == ADC_TOTAL_CHANNELS){
+	if (ADCstMachine.adc_locked == 0){
+		ADCstMachine.adc_locked = 1;
+		if (ADCstMachine.adc_state == ADC_TOTAL_CHANNELS){
         
-        ADCstMachine.adc_state = ADC_0_SPINDLE_LOAD;
+			ADCstMachine.adc_state = ADC_0_SPINDLE_LOAD;
         
-        /* check if any of channels are to be measured and fire measurement on first required channel, other remaining channels will be managed by ADC ISR */
-        while ( ADCstMachine.adc_state < ADC_TOTAL_CHANNELS ){
-            if (ADCstMachine.measure_channel[ADCstMachine.adc_state] == 1)
-            { /* start next conversion */ 
-                asmcnc_start_ADC_single();
-                return; /* next conversion is started, return from function immediately */
-            }
-            ADCstMachine.adc_state++;
-        }
+			/* check if any of channels are to be measured and fire measurement on first required channel, other remaining channels will be managed by ADC ISR */
+			while ( ADCstMachine.adc_state < ADC_TOTAL_CHANNELS ){
+				if (ADCstMachine.measure_channel[ADCstMachine.adc_state] == 1)
+				{ /* start next conversion */ 
+					asmcnc_start_ADC_single();
+					return; /* next conversion is started, return from function immediately */
+				}
+				ADCstMachine.adc_state++;
+			}
         
-    }
-    else{
-        /* should not really come here, but if happened, reset state to idle, so next cycle will initialize ADC correctly */
-        ADCstMachine.adc_state = ADC_TOTAL_CHANNELS;
-    }
+		}
+		else{
+			/* should not really come here, but if happened, reset state to idle, so next cycle will initialize ADC correctly */
+			ADCstMachine.adc_state = ADC_TOTAL_CHANNELS;
+		}
+	} //if (ADCstMachine.adc_locked == 0){
 }
 
 /* define ADC channels to be measured and start ADC conversions */
@@ -479,6 +506,8 @@ void adc_process_all_channels(void){
 
     } //for (uint8_t adc_ch_idx = 0; adc_ch_idx < ADC_TOTAL_CHANNELS; adc_ch_idx++){
 
+	/* ADC state machine completed the measurements, unlock it to allow next schedule*/
+	ADCstMachine.adc_locked = 0;
 }
 
 
@@ -499,7 +528,27 @@ int get_MOT_temperature(void){
 
 /* return global variable calculated earlier */
 int get_spindle_load_mV(void){    
-    //return spindle_load_mV;
-    return Spindle_speed_Signal_mV;
+    return spindle_load_mV;
+    //return Spindle_speed_Signal_mV;
+}
+
+/* return global variable calculated earlier */
+int get_VDD_5V_Atmega_mV(void){
+	return VDD_5V_Atmega_mV;
+}
+
+/* return global variable calculated earlier */
+int get_VDD_5V_dustshoe_mV(void){
+	return VDD_5V_dustshoe_mV;
+}
+
+/* return global variable calculated earlier */
+int get_VDD_24V_mV(void){
+	return VDD_24V_mV;
+}
+
+/* return global variable calculated earlier */
+int get_Spindle_speed_Signal_mV(void){
+	return Spindle_speed_Signal_mV;
 }
 

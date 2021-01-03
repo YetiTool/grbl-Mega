@@ -452,9 +452,11 @@ ISR(TIMER1_COMPA_vect)
 
    
    /* BK: finish step pulse. TMC2590 step pulse should be longer than 20ns, so 630ns is good to cover all corners, including optos delays and bandwidth
-      update 2020-Oct: due to heavy filtering requirements pulse length is increased to 1.26us using ASM instruction insertion */
+    * update 2020-Oct: due to heavy filtering requirements pulse length is increased to 1.26us using ASM instruction insertion
+    * update 2020-Jan: due to heavy filtering requirements pulse length is increased to (630+10*187.5)=2.7us using ASM instruction insertion 
+	*/
    //delay_us(1);
-    uint8_t __count=3; /* each count adds 3 CPU cycles: 66ns x 3 = 200ns*/   
+    uint8_t __count=10; /* each count adds 3 CPU cycles (3*1/16): 62.5ns x 3 = 187ns*/   
 	__asm__ volatile (	"1: dec %0" "\n\t"	"brne 1b"	: "=r" (__count)	: "0" (__count)	);
    
    STEP_PORT = (STEP_PORT & ~STEP_MASK) | (step_port_invert_mask & STEP_MASK);

@@ -155,17 +155,12 @@ uint8_t limits_get_state()
     #endif
     if (bit_isfalse(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) { pin ^= LIMIT_MASK; }
     if (pin) {  
-		  if (pin & (1<<X_LIMIT_BIT)){ limit_state |= (1<<X_AXIS); PORTL &=~(1<<AC_XLIM_MIN_RED);}
-		  else {PORTL |=(1<<AC_XLIM_MIN_RED);}
-		  if (pin & (1<<X_LIM_MAX_BIT)){ limit_state |= (1<< X_AXIS_MAX); PORTL &=~(1<<AC_XLIM_MAX_RED);}
-		  else {PORTL |=(1<<AC_XLIM_MAX_RED);}
-		  if (pin & (1<<Y_LIMIT_BIT)){ limit_state |= (1<<Y_AXIS); PORTL &=~(1<<AC_YLIM_MIN_RED);}
-		  else {PORTL |=(1<<AC_YLIM_MIN_RED);}
-		  if (pin & (1<<Y_LIM_MAX_BIT)){ limit_state |= (1<< Y_AXIS_MAX); PORTL &=~(1<<AC_YLIM_MAX_RED);}
-		  else {PORTL |=(1<<AC_YLIM_MAX_RED);}
-		  if (pin & (1<<Z_LIMIT_BIT)){ limit_state |= (1<<Z_AXIS); PORTL &=~(1<<AC_ZLIM_MAX_RED);}
-		  else {PORTL |=(1<<AC_ZLIM_MAX_RED);}
-    } else {PORTL |=AC_LIM_RED_MASK_XZ;}
+		  if (pin & (1<<X_LIMIT_BIT))  { limit_state |= (1<<X_AXIS);		}		  
+		  if (pin & (1<<X_LIM_MAX_BIT)){ limit_state |= (1<<X_AXIS_MAX);	}		  
+		  if (pin & (1<<Y_LIMIT_BIT))  { limit_state |= (1<<Y_AXIS);		}		  
+		  if (pin & (1<<Y_LIM_MAX_BIT)){ limit_state |= (1<<Y_AXIS_MAX);	}		  
+		  if (pin & (1<<Z_LIMIT_BIT))  { limit_state |= (1<<Z_AXIS);		}		  
+    } 
     return(limit_state);
   #endif //DEFAULTS_RAMPS_BOARD
 }

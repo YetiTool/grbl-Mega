@@ -8,8 +8,8 @@
 #ifndef ASMCNC_h
 #define ASMCNC_h
 
-#define ASMCNC_VERSION			"2.0.9"
-#define ASMCNC_VERSION_BUILD	"20200917"
+#define ASMCNC_VERSION			"2.1.0"
+#define ASMCNC_VERSION_BUILD	"20210101"
 
 /* proprietary error codes */
 #define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
@@ -37,24 +37,24 @@
 // Default assembly version is option 2 (OpAmp based) uncomment INVERT_SPINDLE_PWM if option 1 is used
 //#define INVERT_SPINDLE_PWM
 
-// LIMITS defines
-// Port direction pins
-#define AC_YLIM_XLIM_DDRL 	DDRL
-#define AC_DOOR_DDR			DDRL
-// Port bits
-#define AC_YLIM_MIN_RED		5
-#define AC_YLIM_MAX_RED		1
-#define AC_XLIM_MAX_RED		2
-#define AC_XLIM_MIN_RED		4
-#define AC_ZLIM_MAX_RED		0
-#define AC_DOOR_RED			6
+//// LIMITS defines
+//// Port direction pins
+//#define AC_YLIM_XLIM_DDRL 	DDRL
+//#define AC_DOOR_DDR			DDRL
+//// Port bits
+//#define AC_YLIM_MIN_RED		5
+//#define AC_YLIM_MAX_RED		1
+//#define AC_XLIM_MAX_RED		2
+//#define AC_XLIM_MIN_RED		4
+//#define AC_ZLIM_MAX_RED		0
+//#define AC_DOOR_RED			6
 // Used to add to AXIS number for reporting the correct limit switch
 #define X_AXIS_MAX		4
 #define Y_AXIS_MAX		5
-// TODO: Move all LED's to Port L to simplify the code
-//#define AC_LIM_RED_MASK_Y	((1<<AC_YLIM_MIN_RED)|(1<<AC_YLIM_MAX_RED))
-#define AC_LIM_RED_MASK_XZ	((1<<AC_XLIM_MIN_RED)|(1<<AC_XLIM_MAX_RED)|(1<<AC_ZLIM_MAX_RED)|(1<<AC_YLIM_MIN_RED)|(1<<AC_YLIM_MAX_RED))
-#define AC_DOOR_RED_MASK	(1<<AC_DOOR_RED)
+//// TODO: Move all LED's to Port L to simplify the code
+////#define AC_LIM_RED_MASK_Y	((1<<AC_YLIM_MIN_RED)|(1<<AC_YLIM_MAX_RED))
+//#define AC_LIM_RED_MASK_XZ	((1<<AC_XLIM_MIN_RED)|(1<<AC_XLIM_MAX_RED)|(1<<AC_ZLIM_MAX_RED)|(1<<AC_YLIM_MIN_RED)|(1<<AC_YLIM_MAX_RED))
+//#define AC_DOOR_RED_MASK	(1<<AC_DOOR_RED)
 
 // RGB defines
 // Port direction pins

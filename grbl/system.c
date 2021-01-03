@@ -82,8 +82,8 @@ ISR(CONTROL_INT_vect)
 uint8_t system_check_safety_door_ajar()
 {
 //ASM Mod to turn on door red LED on door open & flash RGB red
-	if(system_control_get_state() & CONTROL_PIN_INDEX_SAFETY_DOOR){ PORTL &=~(1<<AC_DOOR_RED); }
-	else { PORTL |=(1<<AC_DOOR_RED);}
+	//if(system_control_get_state() & CONTROL_PIN_INDEX_SAFETY_DOOR){ PORTL &=~(1<<AC_DOOR_RED); }
+	//else { PORTL |=(1<<AC_DOOR_RED);}
     return(system_control_get_state() & CONTROL_PIN_INDEX_SAFETY_DOOR);
 }
 
