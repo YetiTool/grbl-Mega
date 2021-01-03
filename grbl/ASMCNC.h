@@ -165,39 +165,6 @@ void debug_pin_write(uint8_t level, uint8_t pin);
 #endif
 
 
-#define CURRENT_FLASH_STAT_VER			20090614 //0x18100600 
-#define UPTIME_FIFO_SIZE_BYTES          32
-
-// Flash statistics
-#define FLASH_STAT_FIFO_SIZE            8
-
-typedef struct {
-    /* reset source from MCUSR – MCU Status Register */
-    uint32_t TOT_cnt;                                               /* total count of resets */
-    uint32_t JTRF_cnt;                                              /* count of resets due to JTAG Reset Flag This bit is set if a reset is being caused by a logic one in the JTAG Reset Register selected by the JTAG instruction AVR_RESET. This bit is reset by a Power-on Reset, or by writing a logic zero to the flag. */
-    uint32_t WDRF_cnt;                                              /* count of resets due to Watchdog Reset Flag. This bit is set if a Watchdog Reset occurs. The bit is reset by a Power-on Reset, or by writing a logic zero to the flag. */
-    uint32_t BORF_cnt;                                              /* count of resets due to Brown-out Reset Flag. This bit is set if a Brown-out Reset occurs. The bit is reset by a Power-on Reset, or by writing a logic zero to the flag. */
-    uint32_t EXTRF_cnt;                                             /* count of resets due to External Reset Flag. This bit is set if an External Reset occurs. The bit is reset by a Power-on Reset, or by writing a logic zero to the flag. */
-    uint32_t PORF_cnt;                                              /* count of resets due to Power-on Reset Flag. This bit is set if a Power-on Reset occurs. The bit is reset only by writing a logic zero to the flag. */
-    uint32_t flashStatisticsVersion;                                /* Current flashConfigVersion, required to decide which fields to be updated under DFU, CURRENT_FLASHCONFIG_VER*/
-    uint32_t totalRunTimeSeconds;                                   /* total ON time in seconds. (using spi_interrupt) */
-    uint8_t  RunTimeMinutesFIFO[UPTIME_FIFO_SIZE_BYTES];            /* Flash lifetime is not affected when 0 is written, only depend on erase cycles. this array would allow to write 256 zeros and only then erase to loop the counter. If do it every minute eeprom life will be reached in 40 years. */
-    uint32_t totalTravelMillimeters;                                /* total travelled distance in mm. (using mm_var) */
-    uint32_t totalStallsDetected;                                   /* total number of stalls detected */
-    /* fifo with last exception addresses causing WD to trigger*/
-    uint32_t lastReturnAddresses[FLASH_STAT_FIFO_SIZE];             /* return address from the latest stack dump */
-    /* fifo with statistic on stall: total distance, feed, */
-    uint32_t lastStallsTravel[FLASH_STAT_FIFO_SIZE];                /* fifo buffer for when last stalls were happening */
-    uint8_t  lastStallsMotor[FLASH_STAT_FIFO_SIZE];                 /* fifo buffer for which motor stalled */
-    uint16_t lastStallsSG[FLASH_STAT_FIFO_SIZE];                    /* fifo buffer for Stall Guard reading at last stalls */
-    uint16_t lastStallsSGcalibrated[FLASH_STAT_FIFO_SIZE];               /* fifo buffer for SG delta to calibration at last stalls */
-    uint16_t lastStallsStepUs[FLASH_STAT_FIFO_SIZE];                  /* fifo buffer for feed rates at last stalls */
-} FlashStat;
-extern FlashStat flashStatistics;
-extern float totalTravelMillimeters;                                /* accumulator for accurate tracking of the distance */
-
-
-
 
 void asmcnc_init(void);
 //void asmcnc_TMR3_init();
@@ -207,24 +174,14 @@ void asmcnc_RGB_red_flash(void);
 void asmcnc_RGB_setup(void);
 uint8_t asmcnc_execute_line(char *line);
 
-uint8_t crc8x_fast(uint8_t crc, uint8_t *mem, uint16_t len); /* fast crc8 calculator */
 
 void enable_watchdog(void);
-void dumpMemory(void);
-uint32_t get_return_addr(void); /* return address from the latest stack dump */
 
 #define UNUSED_VARIABLE(X)  ((void)(X))
 #define UNUSED_PARAMETER(X) UNUSED_VARIABLE(X)
 
 uint8_t char2intValidate(char);     /* convert hex char to int and validate result (return 0xFF if character is not hex byte code */
 
-void uptime_increment(void);
-
-void report_statistics(void);
-
-void store_stall_info(uint8_t  lastStallsMotor, uint16_t lastStallsSG, uint16_t lastStallsSGcalibrated,  uint16_t lastStallsStepUs);
-void report_stall_info(void);
-void report_last_wdt_addresses(void);
 
 void asmcnc_enable_AC_live_detection(void);
 uint8_t get_AC_lost_state(void);
