@@ -615,6 +615,11 @@ void protocol_exec_rt_system()
     if (rt_exec & ADC_SET_AND_FIRE_COMMAND) {
         adc_setup_and_fire();
     }
+
+    /* store result of measured ADC channels and advance the state machine */
+    if (rt_exec & ADC_CONVERGENCE_COMPLETED) {
+        adc_state_machine();
+    }
                 
     /* Process results of all ADC channels */
     if (rt_exec & ADC_PROCESS_ALL_COMMAND) {

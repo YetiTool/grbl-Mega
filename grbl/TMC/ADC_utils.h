@@ -89,6 +89,7 @@ int get_VDD_5V_dustshoe_mV(void);
 int get_VDD_24V_mV(void);
 int get_Spindle_speed_Signal_mV(void);
 void adc_setup_and_fire(void); /* define ADC channels to be measured and start ADC conversions */
+void adc_state_machine(void ); /* store result of measured ADC channels and advance the state machine */
 void adc_process_all_channels(void);/* Process results of all ADC channels */
 
 void spindle_speed_feedback_rpm_updated(float rpm);

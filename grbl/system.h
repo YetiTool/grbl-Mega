@@ -132,7 +132,8 @@
 #define TMC_READ_ALL_COMMAND            bit(0)
 #define UPTIME_INCREMENT_COMMAND        bit(1)
 #define ADC_SET_AND_FIRE_COMMAND        bit(2)
-#define ADC_PROCESS_ALL_COMMAND         bit(3)
+#define ADC_CONVERGENCE_COMPLETED       bit(3)
+#define ADC_PROCESS_ALL_COMMAND         bit(4)
 
 // Override bit maps. Realtime bitflags to execute calibration and TMC reporting related actions. 
 #define TMC_CALIBRATION_INIT            bit(0)       /* 1: reset all calibrations and prepare for new one,               */

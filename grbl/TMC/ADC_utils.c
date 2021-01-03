@@ -14,115 +14,21 @@
 #define     SPINDLE_SIG_CONVERGENCE_DAMPING_FACTOR  0.5
 #define		ADC_EXTERNAL_VREF_2048mV					// either ADC_EXTERNAL_VREF_2048mV or ADC_INTERNAL_VREF_1100mV
 
-uint16_t spindle_load_mV                = 0;            // global variable for latest spindle load value
-uint16_t VDD_5V_Atmega_mV               = 0;            // global variable for latest VDD_5V_Atmega value
-uint16_t VDD_5V_dustshoe_mV             = 0;            // global variable for latest VDD_5V_dustshoe value
-uint16_t VDD_24V_mV                     = 0;            // global variable for latest VDD_24V value
-uint16_t Spindle_speed_Signal_mV        = 0;            // global variable for latest Spindle_speed_Signal_mV value
-uint16_t AC_loss_Signal_mV              = 0;            // global variable for latest AC_loss_Signal_mV value
-uint16_t temperature_TMC_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
-uint16_t temperature_PCB_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
-uint16_t temperature_MOT_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
-
+static uint16_t spindle_load_mV                = 0;            // global variable for latest spindle load value
+static uint16_t VDD_5V_Atmega_mV               = 0;            // global variable for latest VDD_5V_Atmega value
+static uint16_t VDD_5V_dustshoe_mV             = 0;            // global variable for latest VDD_5V_dustshoe value
+static uint16_t VDD_24V_mV                     = 0;            // global variable for latest VDD_24V value
+static uint16_t Spindle_speed_Signal_mV        = 0;            // global variable for latest Spindle_speed_Signal_mV value
+static uint16_t AC_loss_Signal_mV              = 0;            // global variable for latest AC_loss_Signal_mV value
+static uint16_t temperature_TMC_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
+static uint16_t temperature_PCB_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
+static uint16_t temperature_MOT_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
+static uint16_t latest_ADC_measurement			= 0;			// global variable to store
+static uint8_t spindle_speed_feedback_update_is_enabled = 0; /* change to 1 to enable spindle feedback auto-adaptation */
 static float spindle_sig_gradient; // Precalulated value to speed up rpm to PWM conversions.
-
-static uint8_t spindle_speed_feedback_update_is_enabled = 0; /* change to 1 to enable spindle feedback auto-adaptation */ 
-
-/* Mafell spindles provide very nice feature: it will stop if load on the spindle is too high.
- * But how do we know that it has stopped !? Well there is another nice feature - overload signal (coming
- * through control cable) that informs the state of internal spindle circuitry by the voltage level (from
- * 0V being no-load to 5V being load is critically high). Below code is setting up the Atmega ADC to run
- * continuous measurement of that signal so it could be reported any time in "report_realtime_status" function.
- * The following scheme is implemented for load sense.
- *   Input signal is divided with resistive divider, filtered and fed to the ADC with clean onboard band-gap reference of 1.1V.
- *   This will provide much cleaner and more repeatable way to measure the voltage and it will be independent of onboard 5V supply level and quality.
- *   Option will use the new PCB tracks that will come from HW ver 6 and will be connected to port F on the micro (now empty).
- *   FW will auto-detect the HW by reading the HW key and configure ADC according to option 2 if HW version is higher than 5.
-*/
-void asmcnc_init_ADC(void)
-{
-
-	/* there are 2 ports on mega2560, port F (channels 0-7) and port K (channels 8-15).
-	 * On Z-head HW ver < 5 pin 89 (channel 8) is used. For this channel MSB of the MUX (MUX5) need to be used
-	 * it is located in register B: ADCSRB. Therefore if channel Number is higher than 7 then ADCSRB need to be written */
-
-
-    static uint8_t ADC_Spindle_load_channel     = SPINDLE_LOAD_ADC_CHANNEL    ;
-    static uint8_t ADC_5V_Atmega_channel        = VDD_5V_ATMEGA_ADC_CHANNEL   ;
-    static uint8_t ADC_5V_dustshoe_channel      = VDD_5V_DUSTSHOE_ADC_CHANNEL ;
-    static uint8_t ADC_24V_mains_channel        = VDD_24V_ADC_CHANNEL         ;
-    static uint8_t ADC_temperature_TMC_channel  = TEMPERATURE_TMC_ADC_CHANNEL ;
-    static uint8_t ADC_temperature_PCB_channel  = TEMPERATURE_PCB_ADC_CHANNEL ;
-    static uint8_t ADC_temperature_MOT_channel  = TEMPERATURE_MOT_ADC_CHANNEL ;
-    static uint8_t ADC_Spindle_speed_channel    = SPINDLE_SPEED_ADC_CHANNEL   ;
-    static uint8_t ADC_AC_loss_channel          = AC_LOSS_ADC_CHANNEL         ;
-
-    /* apply correction for HW version */
-	if (PIND <= 5){ /* if HW version is 5 and lower*/
-    	ADC_Spindle_load_channel          = 8;
-	}
-	else if (PIND <= 15){ /* if HW version is between 5 and 15 ADC channel is 3*/
-    	ADC_Spindle_load_channel          = 3;
-	}
-
-	ADCstMachine.adc_state	= ADC_TOTAL_CHANNELS;
-	ADCstMachine.adc_locked = 0;
-    ADCstMachine.channel[ADC_0_SPINDLE_LOAD   ] = ADC_Spindle_load_channel ;
-    ADCstMachine.channel[ADC_1_VDD_5V_ATMEGA  ] = ADC_5V_Atmega_channel    ;
-    ADCstMachine.channel[ADC_2_VDD_5V_DUSTSHOE] = ADC_5V_dustshoe_channel  ;
-    ADCstMachine.channel[ADC_3_VDD_24V        ] = ADC_24V_mains_channel    ;
-    ADCstMachine.channel[ADC_4_TEMPERATURE_TMC] = ADC_temperature_TMC_channel;
-    ADCstMachine.channel[ADC_5_TEMPERATURE_PCB] = ADC_temperature_PCB_channel;
-    ADCstMachine.channel[ADC_6_TEMPERATURE_MOT] = ADC_temperature_MOT_channel;
-    ADCstMachine.channel[ADC_7_SPINDLE_SPEED  ] = ADC_Spindle_speed_channel;
-    ADCstMachine.channel[ADC_8_AC_LOSS        ] = ADC_AC_loss_channel      ;
-
-    ADCstMachine.max_count[ADC_0_SPINDLE_LOAD   ] = ((SPINDLE_LOAD_ADC_PERIOD_MS    *1000UL)/SPI_READ_OCR_PERIOD_US) ;
-    ADCstMachine.max_count[ADC_1_VDD_5V_ATMEGA  ] = ((VDD_5V_ATMEGA_ADC_PERIOD_MS   *1000UL)/SPI_READ_OCR_PERIOD_US) ;
-    ADCstMachine.max_count[ADC_2_VDD_5V_DUSTSHOE] = ((VDD_5V_DUSTSHOE_ADC_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US) ;
-    ADCstMachine.max_count[ADC_3_VDD_24V        ] = ((VDD_24V_ADC_PERIOD_MS         *1000UL)/SPI_READ_OCR_PERIOD_US) ;
-    ADCstMachine.max_count[ADC_4_TEMPERATURE_TMC] = ((TEMPERATURE_TMC_ADC_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US) ;
-    ADCstMachine.max_count[ADC_5_TEMPERATURE_PCB] = ((TEMPERATURE_PCB_ADC_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US) ;
-    ADCstMachine.max_count[ADC_6_TEMPERATURE_MOT] = ((TEMPERATURE_MOT_ADC_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US) ;
-    ADCstMachine.max_count[ADC_7_SPINDLE_SPEED  ] = ((SPINDLE_SPEED_ADC_PERIOD_MS   *1000UL)/SPI_READ_OCR_PERIOD_US) ;
-    ADCstMachine.max_count[ADC_8_AC_LOSS        ] = ((AC_LOSS_ADC_PERIOD_MS         *1000UL)/SPI_READ_OCR_PERIOD_US) ;
-
-    for (uint8_t adc_ch_idx = 0; adc_ch_idx < ADC_TOTAL_CHANNELS; adc_ch_idx++){
-        if (ADCstMachine.max_count[adc_ch_idx] < 1) ADCstMachine.max_count[adc_ch_idx] = 1; /* if max count is less than 1 then requested period is shorter than system tick. Make sure the channel is measured with max speed */
-        ADCstMachine.tick_count[adc_ch_idx] = ADCstMachine.max_count[adc_ch_idx] - 2 ; /* -2 to start first conversion soon after boot */
-    }
-
-	// reference voltage selection : all commented = external VREF
-	//ADMUX |= (1<<REFS1); // Select Internal 1.1V Voltage Reference with external capacitor at AREF pin
-	//ADMUX |= (1<<REFS0); //both REFS0 a REFS1 pins means 2.56V Voltage Reference
-	//ADMUX |= (1<<REFS0);// Select Vref=AVCC with external capacitor at AREF pin
-
-	//set prescaller to 128 and enable ADC. Pre-scaler 128 with 16M clock corresponds to ~100us long conversion.
-	ADCSRA |= (1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)|(1<<ADEN);
-
-	//enable Auto Triggering of the ADC. Free Running mode is default mode of the ADC
-	//ADCSRA |= (1<<ADATE);
-
-	//enable ADC interrupt
-	ADCSRA |= (1<<ADIE);
-
-
-    spindle_sig_gradient = (SPINDLE_SIG_MAX_MILLIVOLTS-SPINDLE_SIG_MIN_MILLIVOLTS)/(settings.rpm_max-settings.rpm_min);
-    
-    digitalSpindle.is_present   = 0;
-    digitalSpindle.RPM          = 0;
-    digitalSpindle.uptime       = 0;
-    digitalSpindle.brush_uptime = 0;
-    digitalSpindle.load         = 0;
-    digitalSpindle.temperature  = 0;
-
-}
-
-/* function to calculate temperature based on ADC value 
- * written as a loop to keep calculation within 32 bit integer number
- * based on 6th order interpolation for the datasheet scaling factors 
- * of Thermistor_0402_Panasonic_2kOhm_ERT-J0EG202GM, or ERT-J0EG202HM
- */
+static float currentSpindleSpeedRPM, correctedSpindleSpeedRPM;
+static int16_t currentSpindleSpeedNreadings = 0; /* counter of number of readings for spindle speed convergence routine */
+static uint16_t currentSpindleSpeedSignalTargetmV = 0;
 
 int filter_fir_int16(long in_global_16, long in_16) {
     return (int)( ((FIR_COEFF_TEMPC * in_16) + ( (1<<8) - FIR_COEFF_TEMPC) * in_global_16)>>8 );
@@ -131,7 +37,12 @@ int filter_fir_int16(long in_global_16, long in_16) {
 /* temperature coefficients */ 
 long k[] = {TEMP_K0, TEMP_K1, TEMP_K2, TEMP_K3, TEMP_K4, TEMP_K5, TEMP_K6};
 
-/* function takes 270us ~ 4320 cycles */
+/* function to calculate temperature based on ADC value
+ * written as a loop to keep calculation within 32 bit integer number
+ * based on 6th order interpolation for the datasheet scaling factors
+ * of Thermistor_0402_Panasonic_2kOhm_ERT-J0EG202GM, or ERT-J0EG202HM
+ * function takes 270us ~ 4320 cycles
+*/
 uint16_t convert_temperature (uint16_t temperature_ADC_reading){
 #ifdef DEBUG_ADC_ENABLED
 debug_pin_write(0, DEBUG_2_PIN);
@@ -259,11 +170,12 @@ void convert_VDD_24V_mV (uint16_t ADC_reading){
     VDD_24V_mV = convert_adc_24V(ADC_reading);
 }
 
-float currentSpindleSpeedRPM, correctedSpindleSpeedRPM;
-int16_t currentSpindleSpeedNreadings = 0; /* counter of number of readings for spindle speed convergence routine */
-uint16_t currentSpindleSpeedSignalTargetmV = 0;
+void convert_Spindle_speed_Signal_mV (uint16_t ADC_reading){
+	/* output range is 0-10V, convert 10bits ADC output into mV: */
+	Spindle_speed_Signal_mV = convert_adc_10V(ADC_reading);
+}
 
-/* three options are implemented:
+/* three options are possible:
  * 1. No spindle RPM feedback: ignore feedback functions and keep static settings from direct PWM control 
  * 2. Analogue feedback: 10V from the speed control output circuit is fed back to the Atmega ADC and adjustment to the speed is made in SPINDLE_SPEED_FEEDBACK_N_CONVERGES steps 
  * 3. Digital feedback: Digital Mafel spindle is reporting it's speed over UART2 and PWM signal is adjusted accordingly in SPINDLE_SPEED_FEEDBACK_N_CONVERGES steps 
@@ -294,15 +206,15 @@ void spindle_speed_feedback_rpm_updated(float rpm){
         
 }
 
-void convert_Spindle_speed_Signal_mV (uint16_t ADC_reading){
+void converge_Spindle_speed (void){
     
     /* spindle speed convergence is based on feedback mechanism 
        spindle speed feedback is read SPINDLE_SPEED_FEEDBACK_N_CONVERGES times after any speed change request and corresponded nudges are made to ensure exact expected voltage for the given speed is set.
     */
     float rpm_delta_update = 0.0;    
     /* output range is 0-10V, convert 10bits ADC output into mV: */
-    uint16_t Spindle_speed_Signal_mV_instantaneous = convert_adc_10V(ADC_reading);
-    Spindle_speed_Signal_mV = Spindle_speed_Signal_mV_instantaneous;
+    uint16_t Spindle_speed_Signal_mV_instantaneous = Spindle_speed_Signal_mV;
+	
     //Spindle_speed_Signal_mV = filter_fir_int16(Spindle_speed_Signal_mV, Spindle_speed_Signal_mV_instantaneous); /* 7us */
     
     /* if digital spindle is installed use actual RPM to correct the spindle speed */
@@ -326,8 +238,6 @@ void convert_Spindle_speed_Signal_mV (uint16_t ADC_reading){
         //ADCstMachine.max_count[ADC_7_SPINDLE_SPEED  ] = ((ADC_PERIOD_DISABLE *1000UL)/SPI_READ_OCR_PERIOD_US) ;
     }
 }
-
-
 
 /* ADC state machine 
  * ADC state machine is required when multiple inputs need to be measured, for example Load sense signal, temperature and input 24V voltage 
@@ -353,37 +263,57 @@ void asmcnc_start_ADC_single(void){
 	
 }
 
-/* ADC conversion complete interrupt 
- * ADC state machine is implemented here */
+/* ADC conversion complete interrupt */
 ISR(ADC_vect)
 {
     /* routine takes 3.26us ~ 50 cycles */
 #ifdef DEBUG_ADC_ENABLED
-debug_pin_write(0, DEBUG_1_PIN);
-debug_pin_write(1, DEBUG_1_PIN);
+debug_pin_write(0, DEBUG_0_PIN);
 #endif
+
+	latest_ADC_measurement = ADC;
+	system_set_exec_heartbeat_command_flag(ADC_CONVERGENCE_COMPLETED);
+
+#ifdef DEBUG_ADC_ENABLED
+debug_pin_write(1, DEBUG_0_PIN);
+#endif
+}
+
+
+/* 
+ * ADC state machine is implemented here */
+void adc_state_machine(void){
+
+    /* routine takes 3.26us ~ 50 cycles */
+    #ifdef DEBUG_ADC_ENABLED
+    debug_pin_write(0, DEBUG_1_PIN);
+    #endif
     /* store results of last conversion */
-	if ( ADCstMachine.adc_state < ADC_TOTAL_CHANNELS ) ADCstMachine.result[ADCstMachine.adc_state] = ADC;
+    if ( ADCstMachine.adc_state < ADC_TOTAL_CHANNELS ) ADCstMachine.result[ADCstMachine.adc_state] = latest_ADC_measurement;
 
     /* advance to next channel */
     ADCstMachine.adc_state++;
     while ( ADCstMachine.adc_state < ADC_TOTAL_CHANNELS ){
-        if (ADCstMachine.measure_channel[ADCstMachine.adc_state] == 1)
-        { /* start next conversion */ 
-            asmcnc_start_ADC_single();
-            return; /* next conversion is started, return from ISR */
-        }
-        ADCstMachine.adc_state++;
+	    if (ADCstMachine.measure_channel[ADCstMachine.adc_state] == 1)
+	    { /* start next conversion */
+		    asmcnc_start_ADC_single();
+			#ifdef DEBUG_ADC_ENABLED
+			debug_pin_write(1, DEBUG_1_PIN);
+			#endif
+		    return; /* next conversion is started, return from ISR */
+	    }
+	    ADCstMachine.adc_state++;
     }
     
     /* if the code progressed to this point then all channels are done and it is time to signal to main loop to process all results */
     system_set_exec_heartbeat_command_flag(ADC_PROCESS_ALL_COMMAND);
 
-#ifdef DEBUG_ADC_ENABLED
-debug_pin_write(0, DEBUG_1_PIN);
-debug_pin_write(1, DEBUG_1_PIN);
-#endif
+    #ifdef DEBUG_ADC_ENABLED
+    debug_pin_write(1, DEBUG_1_PIN);
+    #endif
+	
 }
+
 
 /* start ADC state machine from channel 0 */
 void asmcnc_start_ADC(void){
@@ -393,7 +323,7 @@ void asmcnc_start_ADC(void){
         
 			ADCstMachine.adc_state = ADC_0_SPINDLE_LOAD;
         
-			/* check if any of channels are to be measured and fire measurement on first required channel, other remaining channels will be managed by ADC ISR */
+			/* check if any of channels are to be measured and fire measurement on first required channel, other remaining channels will be managed by adc_state_machine() */
 			while ( ADCstMachine.adc_state < ADC_TOTAL_CHANNELS ){
 				if (ADCstMachine.measure_channel[ADCstMachine.adc_state] == 1)
 				{ /* start next conversion */ 
@@ -402,12 +332,14 @@ void asmcnc_start_ADC(void){
 				}
 				ADCstMachine.adc_state++;
 			}
-        
 		}
 		else{
 			/* should not really come here, but if happened, reset state to idle, so next cycle will initialize ADC correctly */
 			ADCstMachine.adc_state = ADC_TOTAL_CHANNELS;
 		}
+		/* if none of the channels is to be measured this time then unlock the adc */        
+		ADCstMachine.adc_locked = 0;
+		
 	} //if (ADCstMachine.adc_locked == 0){
 }
 
@@ -550,5 +482,96 @@ int get_VDD_24V_mV(void){
 /* return global variable calculated earlier */
 int get_Spindle_speed_Signal_mV(void){
 	return Spindle_speed_Signal_mV;
+}
+
+
+/* Mafell spindles provide very nice feature: it will stop if load on the spindle is too high.
+ * But how do we know that it has stopped !? Well there is another nice feature - overload signal (coming
+ * through control cable) that informs the state of internal spindle circuitry by the voltage level (from
+ * 0V being no-load to 5V being load is critically high). Below code is setting up the Atmega ADC to run
+ * continuous measurement of that signal so it could be reported any time in "report_realtime_status" function.
+ * The following scheme is implemented for load sense.
+ *   Input signal is divided with resistive divider, filtered and fed to the ADC with clean onboard band-gap reference of 1.1V.
+ *   This will provide much cleaner and more repeatable way to measure the voltage and it will be independent of onboard 5V supply level and quality.
+ *   Option will use the new PCB tracks that will come from HW ver 6 and will be connected to port F on the micro (now empty).
+ *   FW will auto-detect the HW by reading the HW key and configure ADC according to option 2 if HW version is higher than 5.
+*/
+void asmcnc_init_ADC(void)
+{
+
+	/* there are 2 ports on mega2560, port F (channels 0-7) and port K (channels 8-15).
+	 * On Z-head HW ver < 5 pin 89 (channel 8) is used. For this channel MSB of the MUX (MUX5) need to be used
+	 * it is located in register B: ADCSRB. Therefore if channel Number is higher than 7 then ADCSRB need to be written */
+
+
+    static uint8_t ADC_Spindle_load_channel     = SPINDLE_LOAD_ADC_CHANNEL    ;
+    static uint8_t ADC_5V_Atmega_channel        = VDD_5V_ATMEGA_ADC_CHANNEL   ;
+    static uint8_t ADC_5V_dustshoe_channel      = VDD_5V_DUSTSHOE_ADC_CHANNEL ;
+    static uint8_t ADC_24V_mains_channel        = VDD_24V_ADC_CHANNEL         ;
+    static uint8_t ADC_temperature_TMC_channel  = TEMPERATURE_TMC_ADC_CHANNEL ;
+    static uint8_t ADC_temperature_PCB_channel  = TEMPERATURE_PCB_ADC_CHANNEL ;
+    static uint8_t ADC_temperature_MOT_channel  = TEMPERATURE_MOT_ADC_CHANNEL ;
+    static uint8_t ADC_Spindle_speed_channel    = SPINDLE_SPEED_ADC_CHANNEL   ;
+    static uint8_t ADC_AC_loss_channel          = AC_LOSS_ADC_CHANNEL         ;
+
+    /* apply correction for HW version */
+	if (PIND <= 5){ /* if HW version is 5 and lower*/
+    	ADC_Spindle_load_channel          = 8;
+	}
+	else if (PIND <= 15){ /* if HW version is between 5 and 15 ADC channel is 3*/
+    	ADC_Spindle_load_channel          = 3;
+	}
+
+	ADCstMachine.adc_state	= ADC_TOTAL_CHANNELS;
+	ADCstMachine.adc_locked = 0;
+    ADCstMachine.channel[ADC_0_SPINDLE_LOAD   ] = ADC_Spindle_load_channel ;
+    ADCstMachine.channel[ADC_1_VDD_5V_ATMEGA  ] = ADC_5V_Atmega_channel    ;
+    ADCstMachine.channel[ADC_2_VDD_5V_DUSTSHOE] = ADC_5V_dustshoe_channel  ;
+    ADCstMachine.channel[ADC_3_VDD_24V        ] = ADC_24V_mains_channel    ;
+    ADCstMachine.channel[ADC_4_TEMPERATURE_TMC] = ADC_temperature_TMC_channel;
+    ADCstMachine.channel[ADC_5_TEMPERATURE_PCB] = ADC_temperature_PCB_channel;
+    ADCstMachine.channel[ADC_6_TEMPERATURE_MOT] = ADC_temperature_MOT_channel;
+    ADCstMachine.channel[ADC_7_SPINDLE_SPEED  ] = ADC_Spindle_speed_channel;
+    ADCstMachine.channel[ADC_8_AC_LOSS        ] = ADC_AC_loss_channel      ;
+
+    ADCstMachine.max_count[ADC_0_SPINDLE_LOAD   ] = ((SPINDLE_LOAD_ADC_PERIOD_MS    *1000UL)/SPI_READ_OCR_PERIOD_US) ;
+    ADCstMachine.max_count[ADC_1_VDD_5V_ATMEGA  ] = ((VDD_5V_ATMEGA_ADC_PERIOD_MS   *1000UL)/SPI_READ_OCR_PERIOD_US) ;
+    ADCstMachine.max_count[ADC_2_VDD_5V_DUSTSHOE] = ((VDD_5V_DUSTSHOE_ADC_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US) ;
+    ADCstMachine.max_count[ADC_3_VDD_24V        ] = ((VDD_24V_ADC_PERIOD_MS         *1000UL)/SPI_READ_OCR_PERIOD_US) ;
+    ADCstMachine.max_count[ADC_4_TEMPERATURE_TMC] = ((TEMPERATURE_TMC_ADC_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US) ;
+    ADCstMachine.max_count[ADC_5_TEMPERATURE_PCB] = ((TEMPERATURE_PCB_ADC_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US) ;
+    ADCstMachine.max_count[ADC_6_TEMPERATURE_MOT] = ((TEMPERATURE_MOT_ADC_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US) ;
+    ADCstMachine.max_count[ADC_7_SPINDLE_SPEED  ] = ((SPINDLE_SPEED_ADC_PERIOD_MS   *1000UL)/SPI_READ_OCR_PERIOD_US) ;
+    ADCstMachine.max_count[ADC_8_AC_LOSS        ] = ((AC_LOSS_ADC_PERIOD_MS         *1000UL)/SPI_READ_OCR_PERIOD_US) ;
+
+    for (uint8_t adc_ch_idx = 0; adc_ch_idx < ADC_TOTAL_CHANNELS; adc_ch_idx++){
+        if (ADCstMachine.max_count[adc_ch_idx] < 1) ADCstMachine.max_count[adc_ch_idx] = 1; /* if max count is less than 1 then requested period is shorter than system tick. Make sure the channel is measured with max speed */
+        ADCstMachine.tick_count[adc_ch_idx] = ADCstMachine.max_count[adc_ch_idx] - 2 ; /* -2 to start first conversion soon after boot */
+    }
+
+	// reference voltage selection : all commented = external VREF
+	//ADMUX |= (1<<REFS1); // Select Internal 1.1V Voltage Reference with external capacitor at AREF pin
+	//ADMUX |= (1<<REFS0); //both REFS0 a REFS1 pins means 2.56V Voltage Reference
+	//ADMUX |= (1<<REFS0);// Select Vref=AVCC with external capacitor at AREF pin
+
+	//set prescaller to 128 and enable ADC. Pre-scaler 128 with 16M clock corresponds to ~100us long conversion.
+	ADCSRA |= (1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)|(1<<ADEN);
+
+	//enable Auto Triggering of the ADC. Free Running mode is default mode of the ADC
+	//ADCSRA |= (1<<ADATE);
+
+	//enable ADC interrupt
+	ADCSRA |= (1<<ADIE);
+
+
+    spindle_sig_gradient = (SPINDLE_SIG_MAX_MILLIVOLTS-SPINDLE_SIG_MIN_MILLIVOLTS)/(settings.rpm_max-settings.rpm_min);
+    
+    digitalSpindle.is_present   = 0;
+    digitalSpindle.RPM          = 0;
+    digitalSpindle.uptime       = 0;
+    digitalSpindle.brush_uptime = 0;
+    digitalSpindle.load         = 0;
+    digitalSpindle.temperature  = 0;
+
 }
 
