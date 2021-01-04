@@ -235,13 +235,22 @@ void log_resetreason(void)
 {
     uint8_t resetReason = MCUSR;
     /* find and log reset reason */    
+#ifdef PRINT_DETAILED_RESET_INFO	
     printPgmString(PSTR("\r\n\r\nReset cause: "));
-    if      ( resetReason & ( 1<<PORF ) )   { flashStatistics.PORF_cnt++;  printPgmString(PSTR("Power On\n")); }
-    else if ( resetReason & ( 1<<EXTRF) )   { flashStatistics.EXTRF_cnt++; printPgmString(PSTR("External Reset\n")); }
-    else if ( resetReason & ( 1<<BORF ) )   { flashStatistics.BORF_cnt++;  printPgmString(PSTR("Brown out\n")); }
-    else if ( resetReason & ( 1<<WDRF ) )   { flashStatistics.WDRF_cnt++;  printPgmString(PSTR("Watch Dog\n")); }
-    else if ( resetReason & ( 1<<JTRF ) )   { flashStatistics.JTRF_cnt++;  printPgmString(PSTR("JTAG\n")); }
-    else    { printInteger( resetReason );    flashStatistics.WDRF_cnt++;  printPgmString(PSTR(": Watch Dog?\n")); } /* apparently WDR is not showing in the MCUSR, so if anything else then likely it is it. Also bootloader uses WD to reset status, watch out for it later */
+    if      ( resetReason & ( 1<<PORF ) )   { printPgmString(PSTR("Power On\r\n")); }
+    else if ( resetReason & ( 1<<EXTRF) )   { printPgmString(PSTR("External Reset\r\n")); }
+    else if ( resetReason & ( 1<<BORF ) )   { printPgmString(PSTR("Brown out\r\n")); }
+    else if ( resetReason & ( 1<<WDRF ) )   { printPgmString(PSTR("Watch Dog\r\n")); }
+    else if ( resetReason & ( 1<<JTRF ) )   { printPgmString(PSTR("JTAG\r\n")); }
+    else    { printInteger( resetReason );    printPgmString(PSTR(": Watch Dog?\r\n")); } /* apparently WDR is not showing in the MCUSR, so if anything else then likely it is it. Also bootloader uses WD to reset status, watch out for it later */
+#endif //PRINT_DETAILED_RESET_INFO
+
+    if      ( resetReason & ( 1<<PORF ) )   { flashStatistics.PORF_cnt++;  }
+    else if ( resetReason & ( 1<<EXTRF) )   { flashStatistics.EXTRF_cnt++; }
+    else if ( resetReason & ( 1<<BORF ) )   { flashStatistics.BORF_cnt++;  }
+    else if ( resetReason & ( 1<<WDRF ) )   { flashStatistics.WDRF_cnt++;  }
+    else if ( resetReason & ( 1<<JTRF ) )   { flashStatistics.JTRF_cnt++;  }
+    else    {								  flashStatistics.WDRF_cnt++;  } /* apparently WDR is not showing in the MCUSR, so if anything else then likely it is it. Also bootloader uses WD to reset status, watch out for it later */
 
     /* clear status register after reading as it is sticky */
     MCUSR = 0;
@@ -264,12 +273,15 @@ void manage_rst_reasons(void){
     flashStatistics.TOT_cnt++; /* increment total reset count */
     
     printPgmString(PSTR("Total resets: "));   printInteger( flashStatistics.TOT_cnt );
+#ifdef PRINT_DETAILED_RESET_INFO	
     printPgmString(PSTR(" = "));        printInteger( flashStatistics.PORF_cnt);
     printPgmString(PSTR(" POR + "));     printInteger( flashStatistics.EXTRF_cnt);
     printPgmString(PSTR(" EXT + "));     printInteger( flashStatistics.BORF_cnt);
     printPgmString(PSTR(" BOR + "));     printInteger( flashStatistics.WDRF_cnt);
     printPgmString(PSTR(" WDT + "));     printInteger( flashStatistics.JTRF_cnt);
-    printPgmString(PSTR(" JTAG\n"));    
+    printPgmString(PSTR(" JTAG"));    
+#endif //PRINT_DETAILED_RESET_INFO
+    printPgmString(PSTR("\r\n"));
 
     /* manage last exception storage: if address in different from what was stored in flashStatistics then store it */
     int8_t i;
@@ -489,8 +501,8 @@ void flashStatisticsInit(void){
     flashStatisticsRestore();
     manage_rst_reasons();
     manage_psflash_updates();
-    printPgmString(PSTR("Up time: "));  printInteger( getLocalRunTimeSeconds() ); printPgmString(PSTR("seconds\n"));
-    printPgmString(PSTR("Total distance: "));  printInteger( flashStatistics.totalTravelMillimeters); printPgmString(PSTR("mm\n"));    
+    printPgmString(PSTR("Up time: "));  printInteger( getLocalRunTimeSeconds() ); printPgmString(PSTR("seconds\r\n"));
+    printPgmString(PSTR("Total distance: "));  printInteger( flashStatistics.totalTravelMillimeters); printPgmString(PSTR("mm\r\n"));    
     flashStatisticsSave();
 	
 #ifdef FLASH_DEBUG_ENABLED

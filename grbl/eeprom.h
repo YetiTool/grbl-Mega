@@ -23,6 +23,7 @@
 
 #define CURRENT_FLASH_STAT_VER			21010315 //0x18100600
 #define UPTIME_FIFO_SIZE_BYTES          32
+//#define PRINT_DETAILED_RESET_INFO     //uncomment to print out reset reasons statistics at boot
 
 // Flash statistics
 #define FLASH_STAT_FIFO_SIZE            8
