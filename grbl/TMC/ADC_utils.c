@@ -19,7 +19,6 @@ static uint16_t VDD_5V_Atmega_mV               = 0;            // global variabl
 static uint16_t VDD_5V_dustshoe_mV             = 0;            // global variable for latest VDD_5V_dustshoe value
 static uint16_t VDD_24V_mV                     = 0;            // global variable for latest VDD_24V value
 static uint16_t Spindle_speed_Signal_mV        = 0;            // global variable for latest Spindle_speed_Signal_mV value
-static uint16_t AC_loss_Signal_mV              = 0;            // global variable for latest AC_loss_Signal_mV value
 static uint16_t temperature_TMC_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
 static uint16_t temperature_PCB_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
 static uint16_t temperature_MOT_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
@@ -158,12 +157,6 @@ void convert_VDD_5V_dustshoe_mV (uint16_t ADC_reading){
     /* output range is 0-5V, convert 10bits ADC output into mV: */
     VDD_5V_dustshoe_mV = convert_adc_5V(ADC_reading);
 }
-
-void convert_AC_loss_Signal_mV (uint16_t ADC_reading){
-    /* output range is 0-5V, convert 10bits ADC output into mV: */
-    AC_loss_Signal_mV = convert_adc_5V(ADC_reading);
-}
-
 
 void convert_VDD_24V_mV (uint16_t ADC_reading){
     /* output range is 0-5V, convert 10bits ADC output into mV: */
@@ -345,7 +338,7 @@ void asmcnc_start_ADC(void){
 
 /* define ADC channels to be measured and start ADC conversions */
 void adc_setup_and_fire(void){
-    /* there are 5 channels in total to be measured by ADC:
+    /* there are 8 channels in total to be measured by ADC:
     1: Spindle load
     2: 5V Atmega
     3: 5V dustshoe
@@ -354,7 +347,6 @@ void adc_setup_and_fire(void){
     6: temperature 2
     7: temperature 3
     8: Spindle speed control
-    9: AC loss       
     
     each channel has its own poll periodicity that is derived from the main tick time as
     (UPTIME_TICK_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US
@@ -423,10 +415,6 @@ void adc_process_all_channels(void){
                 
                 case ADC_7_SPINDLE_SPEED:
                     convert_Spindle_speed_Signal_mV (ADCstMachine.result[adc_ch_idx]);
-                break;
-                
-                case ADC_8_AC_LOSS:
-                    convert_AC_loss_Signal_mV (ADCstMachine.result[adc_ch_idx]);
                 break;
                 
                 default:
@@ -512,7 +500,6 @@ void asmcnc_init_ADC(void)
     static uint8_t ADC_temperature_PCB_channel  = TEMPERATURE_PCB_ADC_CHANNEL ;
     static uint8_t ADC_temperature_MOT_channel  = TEMPERATURE_MOT_ADC_CHANNEL ;
     static uint8_t ADC_Spindle_speed_channel    = SPINDLE_SPEED_ADC_CHANNEL   ;
-    static uint8_t ADC_AC_loss_channel          = AC_LOSS_ADC_CHANNEL         ;
 
     /* apply correction for HW version */
 	if (PIND <= 5){ /* if HW version is 5 and lower*/
@@ -532,7 +519,6 @@ void asmcnc_init_ADC(void)
     ADCstMachine.channel[ADC_5_TEMPERATURE_PCB] = ADC_temperature_PCB_channel;
     ADCstMachine.channel[ADC_6_TEMPERATURE_MOT] = ADC_temperature_MOT_channel;
     ADCstMachine.channel[ADC_7_SPINDLE_SPEED  ] = ADC_Spindle_speed_channel;
-    ADCstMachine.channel[ADC_8_AC_LOSS        ] = ADC_AC_loss_channel      ;
 
     ADCstMachine.max_count[ADC_0_SPINDLE_LOAD   ] = ((SPINDLE_LOAD_ADC_PERIOD_MS    *1000UL)/SPI_READ_OCR_PERIOD_US) ;
     ADCstMachine.max_count[ADC_1_VDD_5V_ATMEGA  ] = ((VDD_5V_ATMEGA_ADC_PERIOD_MS   *1000UL)/SPI_READ_OCR_PERIOD_US) ;
@@ -542,7 +528,6 @@ void asmcnc_init_ADC(void)
     ADCstMachine.max_count[ADC_5_TEMPERATURE_PCB] = ((TEMPERATURE_PCB_ADC_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US) ;
     ADCstMachine.max_count[ADC_6_TEMPERATURE_MOT] = ((TEMPERATURE_MOT_ADC_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US) ;
     ADCstMachine.max_count[ADC_7_SPINDLE_SPEED  ] = ((SPINDLE_SPEED_ADC_PERIOD_MS   *1000UL)/SPI_READ_OCR_PERIOD_US) ;
-    ADCstMachine.max_count[ADC_8_AC_LOSS        ] = ((AC_LOSS_ADC_PERIOD_MS         *1000UL)/SPI_READ_OCR_PERIOD_US) ;
 
     for (uint8_t adc_ch_idx = 0; adc_ch_idx < ADC_TOTAL_CHANNELS; adc_ch_idx++){
         if (ADCstMachine.max_count[adc_ch_idx] < 1) ADCstMachine.max_count[adc_ch_idx] = 1; /* if max count is less than 1 then requested period is shorter than system tick. Make sure the channel is measured with max speed */

@@ -14,15 +14,14 @@
  * Max period is 64sec. 
  * To disable channel set PERIOD_MS to 0xFFFF */
 #define ADC_PERIOD_DISABLE                  0xFFFF
-#define SPINDLE_LOAD_ADC_PERIOD_MS          20                      /* how often ADC should measure Spindle load channel */
-#define VDD_5V_ATMEGA_ADC_PERIOD_MS         1000					/* how often ADC should measure 5V Atmega channel */
-#define VDD_5V_DUSTSHOE_ADC_PERIOD_MS       1000                    /* how often ADC should measure 5V dustshoe channel */
-#define VDD_24V_ADC_PERIOD_MS               200						/* how often ADC should measure 24V mains channel */
-#define TEMPERATURE_TMC_ADC_PERIOD_MS       100                     /* how often ADC should measure temperature 1 channel */
-#define TEMPERATURE_PCB_ADC_PERIOD_MS       100						/* how often ADC should measure temperature 2 channel */
+#define SPINDLE_LOAD_ADC_PERIOD_MS          80                      /* how often ADC should measure Spindle load channel */
+#define VDD_5V_ATMEGA_ADC_PERIOD_MS         10000					/* how often ADC should measure 5V Atmega channel */
+#define VDD_5V_DUSTSHOE_ADC_PERIOD_MS       10000                   /* how often ADC should measure 5V dustshoe channel */
+#define VDD_24V_ADC_PERIOD_MS               1000				    /* how often ADC should measure 24V mains channel */
+#define TEMPERATURE_TMC_ADC_PERIOD_MS       2000                    /* how often ADC should measure temperature 1 channel */
+#define TEMPERATURE_PCB_ADC_PERIOD_MS       2000				    /* how often ADC should measure temperature 2 channel */
 #define TEMPERATURE_MOT_ADC_PERIOD_MS       ADC_PERIOD_DISABLE      /* how often ADC should measure temperature 2 channel */
-#define SPINDLE_SPEED_ADC_PERIOD_MS         20                      /* how often ADC should measure Spindle speed channel */
-#define AC_LOSS_ADC_PERIOD_MS               ADC_PERIOD_DISABLE      /* how often ADC should measure AC loss channel */
+#define SPINDLE_SPEED_ADC_PERIOD_MS         1000                    /* how often ADC should measure Spindle speed channel */
 
 #define SPINDLE_LOAD_ADC_CHANNEL            SPINDLE_LOAD_MONITOR // ADC1,  PF1
 #define VDD_5V_ATMEGA_ADC_CHANNEL           12					 // ADC12, PK4
@@ -32,7 +31,6 @@
 #define TEMPERATURE_PCB_ADC_CHANNEL         8					 // ADC8,  PK0
 #define TEMPERATURE_MOT_ADC_CHANNEL         9					 // ADC9,  PK1
 #define SPINDLE_SPEED_ADC_CHANNEL           2					 // ADC2,  PF2
-#define AC_LOSS_ADC_CHANNEL                 0
 
 
 
@@ -52,7 +50,6 @@ enum adc_channels{
 	ADC_5_TEMPERATURE_PCB,    // ADC is running conversion on Channel 6  TEMPERATURE_PCB_ADC_CHANNEL
 	ADC_6_TEMPERATURE_MOT,    // ADC is running conversion on Channel 7  TEMPERATURE_MOT_ADC_CHANNEL
 	ADC_7_SPINDLE_SPEED,      // ADC is running conversion on Channel 8  SPINDLE_SPEED_ADC_CHANNEL
-	ADC_8_AC_LOSS,            // ADC is running conversion on Channel 9  AC_LOSS_ADC_CHANNEL        
 	ADC_TOTAL_CHANNELS,       // normal state, ADC is off
 };
 

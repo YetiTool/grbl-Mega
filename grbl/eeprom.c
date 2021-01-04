@@ -490,7 +490,7 @@ void flashStatisticsInit(void){
     manage_rst_reasons();
     manage_psflash_updates();
     printPgmString(PSTR("Up time: "));  printInteger( getLocalRunTimeSeconds() ); printPgmString(PSTR("seconds\n"));
-    printPgmString(PSTR("total distance: "));  printInteger( flashStatistics.totalTravelMillimeters); printPgmString(PSTR("mm\n"));    
+    printPgmString(PSTR("Total distance: "));  printInteger( flashStatistics.totalTravelMillimeters); printPgmString(PSTR("mm\n"));    
     flashStatisticsSave();
 	
 #ifdef FLASH_DEBUG_ENABLED

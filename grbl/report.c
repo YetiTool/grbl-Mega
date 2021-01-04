@@ -591,8 +591,20 @@ void report_realtime_status()
       int spindle_load_mV = get_spindle_load_mV();
       printInteger( spindle_load_mV );
   #endif //#ifdef ENABLE_SPINDLE_LOAD_MONITOR
+
+
   
   #ifdef ENABLE_TEMPERATURE_MONITOR
+    if (sys.report_adc_counter > 0) { sys.report_adc_counter--; }
+    else {  
+      if (sys.state & (STATE_HOMING | STATE_CYCLE | STATE_HOLD | STATE_JOG | STATE_SAFETY_DOOR)) {
+        sys.report_adc_counter = (REPORT_ADC_REFRESH_BUSY_COUNT-1); // Reset counter for slow refresh
+      } else { sys.report_adc_counter = (REPORT_ADC_REFRESH_IDLE_COUNT-1); }
+      if (sys.report_wco_counter == 0) { sys.report_wco_counter = 1; } // Set override on next report.
+      if (sys.report_ovr_counter == 0) { sys.report_ovr_counter = 1; } // Set override on next report.
+      //if (sys.report_tmc_counter == 0) { sys.report_tmc_counter = 1; } // Set override on next report.
+	  
+	  
       printPgmString(PSTR("|TC:"));
       int temperature = get_TMC_temperature();
       printInteger( temperature );
@@ -611,17 +623,22 @@ void report_realtime_status()
       printPgmString(PSTR(","));
       VDD_mv = get_Spindle_speed_Signal_mV();
       printInteger( VDD_mv );
+} //    if (sys.report_adc_counter > 0) { sys.report_adc_counter--; }
 
   #endif //#ifdef ENABLE_TEMPERATURE_MONITOR
   
   #ifdef ENABLE_TMC_FEEDBACK_MONITOR
     if (sys.report_tmc_counter > 0) { 
-        sys.report_tmc_counter--;         
+		sys.report_tmc_counter--; 
         /* just report SG deltas */
-        tmc_report_SG_delta();
-    }
-    else{ /* full TMC statistics report */
-        sys.report_tmc_counter = (REPORT_TMC_REFRESH_COUNT-1); // Reset counter for slow refresh
+        tmc_report_SG_delta();		
+		}
+    else { /* full TMC statistics report */
+	    if (sys.state & (STATE_HOMING | STATE_CYCLE | STATE_HOLD | STATE_JOG | STATE_SAFETY_DOOR)) {
+		    sys.report_tmc_counter = (REPORT_TMC_REFRESH_BUSY_COUNT-1); // Reset counter for slow refresh
+		} else { sys.report_tmc_counter = (REPORT_TMC_REFRESH_IDLE_COUNT-1); }
+		if (sys.report_wco_counter == 0) { sys.report_wco_counter = 1; } // Set override on next report.
+		if (sys.report_ovr_counter == 0) { sys.report_ovr_counter = 1; } // Set override on next report.
         printPgmString(PSTR("|T:"));
         tmc_report_status();
     }        
