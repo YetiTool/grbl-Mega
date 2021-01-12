@@ -97,8 +97,10 @@ ISR(TIMER2_COMPA_vect)
 {
 	sei(); // Re-enable interrupts to allow Stepper Interrupt to fire on-time.
     
+#ifndef ENABLE_SOFTWARE_DEBOUNCE
 	/* feed the dog */
 	asm("WDR");
+#endif // ENABLE_SOFTWARE_DEBOUNCE
 
 #ifdef DEBUG_SPI_ENABLED
 debug_pin_write(1, DEBUG_0_PIN); /* whole ISR routine 18-22us */

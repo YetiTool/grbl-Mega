@@ -434,6 +434,11 @@ void report_build_info(char *line)
   print_uint8_base10(RX_BUFFER_SIZE);
 
   report_util_feedback_line_feed();
+  
+  printPgmString(PSTR("[Total resets: "));   printInteger( flashStatistics.TOT_cnt );   report_util_feedback_line_feed();
+  printPgmString(PSTR("[Up time: "));  printInteger( getLocalRunTimeSeconds() ); printPgmString(PSTR("seconds"));  report_util_feedback_line_feed();
+  printPgmString(PSTR("[Total distance: "));  printInteger( flashStatistics.totalTravelMillimeters); printPgmString(PSTR("mm"));   report_util_feedback_line_feed();
+	  
 }
 
 
