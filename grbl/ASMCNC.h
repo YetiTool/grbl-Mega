@@ -207,4 +207,9 @@ uint8_t char2intValidate(char);     /* convert hex char to int and validate resu
 void asmcnc_enable_AC_live_detection(void);
 uint8_t get_AC_lost_state(void);
 
+uint8_t  uint16_encode(uint16_t value, uint8_t * p_encoded_data);
+uint16_t uint16_decode(const uint8_t * p_encoded_data);
+uint8_t  uint32_encode(uint32_t value, uint8_t * p_encoded_data);
+uint32_t uint32_decode(const uint8_t * p_encoded_data);
+
 #endif /* ASMCNC_h */

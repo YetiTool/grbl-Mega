@@ -171,10 +171,10 @@ void protocol_main_loop()
 
     protocol_execute_realtime();  // Runtime command check point.
     if (sys.abort) { return; } // Bail to main() program loop to reset system.
-              
+
     #ifdef SLEEP_ENABLE
       // Check for sleep conditions and execute auto-park, if timeout duration elapses.
-      sleep_check();    
+      sleep_check();
     #endif
   }
 
@@ -276,14 +276,14 @@ void protocol_exec_rt_system()
 
       // State check for allowable states for hold methods.
       if (!(sys.state & (STATE_ALARM | STATE_CHECK_MODE))) {
-      
+
         // If in CYCLE or JOG states, immediately initiate a motion HOLD.
         if (sys.state & (STATE_CYCLE | STATE_JOG)) {
           if (!(sys.suspend & (SUSPEND_MOTION_CANCEL | SUSPEND_JOG_CANCEL))) { // Block, if already holding.
             st_update_plan_block_parameters(); // Notify stepper module to recompute for hold deceleration.
             sys.step_control = STEP_CONTROL_EXECUTE_HOLD; // Initiate suspend state with active flag.
             if (sys.state == STATE_JOG) { // Jog cancelled upon any hold event, except for sleeping.
-              if (!(rt_exec & EXEC_SLEEP)) { sys.suspend |= SUSPEND_JOG_CANCEL; } 
+              if (!(rt_exec & EXEC_SLEEP)) { sys.suspend |= SUSPEND_JOG_CANCEL; }
             }
           }
         }
@@ -334,12 +334,12 @@ void protocol_exec_rt_system()
           // are executed if the door switch closes and the state returns to HOLD.
           sys.suspend |= SUSPEND_SAFETY_DOOR_AJAR;
         }
-        
+
       }
 
       if (rt_exec & EXEC_SLEEP) {
         if (sys.state == STATE_ALARM) { sys.suspend |= (SUSPEND_RETRACT_COMPLETE|SUSPEND_HOLD_COMPLETE); }
-        sys.state = STATE_SLEEP; 
+        sys.state = STATE_SLEEP;
       }
 
       system_clear_exec_state_flag((EXEC_MOTION_CANCEL | EXEC_FEED_HOLD | EXEC_SAFETY_DOOR | EXEC_SLEEP));
@@ -506,14 +506,14 @@ void protocol_exec_rt_system()
     /* process RTL commands arrived in the serial buffer */
     if (rt_exec & RTL_V2_COMMAND) {
         //execute_TMC_command();
-		process_RTL_buffer();
+        process_RTL_buffer();
     }
-	
+
     /* print out statistics data */
     if (rt_exec & RTL_STAT_REPORT_COMMAND) {
-	    report_statistics();
-    }	
-    
+        report_statistics();
+    }
+
   } //if rt_exec = sys_rt_exec_rtl_command;
 
 
@@ -525,18 +525,18 @@ void protocol_exec_rt_system()
   if (rt_exec) {
 
     system_clear_exec_heartbeat_flags(); // Clear all flags. Shall be done after last command in the buffer is processed
-        
+
     /* schedule next SPI read all */
     if (rt_exec & TMC_READ_ALL_COMMAND) {
         /* BK profiling: SPI prepare: 900us  + actual SPI reads: 1.2-2.0 ms */
         //tmc2590_schedule_read_all();
     }
-                
+
     /* schedule uptime increment and EEPROM update if needed */
     if (rt_exec & UPTIME_INCREMENT_COMMAND) {
         uptime_increment();
     }
-                
+
     /* define ADC channels to be measured and start ADC conversions */
     if (rt_exec & ADC_SET_AND_FIRE_COMMAND) {
         adc_setup_and_fire();
@@ -546,14 +546,14 @@ void protocol_exec_rt_system()
     if (rt_exec & ADC_CONVERGENCE_COMPLETED) {
         adc_state_machine();
     }
-                
+
     /* Process results of all ADC channels */
     if (rt_exec & ADC_PROCESS_ALL_COMMAND) {
         adc_process_all_channels();
     }
 
-      
-  } //if rt_exec = sys_rt_exec_heartbeat_command;  
+
+  } //if rt_exec = sys_rt_exec_heartbeat_command;
 
 
 
@@ -607,7 +607,7 @@ static void protocol_exec_rt_suspend()
     restore_spindle_speed = block->spindle_speed;
   }
   #ifdef DISABLE_LASER_DURING_HOLD
-    if (bit_istrue(settings.flags,BITFLAG_LASER_MODE)) { 
+    if (bit_istrue(settings.flags,BITFLAG_LASER_MODE)) {
       system_set_exec_accessory_override_flag(EXEC_SPINDLE_OVR_STOP);
     }
   #endif
@@ -619,10 +619,10 @@ static void protocol_exec_rt_suspend()
     // Block until initial hold is complete and the machine has stopped motion.
     if (sys.suspend & SUSPEND_HOLD_COMPLETE) {
 
-      // Parking manager. Handles de/re-energizing, switch state checks, and parking motions for 
+      // Parking manager. Handles de/re-energizing, switch state checks, and parking motions for
       // the safety door and sleep states.
       if (sys.state & (STATE_SAFETY_DOOR | STATE_SLEEP)) {
-      
+
         // Handles retraction motions and de-energizing.
         if (bit_isfalse(sys.suspend,SUSPEND_RETRACT_COMPLETE)) {
 
@@ -635,7 +635,7 @@ static void protocol_exec_rt_suspend()
             coolant_set_state(COOLANT_DISABLE);     // De-energize
 
           #else
-					
+
             // Get current position and store restore location and spindle retract waypoint.
             system_convert_array_steps_to_mpos(parking_target,sys_position);
             if (bit_isfalse(sys.suspend,SUSPEND_RESTART_RETRACT)) {
@@ -696,7 +696,7 @@ static void protocol_exec_rt_suspend()
 
         } else {
 
-          
+
           if (sys.state == STATE_SLEEP) {
             report_feedback_message(MESSAGE_SLEEP_MODE);
             // Spindle and coolant should already be stopped, but do it again just to be sure.
@@ -705,8 +705,8 @@ static void protocol_exec_rt_suspend()
             st_go_idle(); // Disable steppers
             while (!(sys.abort)) { protocol_exec_rt_system(); } // Do nothing until reset.
             return; // Abort received. Return to re-initialize.
-          }    
-          
+          }
+
           // Allows resuming from parking/safety door. Actively checks if safety door is closed and ready to resume.
           if (sys.state == STATE_SAFETY_DOOR) {
             if (!(system_check_safety_door_ajar())) {
@@ -771,8 +771,8 @@ static void protocol_exec_rt_suspend()
                   // restore parking motion should logically be valid, either by returning to the
                   // original position through valid machine space or by not moving at all.
                   pl_data->feed_rate = PARKING_PULLOUT_RATE;
-									pl_data->condition |= (restore_condition & PL_COND_ACCESSORY_MASK); // Restore accessory state
-									pl_data->spindle_speed = restore_spindle_speed;
+                                    pl_data->condition |= (restore_condition & PL_COND_ACCESSORY_MASK); // Restore accessory state
+                                    pl_data->spindle_speed = restore_spindle_speed;
                   mc_parking_motion(restore_target, pl_data);
                 }
               }
@@ -827,7 +827,7 @@ static void protocol_exec_rt_suspend()
 
       }
     }
-    
+
     #ifdef SLEEP_ENABLE
       // Check for sleep conditions and execute auto-park, if timeout duration elapses.
       // Sleep is valid for both hold and door states, if the spindle or coolant are on or
@@ -845,103 +845,108 @@ static void protocol_exec_rt_suspend()
 
 /* implementation of Yeti protocol V2: parser, error checker and dispatcher */
 void process_RTL_buffer(){
-	/* prevent reentrance while executing */
-	if (lock_RTL_execution == 0){
-		lock_RTL_execution = 1;
+    /* prevent reentrance while executing */
+    if (lock_RTL_execution == 0){
+        lock_RTL_execution = 1;
 
-		/* fetch host command from rtl serial buffer and execute:  fetch bytes from the buffer, calculate CRC and execute*/
-		uint8_t idx, len, seq, modifier;
-    
-		memset(packet, 0, RTL_V2_COMMAND_SIZE_MAX+1);
+        /* fetch host command from rtl serial buffer and execute:  fetch bytes from the buffer, calculate CRC and execute*/
+        uint8_t idx, len, seq, modifier;
 
-		/* check if data is available from rtl_serial bufer */
-		uint8_t rtl_data_available = serial_rtl_data_available_length(); 
-	
-		/*minimum expected number of bytes is 5 if data length is 0: modifier, len, seq, cmd and crc*/
-		if (rtl_data_available >= (RTL_V2_COMMAND_SIZE_MIN+1) ){
-			/* parse buffer and find the message */
-			/* 1. first byte is modifier byte CMD_RTL_V2 */
-			modifier = serial_read_rtl();
-			if (modifier == CMD_RTL_V2){
-				/* 2. second byte is length, should be less than RTL_V2_COMMAND_SIZE_MAX */
-				packet[0] = serial_read_rtl(); 
-				len = packet[0];
-				if (len <= RTL_V2_COMMAND_SIZE_MAX){
-					/* 3. remaining bytes should pass CRC check */
-					for (idx = 1; idx < len; idx++){
-						packet[idx] = serial_read_rtl();
-					}
+        memset(packet, 0, RTL_V2_COMMAND_SIZE_MAX+1);
 
-					/* calculate CRC 8 on the command and value and compare with checksum */
-					uint8_t crc_in;
-					crc_in = crc8x_fast(0, packet, len-1);
-					if (crc_in == packet[len-1]){
-						/* CRC passed, validate and execute command */			
-					
-						execute_RTL_command();
-					
-						/* 4. third byte (byte[1]) is sequence number 
-						 * if sequence number is not matching expected then raise alarm
-						 * exceptions are:
-						 * 1. RESET_SEQUENCE_NUMBER command 
-						 * 2. if it is first time after boot */					
-						seq = packet[1];					
-						if ( seq != sequence_expected) {
-							sequence_expected = seq; /* reset expected sequence number to match downstream one*/
-							/* raise alarm if command is not RESET_SEQUENCE_NUMBER command, otherwise pass silently */
-							if ( ( packet[2] != RESET_SEQUENCE_NUMBER ) && ( first_packet_since_boot == 0 ) ) { report_status_message(ASMCNC_RTL_SEQ_ERROR);}
-						}				
-						sequence_expected++; /* increment sequence number */
-						first_packet_since_boot = 0;
-				
-						/* check if more data is available from rtl_serial buffer */					
-						rtl_data_available = serial_rtl_data_available_length(); 
-						if ( rtl_data_available >= (RTL_V2_COMMAND_SIZE_MIN+1) ) {
-							/* schedule next TMC execute: indicate to main loop that there is a TMC command to process */
-							system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
-						};				
-					
-					
-					} // if (crc_in == packet[len-1]){
-            
-					else{ /* crc error */
-						/* if crc failed then rtl buffer corruption has happened and parser should continue from next byte*/
-						/* indicate to main loop that there is a RTL command to process */
-						system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
-						report_status_message(ASMCNC_CRC8_ERROR);					
-					} //else{ /* crc error */		
-				
-				} 
-				else{ //if (len <= RTL_V2_COMMAND_SIZE_MAX){
-					/* if length check failed then rtl buffer corruption has happened and parser should continue from next byte*/
-					/* indicate to main loop that there is a RTL command to process */
-					system_set_exec_rtl_command_flag(RTL_V2_COMMAND);				
-					report_status_message(ASMCNC_RTL_LEN_ERROR);				
-				}
-			
-			}
-			else{ //if (modifier == CMD_RTL_V2){
-				/* if modifier is not CMD_RTL_V2 then rtl buffer corruption has happened and parser should continue from next byte*/
-				/* indicate to main loop that there is a RTL command to process */
-				system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
-				report_status_message(ASMCNC_RTL_PARSE_ERROR);					
-			}
-		
-		
-		} //if (rtl_data_available >= RTL_V2_COMMAND_SIZE_MIN){	
+        /* check if data is available from rtl_serial bufer */
+        uint8_t rtl_data_available = serial_rtl_data_available_length();
 
-		
-	} 	
-	else{ //if (lock_RTL_execution == 0){
-		system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
-	}
-	
+        /*minimum expected number of bytes is 5 if data length is 0: modifier, len, seq, cmd and crc*/
+        if (rtl_data_available >= (RTL_V2_COMMAND_SIZE_MIN+1) ){
+            /* parse buffer and find the message */
+            /* 1. first byte is modifier byte CMD_RTL_V2 */
+            modifier = serial_read_rtl();
+            if (modifier == CMD_RTL_V2){
+                /* 2. second byte is length, should be less than RTL_V2_COMMAND_SIZE_MAX */
+                packet[0] = serial_read_rtl();
+                len = packet[0];
+                if (len <= RTL_V2_COMMAND_SIZE_MAX){
+                    /* 3. remaining bytes should pass CRC check */
+                    for (idx = 1; idx < len; idx++){
+                        packet[idx] = serial_read_rtl();
+                    }
+
+                    /* calculate CRC 8 on the command and value and compare with checksum */
+                    uint8_t crc_in;
+                    crc_in = crc8x_fast(0, packet, len-1);
+                    if (crc_in == packet[len-1]){
+                        /* CRC passed, validate and execute command */
+
+                        execute_RTL_command();
+
+                        /* 4. third byte (byte[1]) is sequence number
+                         * if sequence number is not matching expected then raise alarm
+                         * exceptions are:
+                         * 1. RESET_SEQUENCE_NUMBER command
+                         * 2. if it is first time after boot */
+                        seq = packet[1];
+                        if ( seq != sequence_expected) {
+                            sequence_expected = seq; /* reset expected sequence number to match downstream one*/
+                            /* raise alarm if command is not RESET_SEQUENCE_NUMBER command, otherwise pass silently */
+                            //if ( ( packet[2] != RESET_SEQUENCE_NUMBER ) || ( first_packet_since_boot == 0 ) ) { report_status_message(ASMCNC_RTL_SEQ_ERROR);}
+                            if ( first_packet_since_boot == 0 ) { /* suppress alarm for the very first packet */
+                                if ( packet[2] != RESET_SEQUENCE_NUMBER ){ /* suppress alarm for RESET_SEQUENCE_NUMBER command */
+                                     report_status_message(ASMCNC_RTL_SEQ_ERROR);
+                                }
+                            } 
+                        }
+                        sequence_expected++; /* increment sequence number */
+                        first_packet_since_boot = 0;
+
+                        /* check if more data is available from rtl_serial buffer */
+                        rtl_data_available = serial_rtl_data_available_length();
+                        if ( rtl_data_available >= (RTL_V2_COMMAND_SIZE_MIN+1) ) {
+                            /* schedule next TMC execute: indicate to main loop that there is a TMC command to process */
+                            system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
+                        };
+
+
+                    } // if (crc_in == packet[len-1]){
+
+                    else{ /* crc error */
+                        /* if crc failed then rtl buffer corruption has happened and parser should continue from next byte*/
+                        /* indicate to main loop that there is a RTL command to process */
+                        //system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
+                        report_status_message(ASMCNC_CRC8_ERROR);
+                    } //else{ /* crc error */
+
+                }
+                else{ //if (len <= RTL_V2_COMMAND_SIZE_MAX){
+                    /* if length check failed then rtl buffer corruption has happened and parser should continue from next byte*/
+                    /* indicate to main loop that there is a RTL command to process */
+                    //system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
+                    report_status_message(ASMCNC_RTL_LEN_ERROR);
+                }
+
+            }
+            else{ //if (modifier == CMD_RTL_V2){
+                /* if modifier is not CMD_RTL_V2 then rtl buffer corruption has happened and parser should continue from next byte*/
+                /* indicate to main loop that there is a RTL command to process */
+                //system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
+                report_status_message(ASMCNC_RTL_PARSE_ERROR);
+            }
+
+
+        } //if (rtl_data_available >= RTL_V2_COMMAND_SIZE_MIN){
+
+
+    }
+    else{ //if (lock_RTL_execution == 0){
+        system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
+    }
+
 
 } //void process_RTL_buffer(){
 
 
 void execute_RTL_command(){
-/* packet structure: 
+/* packet structure:
  * byte[0]: length
  * byte[1]: seq
  * byte[2]: cmd
@@ -949,67 +954,108 @@ void execute_RTL_command(){
  * byte[len-1]: crc8
  */
 
-	uint8_t data_len = packet[0] - RTL_V2_COMMAND_SIZE_MIN;
-	uint8_t rtl_command = packet[2];	
+    uint8_t data_len = packet[0] - RTL_V2_COMMAND_SIZE_MIN;
+    uint8_t rtl_command = packet[2];
+    uint8_t* p_data = &packet[3];
 
-	switch (rtl_command) {	  
-		case SET_RGB_LED_STATE:
-			/* data must be exactly 3 bytes: R, G and B*/
-			if (data_len == 3){
-				/* set the RGB LED state */
-				asmcnc_RGB_set(packet[3], packet[4], packet[5]);
-			}
-			else{
-				report_status_message(ASMCNC_PARAM_ERROR);
-			}
-		break;
-		
-		case SET_SPINDLE_SPEED:
-		break;
-		
-		case SET_EXTRACTION_STATE:
-		break;
-		
-		case SET_LASER_DATUM_STATE:
-		break;
-		
-		case SET_SERIAL_NUMBER:
-		break;
-		
-		case SET_PRODUCT_VERSION:
-		break;
-		
-		case GET_SERIAL_NUMBER:
-		break;
-		
-		case GET_PRODUCT_NUMBER:
-		break;
-		
-		case GET_ALARM_REASON:
-		break;
-		
-		case GET_DIGITAL_SPINDLE_INFO:
-		break;
-		
-		case RESET_DIGITAL_SPINDLE_BRUSH_TIME:
-		break;
-		
-		case RESET_SEQUENCE_NUMBER:
-		break;
-		
-		case TMC_GLOBAL_COMMAND:
-		break;
-		
-		case TMC_REGISTER_COMMAND:
-		break;
-	  
-		default:
-			report_status_message(ASMCNC_COMMAND_ERROR);
-		break;
-	} //switch (rtl_command) {
-	
-	
-	/* release reentrance lock */
-	lock_RTL_execution = 0;
+    switch (rtl_command) {
+        case SET_RGB_LED_STATE:
+            /* data must be exactly 3 bytes: R, G and B*/
+            if (data_len == 3){
+                /* set the RGB LED state */
+                asmcnc_RGB_set(*p_data, *(p_data+1), *(p_data+2));
+            }
+            else{ //if (data_len == 3){
+                report_status_message(ASMCNC_RTL_LEN_ERROR);
+            }
+        break;
+
+        case SET_SPINDLE_SPEED:
+            /* data must be exactly 2 bytes: and max number shall be less than settings.rpm_max*/
+            if (data_len == 2){
+                /* convert 2 bytes to uint16 */
+                uint16_t spindle_rpm = uint16_decode(p_data);
+                if (spindle_rpm <= settings.rpm_max){
+                    if ( spindle_rpm == 0 ){
+                        spindle_set_state(SPINDLE_DISABLE, (float)spindle_rpm); /* turn Spindle OFF */
+                    }
+                    else {
+                        spindle_set_state(SPINDLE_ENABLE_CW, (float)spindle_rpm); /* turn Spindle ON */
+                    }
+                    
+                }
+                else { //if (spindle_rpm <= settings.rpm_max){
+                    report_status_message(ASMCNC_PARAM_ERROR);
+                }
+            }
+            else{ //if (data_len == 2){
+                report_status_message(ASMCNC_RTL_LEN_ERROR);
+            }
+        break;
+
+        case SET_EXTRACTION_STATE:
+            /* data must be exactly 1 byte, value 1 or 0*/
+            if (data_len == 1){
+                /* convert 2 bytes to uint16 */
+                uint8_t extraction_state = *p_data;
+                if (extraction_state <= 1){
+                    if (extraction_state == 0){
+                        PORTG &=~(1<<AC_EXTRACTOR); break; //Extraction off
+                    }
+                    else{ //if (extraction_state == 0){
+                        PORTG |=(1<<AC_EXTRACTOR); break; //Extraction on
+                    }
+                } 
+                else{//if (extraction_state <= 1){
+                    report_status_message(ASMCNC_PARAM_ERROR);
+                }
+            }
+            else{ //if (data_len == 1){
+                report_status_message(ASMCNC_RTL_LEN_ERROR);
+            }
+        break;
+
+        case SET_LASER_DATUM_STATE:
+        break;
+
+        case SET_SERIAL_NUMBER:
+        break;
+
+        case SET_PRODUCT_VERSION:
+        break;
+
+        case GET_SERIAL_NUMBER:
+        break;
+
+        case GET_PRODUCT_NUMBER:
+        break;
+
+        case GET_ALARM_REASON:
+        break;
+
+        case GET_DIGITAL_SPINDLE_INFO:
+        break;
+
+        case RESET_DIGITAL_SPINDLE_BRUSH_TIME:
+        break;
+
+        case RESET_SEQUENCE_NUMBER:
+            /* nothing to do here, already done in function process_RTL_buffer() at sequence number check */
+        break;
+
+        case TMC_GLOBAL_COMMAND:
+        break;
+
+        case TMC_REGISTER_COMMAND:
+        break;
+
+        default:
+            report_status_message(ASMCNC_COMMAND_ERROR);
+        break;
+    } //switch (rtl_command) {
+
+
+    /* release reentrance lock */
+    lock_RTL_execution = 0;
 } //execute_RTL_command();
 

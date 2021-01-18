@@ -191,6 +191,37 @@ void debug_pin_write(uint8_t level, uint8_t pin){
 }
 #endif
 
+uint16_t uint16_decode(const uint8_t * p_encoded_data)
+{
+    return ( (((uint16_t)((uint8_t *)p_encoded_data)[0])) |
+             (((uint16_t)((uint8_t *)p_encoded_data)[1]) << 8 ));
+}
+
+uint8_t uint16_encode(uint16_t value, uint8_t * p_encoded_data)
+{
+    p_encoded_data[0] = (uint8_t) ((value & 0x00FF) >> 0);
+    p_encoded_data[1] = (uint8_t) ((value & 0xFF00) >> 8);
+    return sizeof(uint16_t);
+}
+
+uint8_t uint32_encode(uint32_t value, uint8_t * p_encoded_data)
+{
+    p_encoded_data[0] = (uint8_t) ((value & 0x000000FF) >> 0);
+    p_encoded_data[1] = (uint8_t) ((value & 0x0000FF00) >> 8);
+    p_encoded_data[2] = (uint8_t) ((value & 0x00FF0000) >> 16);
+    p_encoded_data[3] = (uint8_t) ((value & 0xFF000000) >> 24);
+    return sizeof(uint32_t);
+}
+
+uint32_t uint32_decode(const uint8_t * p_encoded_data)
+{
+    return ( (((uint32_t)((uint8_t *)p_encoded_data)[0]) << 0)  |
+             (((uint32_t)((uint8_t *)p_encoded_data)[1]) << 8)  |
+             (((uint32_t)((uint8_t *)p_encoded_data)[2]) << 16) |
+             (((uint32_t)((uint8_t *)p_encoded_data)[3]) << 24 ));
+}
+
+
 
 void asmcnc_init(void)
 {
