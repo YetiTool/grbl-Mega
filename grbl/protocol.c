@@ -31,6 +31,10 @@ static char line[LINE_BUFFER_SIZE]; // Line to be executed. Zero-terminated.
 
 static void protocol_exec_rt_suspend();
 
+static uint8_t sequence_expected = 0; /* expected sequence number for protocol v2 */
+static uint8_t lock_RTL_execution = 0;
+static uint8_t packet[RTL_V2_COMMAND_SIZE_MAX]; /* RTL command buffer */
+static uint8_t first_packet_since_boot = 1;
 
 /*
   GRBL PRIMARY LOOP:
@@ -500,8 +504,9 @@ void protocol_exec_rt_system()
     system_clear_exec_rtl_flags(); // Clear all accessory override flags. Shall be done after last command in the buffer is processed
 
     /* process RTL commands arrived in the serial buffer */
-    if (rt_exec & RTL_TMC_COMMAND) {
+    if (rt_exec & RTL_V2_COMMAND) {
         //execute_TMC_command();
+		process_RTL_buffer();
     }
 	
     /* print out statistics data */
@@ -834,3 +839,177 @@ static void protocol_exec_rt_suspend()
 
   }
 }
+
+
+/*************************************************************** protocol V2 extension ***************************************************************/
+
+/* implementation of Yeti protocol V2: parser, error checker and dispatcher */
+void process_RTL_buffer(){
+	/* prevent reentrance while executing */
+	if (lock_RTL_execution == 0){
+		lock_RTL_execution = 1;
+
+		/* fetch host command from rtl serial buffer and execute:  fetch bytes from the buffer, calculate CRC and execute*/
+		uint8_t idx, len, seq, modifier;
+    
+		memset(packet, 0, RTL_V2_COMMAND_SIZE_MAX+1);
+
+		/* check if data is available from rtl_serial bufer */
+		uint8_t rtl_data_available = serial_rtl_data_available_length(); 
+	
+		/*minimum expected number of bytes is 5 if data length is 0: modifier, len, seq, cmd and crc*/
+		if (rtl_data_available >= (RTL_V2_COMMAND_SIZE_MIN+1) ){
+			/* parse buffer and find the message */
+			/* 1. first byte is modifier byte CMD_RTL_V2 */
+			modifier = serial_read_rtl();
+			if (modifier == CMD_RTL_V2){
+				/* 2. second byte is length, should be less than RTL_V2_COMMAND_SIZE_MAX */
+				packet[0] = serial_read_rtl(); 
+				len = packet[0];
+				if (len <= RTL_V2_COMMAND_SIZE_MAX){
+					/* 3. remaining bytes should pass CRC check */
+					for (idx = 1; idx < len; idx++){
+						packet[idx] = serial_read_rtl();
+					}
+
+					/* calculate CRC 8 on the command and value and compare with checksum */
+					uint8_t crc_in;
+					crc_in = crc8x_fast(0, packet, len-1);
+					if (crc_in == packet[len-1]){
+						/* CRC passed, validate and execute command */			
+					
+						execute_RTL_command();
+					
+						/* 4. third byte (byte[1]) is sequence number 
+						 * if sequence number is not matching expected then raise alarm
+						 * exceptions are:
+						 * 1. RESET_SEQUENCE_NUMBER command 
+						 * 2. if it is first time after boot */					
+						seq = packet[1];					
+						if ( seq != sequence_expected) {
+							sequence_expected = seq; /* reset expected sequence number to match downstream one*/
+							/* raise alarm if command is not RESET_SEQUENCE_NUMBER command, otherwise pass silently */
+							if ( ( packet[2] != RESET_SEQUENCE_NUMBER ) && ( first_packet_since_boot == 0 ) ) { report_status_message(ASMCNC_RTL_SEQ_ERROR);}
+						}				
+						sequence_expected++; /* increment sequence number */
+						first_packet_since_boot = 0;
+				
+						/* check if more data is available from rtl_serial buffer */					
+						rtl_data_available = serial_rtl_data_available_length(); 
+						if ( rtl_data_available >= (RTL_V2_COMMAND_SIZE_MIN+1) ) {
+							/* schedule next TMC execute: indicate to main loop that there is a TMC command to process */
+							system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
+						};				
+					
+					
+					} // if (crc_in == packet[len-1]){
+            
+					else{ /* crc error */
+						/* if crc failed then rtl buffer corruption has happened and parser should continue from next byte*/
+						/* indicate to main loop that there is a RTL command to process */
+						system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
+						report_status_message(ASMCNC_CRC8_ERROR);					
+					} //else{ /* crc error */		
+				
+				} 
+				else{ //if (len <= RTL_V2_COMMAND_SIZE_MAX){
+					/* if length check failed then rtl buffer corruption has happened and parser should continue from next byte*/
+					/* indicate to main loop that there is a RTL command to process */
+					system_set_exec_rtl_command_flag(RTL_V2_COMMAND);				
+					report_status_message(ASMCNC_RTL_LEN_ERROR);				
+				}
+			
+			}
+			else{ //if (modifier == CMD_RTL_V2){
+				/* if modifier is not CMD_RTL_V2 then rtl buffer corruption has happened and parser should continue from next byte*/
+				/* indicate to main loop that there is a RTL command to process */
+				system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
+				report_status_message(ASMCNC_RTL_PARSE_ERROR);					
+			}
+		
+		
+		} //if (rtl_data_available >= RTL_V2_COMMAND_SIZE_MIN){	
+
+		
+	} 	
+	else{ //if (lock_RTL_execution == 0){
+		system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
+	}
+	
+
+} //void process_RTL_buffer(){
+
+
+void execute_RTL_command(){
+/* packet structure: 
+ * byte[0]: length
+ * byte[1]: seq
+ * byte[2]: cmd
+ * byte[3-18]: data
+ * byte[len-1]: crc8
+ */
+
+	uint8_t data_len = packet[0] - RTL_V2_COMMAND_SIZE_MIN;
+	uint8_t rtl_command = packet[2];	
+
+	switch (rtl_command) {	  
+		case SET_RGB_LED_STATE:
+			/* data must be exactly 3 bytes: R, G and B*/
+			if (data_len == 3){
+				/* set the RGB LED state */
+				asmcnc_RGB_set(packet[3], packet[4], packet[5]);
+			}
+			else{
+				report_status_message(ASMCNC_PARAM_ERROR);
+			}
+		break;
+		
+		case SET_SPINDLE_SPEED:
+		break;
+		
+		case SET_EXTRACTION_STATE:
+		break;
+		
+		case SET_LASER_DATUM_STATE:
+		break;
+		
+		case SET_SERIAL_NUMBER:
+		break;
+		
+		case SET_PRODUCT_VERSION:
+		break;
+		
+		case GET_SERIAL_NUMBER:
+		break;
+		
+		case GET_PRODUCT_NUMBER:
+		break;
+		
+		case GET_ALARM_REASON:
+		break;
+		
+		case GET_DIGITAL_SPINDLE_INFO:
+		break;
+		
+		case RESET_DIGITAL_SPINDLE_BRUSH_TIME:
+		break;
+		
+		case RESET_SEQUENCE_NUMBER:
+		break;
+		
+		case TMC_GLOBAL_COMMAND:
+		break;
+		
+		case TMC_REGISTER_COMMAND:
+		break;
+	  
+		default:
+			report_status_message(ASMCNC_COMMAND_ERROR);
+		break;
+	} //switch (rtl_command) {
+	
+	
+	/* release reentrance lock */
+	lock_RTL_execution = 0;
+} //execute_RTL_command();
+

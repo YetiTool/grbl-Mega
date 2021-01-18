@@ -51,22 +51,7 @@ uint8_t asmcnc_execute_line(char *line)
 		case 'L': {			//RGB HEX Codes, see https://htmlcolorcodes.com/
 			uint8_t buffer[3] = {0}; 	/* buffer to hold output int values */
 			hex2bin(&line[2], buffer); 	/* convert hex string to numbers , for example: HEX #FFC133 -> RGB 255, 193, 51  */
-			asmcnc_RGB_setup(); 		/* Setup pre-scaling = 8 and Waveform Generation Mode: PWM, Phase Correct, 8-bit */
-			/* decoded RGB values:
-			 * R = buffer [0]
-			 * G = buffer [1]
-			 * B = buffer [2]
-			 * */
-			OCR3A=buffer[0]; /* R */
-			OCR3B=buffer[1]; /* G */
-			OCR3C=buffer[2]; /* B */
-			/* debug prints */
-//			printPgmString(PSTR("R:"));
-//			printInteger(buffer[0]);
-//			printPgmString(PSTR("G:"));
-//			printInteger(buffer[1]);
-//			printPgmString(PSTR("B:"));
-//			printInteger(buffer[2]);
+			asmcnc_RGB_set(buffer[0],buffer[1],buffer[2]);
 			} //case 'L':
 			break; //case 'L': 			//RGB HEX Codes, see https://htmlcolorcodes.com/
 
@@ -79,7 +64,7 @@ uint8_t asmcnc_execute_line(char *line)
 	case 'A':      /* YETI custom non-realtime commands, they do generate "ok" response */
 	  switch( line[1] ) {
 		case 'L': 			//RGD LED PWM values 1=off 255=full on
-			asmcnc_RGB_setup(); /* Setup pre-scaling = 8 and Waveform Generation Mode: PWM, Phase Correct, 8-bit */
+			asmcnc_RGB_init(); /* Setup pre-scaling = 8 and Waveform Generation Mode: PWM, Phase Correct, 8-bit */
 			if (line[2] == '0') {asmcnc_RGB_off(); break;} //"0" = all off
 			if ((line[2] != 'R') && (line[2] != 'G') && (line[2] != 'B')) { return(ASMCNC_STATUS_INVALID_STATEMENT); }
 			if ((line[3]<0x30)|(line[3]>0x39)){ return(ASMCNC_STATUS_INVALID_STATEMENT); }
@@ -152,21 +137,11 @@ uint8_t asmcnc_execute_line(char *line)
 }
 
 void asmcnc_RGB_off(void){
-
-	/* Setup pre-scaling = 8 and Waveform Generation Mode: PWM, Phase Correct, 8-bit */
-	asmcnc_RGB_setup();
-
-	/* set min brightness */
-	OCR3B=0; OCR3C=0; OCR3A=0;
+	asmcnc_RGB_set(0,0,0);
 }
 
 void asmcnc_RGB_white(void){
-
-	/* Setup pre-scaling = 8 and Waveform Generation Mode: PWM, Phase Correct, 8-bit */
-	asmcnc_RGB_setup();
-
-	/* set max white brightness */
-	OCR3B=0xFF; OCR3C=0xFF; OCR3A=0xFF;
+	asmcnc_RGB_set(0xFF, 0xFF, 0xFF);
 }
 
 
@@ -187,7 +162,7 @@ void asmcnc_RGB_red_flash(void){		 //Configure PWM for long run time to give vis
 
 }
 
-void asmcnc_RGB_setup(void){
+void asmcnc_RGB_init(void){
 	/* Setup pre-scaling = 8 to ensure 256 shades of grey */
 	TCCR3B &=~(1<<CS32); /* unset bit CSn2 set in RGB_red_flash function */
 	TCCR3B |=(1<<CS31);
@@ -196,6 +171,16 @@ void asmcnc_RGB_setup(void){
 	TCCR3B &=~(1<<WGM33); /* unset bit set in RGB_red_flash function */
 	TCCR3A &=~(1<<WGM31); /* unset bit set in RGB_red_flash function */
 	TCCR3A |= (1<<WGM30);
+}
+
+void asmcnc_RGB_set(uint8_t R, uint8_t G, uint8_t B){
+	
+	asmcnc_RGB_init(); 		/* Setup pre-scaling = 8 and Waveform Generation Mode: PWM, Phase Correct, 8-bit */
+
+	OCR3A = R;
+	OCR3B = G;
+	OCR3C = B;
+	
 }
 
 #ifdef ANY_DEBUG_ENABLED
@@ -233,9 +218,9 @@ void asmcnc_init(void)
 	TCCR3B = 0;
 	TCCR3C = 0;
 	TCCR3A |= ((1<<COM3C1)|(1<<COM3B1)|(1<<COM3A1)); 	/* Setup non-inverted output for channels A, B and C */
-	asmcnc_RGB_setup(); 							/* Setup pre-scaling = 8 and Waveform Generation Mode: PWM, Phase Correct, 8-bit */
+	asmcnc_RGB_set(0,0,0); /* Turn off all LED's */
 	TCNT3=0; 											/* Zero timer 3 */
-	OCR3A = 0; OCR3B = 0; OCR3C = 0;					/* Turn off all LED's */
+
 
 	spi_hw_init(); /* enable heartbeat timer 5 */
 

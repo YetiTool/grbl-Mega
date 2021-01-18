@@ -8,16 +8,20 @@
 #ifndef ASMCNC_h
 #define ASMCNC_h
 
-#define ASMCNC_VERSION			"1.3.1"
-#define ASMCNC_VERSION_BUILD	"20210112"
+#define ASMCNC_VERSION          "1.3.2"
+#define ASMCNC_VERSION_BUILD    "20210119"
 
 /* proprietary error codes */
-#define ASMCNC_STATUS_INVALID_STATEMENT	39 //ASM Error code 39 if 'A' is followed by unrecognised command
-#define ASMCNC_INVALID_MOTOR_ID	        40 //ASM Error code 40. TMC command received for wrong motor
-#define ASMCNC_CRC8_ERROR	            41 //ASM Error code 41. TMC command received but crc8 does not match
+#define ASMCNC_STATUS_INVALID_STATEMENT 39 //ASM Error code 39 if 'A' is followed by unrecognised command
+#define ASMCNC_INVALID_MOTOR_ID         40 //ASM Error code 40. TMC command received for wrong motor
+#define ASMCNC_CRC8_ERROR               41 //ASM Error code 41. TMC command received but crc8 does not match
 #define ASMCNC_INVALID_HEX_CODE         42 //ASM Error code 42. Non "hex code" character received
 #define ASMCNC_COMMAND_ERROR            43 //ASM Error code 43. Command supplied to the function is outside wanted range
 #define ASMCNC_PARAM_ERROR              44 //ASM Error code 44. Parameter supplied to the function is outside wanted range
+#define ASMCNC_RTL_PARSE_ERROR          45 //ASM Error code 45. RTL buffer parser did not find expected packet start modifier.
+#define ASMCNC_RTL_LEN_ERROR            46 //ASM Error code 46. RTL buffer parser found length that is higher than maximum.
+#define ASMCNC_RTL_SEQ_ERROR            47 //ASM Error code 47. Sequence number does not match the expected one.
+#define ASMCNC_RTL_BUFFER_FULL          48 //ASM Error code 48. RTL buffer overflow, slow down sending RTL commands or increase buffer size.
 
 #define BK_INITIATOR "^"
 #define BK_TERMINATOR "v\n"
@@ -39,57 +43,57 @@
 
 // LIMITS defines
 // Port direction pins
-//#define AC_YLIM_XLIM_DDRL 	DDRL
-//#define AC_DOOR_DDR			DDRL
+//#define AC_YLIM_XLIM_DDRL     DDRL
+//#define AC_DOOR_DDR           DDRL
 // Port bits
-//#define AC_YLIM_MIN_RED		5
-//#define AC_YLIM_MAX_RED		1
-//#define AC_XLIM_MAX_RED		2
-//#define AC_XLIM_MIN_RED		4
-//#define AC_ZLIM_MAX_RED		0
-//#define AC_DOOR_RED			6
+//#define AC_YLIM_MIN_RED       5
+//#define AC_YLIM_MAX_RED       1
+//#define AC_XLIM_MAX_RED       2
+//#define AC_XLIM_MIN_RED       4
+//#define AC_ZLIM_MAX_RED       0
+//#define AC_DOOR_RED           6
 // Used to add to AXIS number for reporting the correct limit switch
-#define X_AXIS_MAX		4
-#define Y_AXIS_MAX		5
+#define X_AXIS_MAX      4
+#define Y_AXIS_MAX      5
 // TODO: Move all LED's to Port L to simplify the code
-//#define AC_LIM_RED_MASK_Y	((1<<AC_YLIM_MIN_RED)|(1<<AC_YLIM_MAX_RED))
-//#define AC_LIM_RED_MASK_XZ	((1<<AC_XLIM_MIN_RED)|(1<<AC_XLIM_MAX_RED)|(1<<AC_ZLIM_MAX_RED)|(1<<AC_YLIM_MIN_RED)|(1<<AC_YLIM_MAX_RED))
-//#define AC_DOOR_RED_MASK	(1<<AC_DOOR_RED)
+//#define AC_LIM_RED_MASK_Y ((1<<AC_YLIM_MIN_RED)|(1<<AC_YLIM_MAX_RED))
+//#define AC_LIM_RED_MASK_XZ    ((1<<AC_XLIM_MIN_RED)|(1<<AC_XLIM_MAX_RED)|(1<<AC_ZLIM_MAX_RED)|(1<<AC_YLIM_MIN_RED)|(1<<AC_YLIM_MAX_RED))
+//#define AC_DOOR_RED_MASK  (1<<AC_DOOR_RED)
 
 // RGB defines
 // Port direction pins
-#define AC_RGB_DDR			DDRE
+#define AC_RGB_DDR          DDRE
 // Port bits
-#define AC_RGB_R		3 //Red LED
-#define AC_RGB_G		4 //Green LED
-#define AC_RGB_B		5 //Blue LED
-#define LASER_PIN		6 //Laser cross on/off control, pin 8, PE6, line 6 on port E
+#define AC_RGB_R        3 //Red LED
+#define AC_RGB_G        4 //Green LED
+#define AC_RGB_B        5 //Blue LED
+#define LASER_PIN       6 //Laser cross on/off control, pin 8, PE6, line 6 on port E
 
-#define AC_RGB_MASK		((1<<AC_RGB_R)|(1<<AC_RGB_G)|(1<<AC_RGB_B))
+#define AC_RGB_MASK     ((1<<AC_RGB_R)|(1<<AC_RGB_G)|(1<<AC_RGB_B))
 
 //Extractor & Light defines
-#define AC_ACCS_DDR			DDRG
-#define	AC_EXTRACTOR	0
-#define AC_LIGHT		2
+#define AC_ACCS_DDR         DDRG
+#define AC_EXTRACTOR    0
+#define AC_LIGHT        2
 
-#define AC_ACCS_MASK	((1<<AC_EXTRACTOR)|(1<<AC_LIGHT))
+#define AC_ACCS_MASK    ((1<<AC_EXTRACTOR)|(1<<AC_LIGHT))
 
 //PL3 Probe holder
 //Probe holder
-#define AC_PROBE_HOLDER_DDR	DDRL
-#define AC_PROBE_HOLDER	3
-#define AC_PROBE_HOLDER_MASK	(1<<AC_PROBE_HOLDER)
+#define AC_PROBE_HOLDER_DDR DDRL
+#define AC_PROBE_HOLDER 3
+#define AC_PROBE_HOLDER_MASK    (1<<AC_PROBE_HOLDER)
 //Enclosure (dust shoe cover)
-#define AC_PROBE_ENCLOSURE_DDR	DDRK
-#define AC_PROBE_ENCLOSURE	2
-#define AC_PROBE_ENCLOSURE_MASK	(1<<AC_PROBE_ENCLOSURE)
+#define AC_PROBE_ENCLOSURE_DDR  DDRK
+#define AC_PROBE_ENCLOSURE  2
+#define AC_PROBE_ENCLOSURE_MASK (1<<AC_PROBE_ENCLOSURE)
 //spare control pin
-#define AC_PROBE_SPARE1_DDR	DDRK
+#define AC_PROBE_SPARE1_DDR DDRK
 #define AC_PROBE_SPARE1 4
-#define AC_PROBE_SPARE1_MASK	(1<<AC_PROBE_SPARE1)
+#define AC_PROBE_SPARE1_MASK    (1<<AC_PROBE_SPARE1)
 //Live loss pin
 #define AC_LIVE_SENSE 1           /* MEGA2560 Analog Pin 1 on port F, low when live is present, high when live is lost, only for Z-head HW >= Rev H */
-#define AC_LIVE_SENSE_MASK		(1<<AC_LIVE_SENSE)
+#define AC_LIVE_SENSE_MASK      (1<<AC_LIVE_SENSE)
 
 #define AC_LIVE_DDR       DDRL
 #define AC_LIVE_PIN       PINL
@@ -105,7 +109,7 @@
 #define THERMISTOR_MONITOR   3    /* MEGA2560 Analog Pin PF3, 2k NTC thermistor monitor*/
 //Spindle spare pin
 #define SPINDLE_SPARE 5           /* MEGA2560 Analog Pin PF5, for future use, for example low when brushes are ok, high when brushes are worn */
-#define SPINDLE_SPARE_MASK		(1<<SPINDLE_SPARE)
+#define SPINDLE_SPARE_MASK      (1<<SPINDLE_SPARE)
 
 #define ENABLE_SPINDLE_LOAD_MONITOR // enable spindle load monitoring, apply to Mafell spindles
 #define ENABLE_TEMPERATURE_MONITOR  // enable temperatuer monitoring, apply to ZH2 and newer
@@ -115,27 +119,46 @@
 
 /* RGB HEX Rx state machine state */
 enum rgbHexStates{
-	RGB_HEX_RTL_IDLE, // normal state, usual operation
-	RGB_HEX_RTL_RX,   // hex code reception ongoing
-	RGB_HEX_RTL_ERR   // FAULT - other than "0123456789ABCDEF" char received
+    RTL_IDLE,           // normal state, usual operation
+    RTL_RGB_HEX_RX,     // hex code reception ongoing
+    RTL_RGB_HEX_ERR,    // FAULT - other than "0123456789ABCDEF" char received
+    RTL_V2_RX,          // TMC command code reception ongoing
 };
 
-#define RTL_TMC_COMMAND_SIZE 7 /* 7 bytes: len, command, value, crc */
+ /* protocol v2 Commands, refer to gdoc "Yeti-GRBL extended Protocol"*/
+#define SET_RGB_LED_STATE                   1            //  Set the dust show light color in RGB 3 bytes format, Green would be “^\x01\x00\xFF\x00“
+#define SET_SPINDLE_SPEED                   2            //  Set spindle speed. Speed 0 would also turn off the spindle relay
+#define SET_EXTRACTION_STATE                3            //  Enable or disable extraction. 1: enable, 0: disable.
+#define SET_LASER_DATUM_STATE               4            //  Enable or disable laser datum. 1: enable, 0: disable.
+#define SET_SERIAL_NUMBER                   5            //  Store serial number to persistent memory
+#define SET_PRODUCT_VERSION                 6            //  Store product version to persistent memory
+#define GET_SERIAL_NUMBER                   7            //  Report serial number stored in persistent memory
+#define GET_PRODUCT_NUMBER                  8            //  Report product number stored in persistent memory
+#define GET_ALARM_REASON                    9            //  Report latest alarm reason (which end switch triggered the alarm)
+#define GET_DIGITAL_SPINDLE_INFO            10           //  Report Mafell digital spindle info: serial number, uptime, brush time, etc.
+#define RESET_DIGITAL_SPINDLE_BRUSH_TIME    11           //  Reset brush timer in Mafell digital spindle
+#define RESET_SEQUENCE_NUMBER               12           //  Reset protocol V2 sequence number to 0. Command would not generate sequence error even if expected sequence number does not match
+#define TMC_GLOBAL_COMMAND                  50           //  TMC command, see table xx
+#define TMC_REGISTER_COMMAND                51           //  TMC command, see table xx
+
+
+#define RTL_V2_COMMAND_SIZE_MIN 4 /* 5 bytes: len, seq, command, crc */
+#define RTL_V2_COMMAND_SIZE_MAX 20 /* 20 bytes: len, seq, command, data (0-16), crc */
 #define RTL_RGB_COMMAND_SIZE 6 /* 6 hex bytes: 2xR, 2xG, 2xB */
 
 
 /* setup TMC port */
-#define TMC_DDR			DDRB
-#define TMC_PORT		PORTB
+#define TMC_DDR         DDRB
+#define TMC_PORT        PORTB
 // Port bits
-#define SPI_SS_PIN			0 //PB0
-#define SPI_SCK_PIN			1 //PB1
-#define SPI_MOSI_PIN		2 //PB2
-#define SPI_MISO_PIN		3 //PB3 //this need to be input pin
-#define SPI_CS_X_PIN		4 //PB4
-#define SPI_CS_Y_PIN		5 //PB5
-#define SPI_CS_Z_PIN		6 //PB6
-#define TMC_PORT_MASK	( (1<<SPI_SCK_PIN) | (1<<SPI_MOSI_PIN) | (1<<SPI_CS_X_PIN) | (1<<SPI_CS_Y_PIN) | (1<<SPI_CS_Z_PIN) | (1<<SPI_SS_PIN) );
+#define SPI_SS_PIN          0 //PB0
+#define SPI_SCK_PIN         1 //PB1
+#define SPI_MOSI_PIN        2 //PB2
+#define SPI_MISO_PIN        3 //PB3 //this need to be input pin
+#define SPI_CS_X_PIN        4 //PB4
+#define SPI_CS_Y_PIN        5 //PB5
+#define SPI_CS_Z_PIN        6 //PB6
+#define TMC_PORT_MASK   ( (1<<SPI_SCK_PIN) | (1<<SPI_MOSI_PIN) | (1<<SPI_CS_X_PIN) | (1<<SPI_CS_Y_PIN) | (1<<SPI_CS_Z_PIN) | (1<<SPI_SS_PIN) );
 
 /* setup debug port. Designed for monitoring real time performance of individual functions to identify potential weaknesses and clashes in the code*/
 //#define DEBUG_SPI_ENABLED // comment out to remove debug pins functionality - remove for production version
@@ -147,19 +170,19 @@ enum rgbHexStates{
 //#define FLASH_DEBUG_ENABLED // enable to debug EEPROM storage
 #define DEBUG_LED_ENABLED // enable to drive indication (second) RGB LED light
 
-#if defined(DEBUG_SPI_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED) || defined(SG_CAL_DEBUG_ENABLED) || defined(FLASH_DEBUG_ENABLED) || defined(DEBUG_LED_ENABLED) 
+#if defined(DEBUG_SPI_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED) || defined(SG_CAL_DEBUG_ENABLED) || defined(FLASH_DEBUG_ENABLED) || defined(DEBUG_LED_ENABLED)
 #define ANY_DEBUG_ENABLED //
 #endif
 
 #ifdef ANY_DEBUG_ENABLED
-#define DEBUG_DDR			DDRC
-#define DEBUG_PORT			PORTC
+#define DEBUG_DDR           DDRC
+#define DEBUG_PORT          PORTC
 // Port bits
-#define DEBUG_0_PIN			0 //PC0, Blue debug LED
-#define DEBUG_1_PIN			1 //PC1, Red debug LED
-#define DEBUG_2_PIN			2 //PC2
-#define DEBUG_3_PIN			3 //PC3, Green debug LED
-#define DEBUG_PORT_MASK	( (1<<DEBUG_0_PIN) | (1<<DEBUG_1_PIN) | (1<<DEBUG_2_PIN) | (1<<DEBUG_3_PIN) )
+#define DEBUG_0_PIN         0 //PC0, Blue debug LED
+#define DEBUG_1_PIN         1 //PC1, Red debug LED
+#define DEBUG_2_PIN         2 //PC2
+#define DEBUG_3_PIN         3 //PC3, Green debug LED
+#define DEBUG_PORT_MASK ( (1<<DEBUG_0_PIN) | (1<<DEBUG_1_PIN) | (1<<DEBUG_2_PIN) | (1<<DEBUG_3_PIN) )
 void debug_pin_write(uint8_t level, uint8_t pin);
 #endif
 
@@ -170,7 +193,9 @@ void asmcnc_init(void);
 void asmcnc_RGB_off(void);
 void asmcnc_RGB_white(void);
 void asmcnc_RGB_red_flash(void);
-void asmcnc_RGB_setup(void);
+void asmcnc_RGB_init(void);
+void asmcnc_RGB_set(uint8_t R, uint8_t G, uint8_t B);
+
 uint8_t asmcnc_execute_line(char *line);
 
 #define UNUSED_VARIABLE(X)  ((void)(X))

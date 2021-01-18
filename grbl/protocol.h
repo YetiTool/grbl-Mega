@@ -41,4 +41,7 @@ void protocol_auto_cycle_start();
 // Block until all buffered steps are executed
 void protocol_buffer_synchronize();
 
+void process_RTL_buffer();
+void execute_RTL_command();
+
 #endif

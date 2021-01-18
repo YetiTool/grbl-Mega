@@ -26,11 +26,16 @@
 #ifndef RX_BUFFER_SIZE
   #define RX_BUFFER_SIZE 255
 #endif
+#ifndef RX_RTL_BUFFER_SIZE
+  #define RX_RTL_BUFFER_MASK 	0x3F                 	/* RX Buffer mask, must be a mask of contiguous zeroes, followed by contiguous sequence of ones: 000...111. */
+  #define RX_RTL_BUFFER_SIZE 	(RX_RTL_BUFFER_MASK + 1)/* Size of the send buffer, which is 1 higher than the mask. */
+#endif
 #ifndef TX_BUFFER_SIZE
   #define TX_BUFFER_SIZE 255
 #endif
 
 #define SERIAL_NO_DATA 0xff
+#define SERIAL_DATA_INCOMPLETE 0xf7
 
 
 void serial_init();
@@ -40,6 +45,8 @@ void serial_write(uint8_t data);
 
 // Fetches the first byte in the serial read buffer. Called by main program.
 uint8_t serial_read();
+uint8_t serial_read_rtl();
+uint8_t serial_rtl_data_available_length();
 
 // Reset and empty data in read buffer. Used by e-stop and reset.
 void serial_reset_read_buffer();

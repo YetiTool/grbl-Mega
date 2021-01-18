@@ -115,7 +115,7 @@
 #define SPINDLE_STOP_OVR_RESTORE_CYCLE  bit(3)
 
 // Override bit maps. Realtime bitflags to control Yeti downstream real time commands.
-#define RTL_TMC_COMMAND                 bit(0)
+#define RTL_V2_COMMAND                  bit(0)
 #define RTL_RGB_COMMAND                 bit(1)
 #define RTL_VAC_COMMAND                 bit(2)
 #define RTL_LASER_DATUM_COMMAND         bit(3)

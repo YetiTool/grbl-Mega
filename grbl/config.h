@@ -59,7 +59,7 @@
 #define CMD_FEED_HOLD '!'
 #define CMD_RGB_WHITE '&' //ASM Mod allow control of the RGB LED while in alarm state
 #define CMD_RGB_HEX '_'   //ASM Mod allow control of the RGB LED while bypassing serial buffer
-#define CMD_TMC_HEX '^'   //BK Mod allow control of the TMC motor controllers while bypassing serial buffer
+#define CMD_RTL_V2 '^'   //BK Mod allow control of the TMC motor controllers while bypassing serial buffer
 
 // NOTE: All override realtime commands must be in the extended ASCII character set, starting
 // at character value 128 (0x80) and up to 255 (0xFF). If the normal set of realtime commands,
