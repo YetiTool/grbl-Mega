@@ -30,6 +30,8 @@
   #define HOMING_AXIS_LOCATE_SCALAR  5.0 // Must be > 1 to ensure limit switch is cleared.
 #endif
 
+uint8_t limits_last_alarm_state = 0; /* persistent variable to keep most recent limits ALARM reason (which switch has triggered) */
+
 void limits_init()
 {
   #ifdef DEFAULTS_RAMPS_BOARD
@@ -191,7 +193,8 @@ uint8_t limits_get_state()
         if (!(sys_rt_exec_alarm)) {
           #ifdef HARD_LIMIT_FORCE_STATE_CHECK
             // Check limit pin state. 
-            if (limits_get_state()) {
+            limits_last_alarm_state = limits_get_state();
+            if (limits_last_alarm_state) {
               mc_reset(); // Initiate system kill.
               system_set_exec_alarm(EXEC_ALARM_HARD_LIMIT); // Indicate hard limit critical event
             }
@@ -211,7 +214,8 @@ uint8_t limits_get_state()
       if (sys.state != STATE_ALARM) {  // Ignore if already in alarm state. 
         if (!(sys_rt_exec_alarm)) {
           // Check limit pin state. 
-          if (limits_get_state()) {
+          limits_last_alarm_state = limits_get_state();
+          if (limits_last_alarm_state) {
 //ASM Modification to allow limit red LED's to function HARD LIMIT ENABLED check moved to interrupt
         	if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)){
             mc_reset(); // Initiate system kill.
@@ -571,4 +575,8 @@ void limits_soft_check(float *target)
     protocol_execute_realtime(); // Execute to enter critical event loop and system abort
     return;
   }
+}
+
+uint8_t limits_get_last_alarm_state(){
+    return limits_last_alarm_state;
 }

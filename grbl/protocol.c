@@ -996,7 +996,6 @@ void execute_RTL_command(){
         case SET_EXTRACTION_STATE:
             /* data must be exactly 1 byte, value 1 or 0*/
             if (data_len == 1){
-                /* convert 2 bytes to uint16 */
                 uint8_t extraction_state = *p_data;
                 if (extraction_state <= 1){
                     if (extraction_state == 0){
@@ -1016,21 +1015,84 @@ void execute_RTL_command(){
         break;
 
         case SET_LASER_DATUM_STATE:
+            /* data must be exactly 1 byte, value 1 or 0*/
+            if (data_len == 1){
+                uint8_t laser_datum_state = *p_data;
+                if (laser_datum_state <= 1){
+                    if (laser_datum_state == 0){
+                        PORTE &=~(1<<LASER_PIN); //Laser off
+                    }
+                    else{ //if (laser_datum_state == 0){
+                        PORTE |=(1<<LASER_PIN);  //Laser on
+                    }
+                }
+                else{//if (laser_datum_state <= 1){
+                    report_status_message(ASMCNC_PARAM_ERROR);
+                }
+            }
+            else{ //if (data_len == 1){
+                report_status_message(ASMCNC_RTL_LEN_ERROR);
+            }
         break;
 
         case SET_SERIAL_NUMBER:
+            /* data must be exactly SERIAL_NUMBER_LEN bytes*/
+            if (data_len == SERIAL_NUMBER_LEN){
+                printPgmString(PSTR("Storing serial number: "));
+                for (uint8_t idx = 0; idx < SERIAL_NUMBER_LEN; idx++){
+                    serial_write(*p_data);
+                    p_data++;
+                }
+                printPgmString(PSTR("\n"));
+            }
+            else{ //if (data_len == 2){
+                report_status_message(ASMCNC_RTL_LEN_ERROR);
+            }
         break;
 
         case SET_PRODUCT_VERSION:
+            /* data must be exactly PRODUCT_VERSION_LEN bytes*/
+            if (data_len == PRODUCT_VERSION_LEN){
+                printPgmString(PSTR("Storing product number: "));
+                for (uint8_t idx = 0; idx < PRODUCT_VERSION_LEN; idx++){
+                    serial_write(*p_data);
+                    p_data++;
+                }
+                printPgmString(PSTR("\n"));
+            }
+            else{ //if (data_len == 2){
+                report_status_message(ASMCNC_RTL_LEN_ERROR);
+            }
         break;
 
         case GET_SERIAL_NUMBER:
         break;
 
-        case GET_PRODUCT_NUMBER:
+        case GET_PRODUCT_VERSION:
         break;
 
         case GET_ALARM_REASON:
+            /* data must be exactly 0 bytes*/
+            if (data_len == 0){
+                uint8_t lim_pin_state = limits_get_last_alarm_state();
+                printPgmString(PSTR("Limits state: "));
+                printInteger( lim_pin_state );
+                printPgmString(PSTR(", end switch triggered alarm: "));
+                if (lim_pin_state) {
+                    if (bit_istrue(lim_pin_state,bit(X_AXIS)))      { serial_write('x'); }
+                    if (bit_istrue(lim_pin_state,bit(X_AXIS_MAX)))  { serial_write('X'); }
+                    if (bit_istrue(lim_pin_state,bit(Y_AXIS)))      { serial_write('y'); }
+                    if (bit_istrue(lim_pin_state,bit(Y_AXIS_MAX)))  { serial_write('Y'); }
+                    if (bit_istrue(lim_pin_state,bit(Z_AXIS)))      { serial_write('Z'); }
+                }
+                else{
+                    printPgmString(PSTR("None"));
+                }
+                printPgmString(PSTR("\n"));
+            }
+            else{ //if (data_len == 1){
+                report_status_message(ASMCNC_RTL_LEN_ERROR);
+            }
         break;
 
         case GET_DIGITAL_SPINDLE_INFO:

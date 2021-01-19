@@ -133,7 +133,7 @@ enum rgbHexStates{
 #define SET_SERIAL_NUMBER                   5            //  Store serial number to persistent memory
 #define SET_PRODUCT_VERSION                 6            //  Store product version to persistent memory
 #define GET_SERIAL_NUMBER                   7            //  Report serial number stored in persistent memory
-#define GET_PRODUCT_NUMBER                  8            //  Report product number stored in persistent memory
+#define GET_PRODUCT_VERSION                 8            //  Report product number stored in persistent memory
 #define GET_ALARM_REASON                    9            //  Report latest alarm reason (which end switch triggered the alarm)
 #define GET_DIGITAL_SPINDLE_INFO            10           //  Report Mafell digital spindle info: serial number, uptime, brush time, etc.
 #define RESET_DIGITAL_SPINDLE_BRUSH_TIME    11           //  Reset brush timer in Mafell digital spindle
@@ -142,9 +142,11 @@ enum rgbHexStates{
 #define TMC_REGISTER_COMMAND                51           //  TMC command, see table xx
 
 
-#define RTL_V2_COMMAND_SIZE_MIN 4 /* 5 bytes: len, seq, command, crc */
-#define RTL_V2_COMMAND_SIZE_MAX 20 /* 20 bytes: len, seq, command, data (0-16), crc */
-#define RTL_RGB_COMMAND_SIZE 6 /* 6 hex bytes: 2xR, 2xG, 2xB */
+#define RTL_V2_COMMAND_SIZE_MIN  4  /* 5 bytes: len, seq, command, crc */
+#define RTL_V2_COMMAND_SIZE_MAX 20  /* 20 bytes: len, seq, command, data (0-16), crc */
+#define RTL_RGB_COMMAND_SIZE     6  /* 6 hex bytes: 2xR, 2xG, 2xB */
+#define SERIAL_NUMBER_LEN       12  /* length of serial number field */
+#define PRODUCT_VERSION_LEN      8  /* length of product number field */
 
 
 /* setup TMC port */
