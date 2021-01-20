@@ -1039,11 +1039,7 @@ void execute_RTL_command(){
             /* data must be exactly SERIAL_NUMBER_LEN bytes*/
             if (data_len == SERIAL_NUMBER_LEN){
                 printPgmString(PSTR("Storing serial number: "));
-                for (uint8_t idx = 0; idx < SERIAL_NUMBER_LEN; idx++){
-                    serial_write(*p_data);
-                    p_data++;
-                }
-                printPgmString(PSTR("\n"));
+                flash_serial_store(p_data);
             }
             else{ //if (data_len == 2){
                 report_status_message(ASMCNC_RTL_LEN_ERROR);
@@ -1054,11 +1050,7 @@ void execute_RTL_command(){
             /* data must be exactly PRODUCT_VERSION_LEN bytes*/
             if (data_len == PRODUCT_VERSION_LEN){
                 printPgmString(PSTR("Storing product number: "));
-                for (uint8_t idx = 0; idx < PRODUCT_VERSION_LEN; idx++){
-                    serial_write(*p_data);
-                    p_data++;
-                }
-                printPgmString(PSTR("\n"));
+                flash_product_store(p_data);
             }
             else{ //if (data_len == 2){
                 report_status_message(ASMCNC_RTL_LEN_ERROR);
@@ -1066,9 +1058,23 @@ void execute_RTL_command(){
         break;
 
         case GET_SERIAL_NUMBER:
+            /* data must be exactly 0 bytes*/
+            if (data_len == 0){
+                flash_serial_read();
+            }
+            else{ //if (data_len == 1){
+                report_status_message(ASMCNC_RTL_LEN_ERROR);
+            }
         break;
 
         case GET_PRODUCT_VERSION:
+            /* data must be exactly 0 bytes*/
+            if (data_len == 0){
+                flash_product_read();
+            }
+            else{ //if (data_len == 1){
+                report_status_message(ASMCNC_RTL_LEN_ERROR);
+            }
         break;
 
         case GET_ALARM_REASON:
@@ -1096,9 +1102,23 @@ void execute_RTL_command(){
         break;
 
         case GET_DIGITAL_SPINDLE_INFO:
+            /* data must be exactly 0 bytes*/
+            if (data_len == 0){
+                printPgmString(PSTR("GET_DIGITAL_SPINDLE_INFO Not implemented\n"));
+            }
+            else{ //if (data_len == 1){
+                report_status_message(ASMCNC_RTL_LEN_ERROR);
+            }
         break;
 
         case RESET_DIGITAL_SPINDLE_BRUSH_TIME:
+            /* data must be exactly 0 bytes*/
+            if (data_len == 0){
+                printPgmString(PSTR("RESET_DIGITAL_SPINDLE_BRUSH_TIME Not implemented\n"));
+            }
+            else{ //if (data_len == 1){
+                report_status_message(ASMCNC_RTL_LEN_ERROR);
+            }
         break;
 
         case RESET_SEQUENCE_NUMBER:
@@ -1106,9 +1126,20 @@ void execute_RTL_command(){
         break;
 
         case TMC_GLOBAL_COMMAND:
-        break;
-
-        case TMC_REGISTER_COMMAND:
+            /* data must be exactly 1 bytes*/
+            if ( data_len == (TMC_GBL_CMD_LENGTH + 1) ) {
+                printPgmString(PSTR("TMC_GLOBAL_COMMAND: "));
+                printInteger( *p_data );
+                printPgmString(PSTR("\n"));
+            }
+            else if ( data_len == (TMC_REG_CMD_LENGTH + 1) ) {
+                printPgmString(PSTR("TMC_REGISTER_COMMAND: "));
+                printInteger( *p_data );
+                printPgmString(PSTR("\n"));
+            }
+            else{ //if (data_len == xx){
+                report_status_message(ASMCNC_RTL_LEN_ERROR);
+            }
         break;
 
         default:

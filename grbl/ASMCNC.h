@@ -147,7 +147,8 @@ enum rgbHexStates{
 #define RTL_RGB_COMMAND_SIZE     6  /* 6 hex bytes: 2xR, 2xG, 2xB */
 #define SERIAL_NUMBER_LEN       12  /* length of serial number field */
 #define PRODUCT_VERSION_LEN      8  /* length of product number field */
-
+#define TMC_REG_CMD_LENGTH       4  /* value */
+#define TMC_GBL_CMD_LENGTH       1  /* 1 byte command */
 
 /* setup TMC port */
 #define TMC_DDR         DDRB

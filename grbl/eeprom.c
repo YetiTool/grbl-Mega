@@ -492,6 +492,49 @@ uint32_t getLocalRunTimeSeconds(void){
 	return localRunTimeSeconds;
 }
 
+void print_serial(uint8_t* serial_number, uint8_t length){
+    /* copy pointer */
+    volatile uint8_t* p_data;
+    p_data = serial_number;
+    for (uint8_t idx = 0; idx < length; idx++){
+        serial_write(*p_data);
+        p_data++;
+    }
+    printPgmString(PSTR("\n"));
+}
+
+void flash_serial_store(uint8_t* serial_number){
+    /* only access EEPROM in not in motions state */
+    if ( !(sys.state & (STATE_CYCLE | STATE_HOMING | STATE_JOG) ) ){
+        print_serial(serial_number, SERIAL_NUMBER_LEN);
+        /* save serial number to eeprom */
+        memcpy_to_eeprom_with_checksum(EEPROM_ADDR_SERIAL, (char*)serial_number, SERIAL_NUMBER_LEN);
+    }
+}
+
+void flash_product_store(uint8_t* product_version){
+    /* only access EEPROM in not in motions state */
+    if ( !(sys.state & (STATE_CYCLE | STATE_HOMING | STATE_JOG) ) ){
+        print_serial(product_version, PRODUCT_VERSION_LEN);
+        /* save serial number to eeprom */
+        memcpy_to_eeprom_with_checksum(EEPROM_ADDR_SERIAL + 1 + SERIAL_NUMBER_LEN, (char*)product_version, PRODUCT_VERSION_LEN);
+    }
+}
+
+void flash_serial_read(void){
+    /* load serial from eeprom and print out */
+    uint8_t serial_number[SERIAL_NUMBER_LEN];
+    memcpy_from_eeprom_with_checksum((char*)serial_number, EEPROM_ADDR_SERIAL, SERIAL_NUMBER_LEN);
+    print_serial(serial_number, SERIAL_NUMBER_LEN);
+}
+void flash_product_read(void){
+    /* load serial from eeprom and print out */
+    uint8_t product_version[SERIAL_NUMBER_LEN];
+    memcpy_from_eeprom_with_checksum((char*)product_version, EEPROM_ADDR_SERIAL + 1 + SERIAL_NUMBER_LEN, PRODUCT_VERSION_LEN);
+    print_serial(product_version, PRODUCT_VERSION_LEN);
+}
+
+
 void flashStatisticsInit(void){
 
 #ifdef FLASH_DEBUG_ENABLED
