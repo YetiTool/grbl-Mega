@@ -67,6 +67,8 @@ void protocol_main_loop()
     system_execute_startup(line); // Execute startup script.
   }
 
+  system_set_exec_rtl_command_flag(RTL_V2_COMMAND); /* process realtime commads arrived to the buffer while system was in alarm state */
+
   // ---------------------------------------------------------------------------------
   // Primary loop! Upon a system abort, this exits back to main() to reset the system.
   // This is also where Grbl idles while waiting for something to do.
@@ -852,7 +854,7 @@ void process_RTL_buffer(){
         /* fetch host command from rtl serial buffer and execute:  fetch bytes from the buffer, calculate CRC and execute*/
         uint8_t idx, len, seq, modifier;
 
-        memset(packet, 0, RTL_V2_COMMAND_SIZE_MAX+1);
+        memset(packet, 0, RTL_V2_COMMAND_SIZE_MAX);
 
         /* check if data is available from rtl_serial bufer */
         uint8_t rtl_data_available = serial_rtl_data_available_length();
@@ -899,14 +901,6 @@ void process_RTL_buffer(){
                         sequence_expected++; /* increment sequence number */
                         first_packet_since_boot = 0;
 
-                        /* check if more data is available from rtl_serial buffer */
-                        rtl_data_available = serial_rtl_data_available_length();
-                        if ( rtl_data_available >= (RTL_V2_COMMAND_SIZE_MIN+1) ) {
-                            /* schedule next TMC execute: indicate to main loop that there is a TMC command to process */
-                            system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
-                        };
-
-
                     } // if (crc_in == packet[len-1]){
 
                     else{ /* crc error */
@@ -933,14 +927,24 @@ void process_RTL_buffer(){
             }
 
 
-        } //if (rtl_data_available >= RTL_V2_COMMAND_SIZE_MIN){
+        }//if (rtl_data_available >= RTL_V2_COMMAND_SIZE_MIN){
 
+        /* when code reached this point, be it successful completion of command or fault due to any of above 'else' error checks execute two steps: 
+         * 1. Release reentrance lock */
+        lock_RTL_execution = 0;
+
+        /* 2. Check if more data is available from rtl_serial buffer */
+        rtl_data_available = serial_rtl_data_available_length();
+        if ( rtl_data_available >= (RTL_V2_COMMAND_SIZE_MIN+1) ) {
+            /* schedule next TMC execute: indicate to main loop that there is a TMC command to process */
+            system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
+        };
 
     }
     else{ //if (lock_RTL_execution == 0){
-        system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
+        /* schedule next read */
+        //system_set_exec_rtl_command_flag(RTL_V2_COMMAND);
     }
-
 
 } //void process_RTL_buffer(){
 
@@ -1125,10 +1129,10 @@ void execute_RTL_command(){
             /* nothing to do here, already done in function process_RTL_buffer() at sequence number check */
         break;
 
-        case TMC_GLOBAL_COMMAND:
+        case TMC_COMMAND:
             /* data must be exactly 1 bytes*/
             if ( data_len == (TMC_GBL_CMD_LENGTH + 1) ) {
-                printPgmString(PSTR("TMC_GLOBAL_COMMAND: "));
+                printPgmString(PSTR("TMC_COMMAND: "));
                 printInteger( *p_data );
                 printPgmString(PSTR("\n"));
             }
@@ -1148,7 +1152,5 @@ void execute_RTL_command(){
     } //switch (rtl_command) {
 
 
-    /* release reentrance lock */
-    lock_RTL_execution = 0;
 } //execute_RTL_command();
 
