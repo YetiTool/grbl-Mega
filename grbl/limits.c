@@ -67,11 +67,12 @@ void limits_init()
       }
       #ifdef ENABLE_SOFTWARE_DEBOUNCE
         MCUSR &= ~(1<<WDRF);
-        WDTCSR |= (1<<WDCE) | (1<<WDE);
-        WDTCSR = (1<<WDP0); // Set time-out at ~32msec.
+        WDTCSR |= (1<<WDCE) | (1<<WDE); //start WDT once
+        //WDTCSR = (1<<WDP0); // Set time-out at ~32msec.
+        WDTCSR = 0; //all WDP bits "0" = 16ms interval
       #endif
     #endif // DISABLE_HW_LIMITS
-  #else
+  #else // DEFAULTS_RAMPS_BOARD
         SPCR = 0;
     LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins
 
@@ -90,8 +91,9 @@ void limits_init()
   
     #ifdef ENABLE_SOFTWARE_DEBOUNCE
       MCUSR &= ~(1<<WDRF);
-      WDTCSR |= (1<<WDCE) | (1<<WDE);
-      WDTCSR = (1<<WDP0); // Set time-out at ~32msec.
+      WDTCSR |= (1<<WDCE) | (1<<WDE); //start WDT once
+      //WDTCSR = (1<<WDP0); // Set time-out at ~32msec.
+	  WDTCSR = 0; //all WDP bits "0" = 16ms interval
     #endif
   #endif // DEFAULTS_RAMPS_BOARD
 }
@@ -199,6 +201,8 @@ uint8_t limits_get_state()
               system_set_exec_alarm(EXEC_ALARM_HARD_LIMIT); // Indicate hard limit critical event
             }
           #else
+            // Check limit pin state.
+            limits_last_alarm_state = limits_get_state();
             mc_reset(); // Initiate system kill.
             system_set_exec_alarm(EXEC_ALARM_HARD_LIMIT); // Indicate hard limit critical event
           #endif

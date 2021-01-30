@@ -8,7 +8,7 @@ REM USPasp takes 40s to complete 375kHz
 REM Pololu ISP emulator takes 21s to complete at 200kHz
 REM Pololu ISP emulator takes 10s to complete at 2000kHz
 
-SET PORT=COM3
+SET PORT=COM6
 REM SET FIRMWARE=GRBL_1.0.4\GRBL104andBL.hex
 SET FIRMWARE=Debug\grbl_mega.hex 
 SET AVRDUDE=C:\Yeti Drive\Engineering\Firmware\Production\tools\6.3.0-arduino14
