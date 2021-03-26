@@ -554,25 +554,19 @@ void report_realtime_status()
     uint8_t lim_pin_state   = limits_get_state();
     uint8_t ctrl_pin_state 	= system_control_get_state();
     uint8_t prb_pin_state 	= probe_get_state();
-//ASM Mod to get probe holder state & max limit switch states
-    uint8_t prb_hold_state 	= !(PINL & AC_PROBE_HOLDER_MASK);
+//ASM Mod to get enclosure and AC sense
     uint8_t enclosure_state =  (PINK & AC_PROBE_ENCLOSURE_MASK); /* print status letter 'G' when cover is open  */
-    uint8_t spare1_state 	= !(PINK & AC_PROBE_SPARE1_MASK);
     uint8_t ac_sense_state  =  (PINF & AC_LIVE_SENSE_MASK) && (PIND > 5); /* low when live is present, high when live is lost, only for Z-head HW >= Rev H */
-    uint8_t spn_spare_state =  (PINF & SPINDLE_SPARE_MASK) && (PIND > 5); /* only for Z-head HW >= Rev H*/
 	
 	if (PIND > 16){
 		ac_sense_state = get_AC_lost_state(); /* ZH3 HW detects the AC_LIVE using timer5 counting zero crossings */
 	}	
 	
-    if (lim_pin_state | ctrl_pin_state | prb_pin_state | prb_hold_state | enclosure_state | spare1_state | ac_sense_state ) {
+    if (lim_pin_state | ctrl_pin_state | prb_pin_state | enclosure_state | ac_sense_state ) {
       printPgmString(PSTR("|Pn:"));
       if (prb_pin_state)    { serial_write('P'); }
-      if (prb_hold_state)   { serial_write('p'); }
       if (enclosure_state)  { serial_write('G'); }
-      if (spare1_state)     { serial_write('g'); }
       if (ac_sense_state)   { serial_write('r'); }
-      if (spn_spare_state)	{ serial_write('B'); }
       if (lim_pin_state) {
         if (bit_istrue(lim_pin_state,bit(X_AXIS))) { serial_write('x'); }
         if (bit_istrue(lim_pin_state,bit(X_AXIS_MAX))) { serial_write('X'); }
@@ -584,9 +578,9 @@ void report_realtime_status()
         #ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
           if (bit_istrue(ctrl_pin_state,CONTROL_PIN_INDEX_SAFETY_DOOR)) { serial_write('D'); }
         #endif
-        if (bit_istrue(ctrl_pin_state,CONTROL_PIN_INDEX_RESET)) { serial_write('R'); }
-        if (bit_istrue(ctrl_pin_state,CONTROL_PIN_INDEX_FEED_HOLD)) { serial_write('H'); }
-        if (bit_istrue(ctrl_pin_state,CONTROL_PIN_INDEX_CYCLE_START)) { serial_write('S'); }
+        //if (bit_istrue(ctrl_pin_state,CONTROL_PIN_INDEX_RESET)) { serial_write('R'); }
+        //if (bit_istrue(ctrl_pin_state,CONTROL_PIN_INDEX_FEED_HOLD)) { serial_write('H'); }
+        //if (bit_istrue(ctrl_pin_state,CONTROL_PIN_INDEX_CYCLE_START)) { serial_write('S'); }
       } //if (ctrl_pin_state) {
     } //if (lim_pin_state | ctrl_pin_state | prb_pin_state | prb_hold_state | enclosure_state | spare1_state | ac_sense_state ) {
   #endif //#ifdef REPORT_FIELD_PIN_STATE

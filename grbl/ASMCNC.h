@@ -8,8 +8,8 @@
 #ifndef ASMCNC_h
 #define ASMCNC_h
 
-#define ASMCNC_VERSION          "1.3.3"
-#define ASMCNC_VERSION_BUILD    "20210209"
+#define ASMCNC_VERSION          "1.3.4"
+#define ASMCNC_VERSION_BUILD    "20210325"
 
 /* proprietary error codes */
 #define ASMCNC_STATUS_INVALID_STATEMENT 39 //ASM Error code 39 if 'A' is followed by unrecognised command
@@ -79,18 +79,11 @@
 #define AC_ACCS_MASK    ((1<<AC_EXTRACTOR)|(1<<AC_LIGHT))
 
 //PL3 Probe holder
-//Probe holder
-#define AC_PROBE_HOLDER_DDR DDRL
-#define AC_PROBE_HOLDER 3
-#define AC_PROBE_HOLDER_MASK    (1<<AC_PROBE_HOLDER)
 //Enclosure (dust shoe cover)
 #define AC_PROBE_ENCLOSURE_DDR  DDRK
 #define AC_PROBE_ENCLOSURE  2
 #define AC_PROBE_ENCLOSURE_MASK (1<<AC_PROBE_ENCLOSURE)
-//spare control pin
-#define AC_PROBE_SPARE1_DDR DDRK
-#define AC_PROBE_SPARE1 4
-#define AC_PROBE_SPARE1_MASK    (1<<AC_PROBE_SPARE1)
+
 //Live loss pin
 #define AC_LIVE_SENSE 1           /* MEGA2560 Analog Pin 1 on port F, low when live is present, high when live is lost, only for Z-head HW >= Rev H */
 #define AC_LIVE_SENSE_MASK      (1<<AC_LIVE_SENSE)
@@ -107,9 +100,6 @@
 //Spindle load monitor pin
 #define SPINDLE_LOAD_MONITOR 1    /* MEGA2560 Analog Pin PF1, spindle load 0-5V signal monitor*/
 #define THERMISTOR_MONITOR   3    /* MEGA2560 Analog Pin PF3, 2k NTC thermistor monitor*/
-//Spindle spare pin
-#define SPINDLE_SPARE 5           /* MEGA2560 Analog Pin PF5, for future use, for example low when brushes are ok, high when brushes are worn */
-#define SPINDLE_SPARE_MASK      (1<<SPINDLE_SPARE)
 
 #define ENABLE_SPINDLE_LOAD_MONITOR // enable spindle load monitoring, apply to Mafell spindles
 #define ENABLE_TEMPERATURE_MONITOR  // enable temperatuer monitoring, apply to ZH2 and newer

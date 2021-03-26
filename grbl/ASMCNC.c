@@ -234,7 +234,6 @@ void asmcnc_init(void)
     DEBUG_DDR  			|=DEBUG_PORT_MASK; /* enable output direction of the port */
 	DEBUG_PORT			|=DEBUG_PORT_MASK; /* default pin state high*/	
     #endif	
-	AC_PROBE_HOLDER_DDR	&=~AC_PROBE_HOLDER_MASK; //Set as input
 
     //PORTL |= AC_LIM_RED_MASK_XZ;
     //PORTL |= AC_DOOR_RED_MASK;
