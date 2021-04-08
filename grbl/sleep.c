@@ -27,7 +27,7 @@
 volatile uint8_t sleep_counter;
 volatile uint8_t AC_live_counter = 0;
 volatile uint8_t AC_live_lost = 0;
-#define AC_LOST_DEBUG
+//#define AC_LOST_DEBUG //uncomment to print "AC lost xx times" if AC loss detected
 #ifdef AC_LOST_DEBUG
 volatile uint8_t AC_live_lost_counter = 0; /* count how many times AC live was detected */
 #endif
