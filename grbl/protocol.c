@@ -519,6 +519,93 @@ void protocol_exec_rt_system()
   } //if rt_exec = sys_rt_exec_rtl_command;
 
 
+  // Execute TMC control commands that arrived from SPI ISR routines
+  rt_exec = sys_rt_exec_tmc_command;
+  if (rt_exec) {
+      system_clear_exec_tmc_flags(); // Clear all accessory override flags. Shall be done after last command in the buffer is processed
+      
+      /* schedule standstill current SPI command transfer*/
+      if (rt_exec & TMC_STANDSTILL_COMMAND) {
+          tmc_standstill_on();
+      }
+      
+      /* schedule standstill current SPI command transfer*/
+      if (rt_exec & TMC_ACTIVE_COMMAND) {
+          tmc_standstill_off();
+      }
+      
+      /* schedule next SPI read all */
+      if (rt_exec & TMC_READ_ALL_COMMAND) {
+          /* BK profiling: SPI prepare: 900us  + actual SPI reads: 1.2-2.0 ms */
+          tmc2590_schedule_read_all();          
+      }
+      
+      /* schedule next SPI read Stall Guard from X motor controllers */
+      if (rt_exec & TMC_SPI_READ_SG_X_COMMAND) {
+          tmc2590_schedule_read_sg(X_AXIS);          
+      }
+      
+      /* schedule next SPI read Stall Guard from Y motor controllers */
+      if (rt_exec & TMC_SPI_READ_SG_Y_COMMAND) {
+          tmc2590_schedule_read_sg(Y_AXIS);          
+      }
+      
+      /* schedule next SPI read Stall Guard from Z motor controllers */
+      if (rt_exec & TMC_SPI_READ_SG_Z_COMMAND) {
+          tmc2590_schedule_read_sg(Z_AXIS);          
+      }
+
+
+      /* indicate to main loop to process all responses and update the current status of controller's parameters */
+      if (rt_exec & TMC_SPI_PROCESS_COMMAND) {
+          /* process all responses and update the current status of controller's parameters */
+          process_status_of_all_controllers();
+      }
+      
+      /* schedule uptime increment and EEPROM update if needed */
+      if (rt_exec & UPTIME_INCREMENT_COMMAND) {
+          uptime_increment();
+      }          
+      
+
+      
+  } //if rt_exec = sys_rt_exec_tmc_command;
+
+
+  // Execute TMC calibration functions
+  rt_exec = sys_rt_exec_tmc_cal_command;
+  if (rt_exec) {
+      system_clear_exec_tmc_cal_flags(); // Clear all flags. Shall be done after last command in the buffer is processed
+      
+      /* clear calibration matrix and get ready for data collection */
+      if (rt_exec & TMC_CALIBRATION_INIT) {
+          tmc_calibration_init(); 
+      }
+      
+      /* stop calibration and compute coefficients based on accumulated data */
+      if (rt_exec & TMC_CALIBRATION_COMPUTE) {
+          tmc_compute_and_apply_calibration(); 
+      }
+      
+      /* print out calibration data */
+      if (rt_exec & TMC_CALIBRATION_REPORT) {
+          tmc_report_calibration(); 
+      }
+
+      /* print out calibration data */
+      if (rt_exec & TMC_REGISTERS_REPORT) {
+          tmc_report_registers();
+      }
+
+      /* print out calibration data */
+      if (rt_exec & TMC_STATISTICS_REPORT) {
+          report_statistics();          
+      }
+      
+  } //if rt_exec = sys_rt_exec_tmc_cal_command;
+
+
+
 
 
 
@@ -531,7 +618,7 @@ void protocol_exec_rt_system()
     /* schedule next SPI read all */
     if (rt_exec & TMC_READ_ALL_COMMAND) {
         /* BK profiling: SPI prepare: 900us  + actual SPI reads: 1.2-2.0 ms */
-        //tmc2590_schedule_read_all();
+        tmc2590_schedule_read_all();
     }
 
     /* schedule uptime increment and EEPROM update if needed */
@@ -1135,11 +1222,13 @@ void execute_RTL_command(){
                 printPgmString(PSTR("TMC_COMMAND: "));
                 printInteger( *p_data );
                 printPgmString(PSTR("\n"));
+                execute_TMC_command(p_data, data_len);
             }
             else if ( data_len == (TMC_REG_CMD_LENGTH + 1) ) {
                 printPgmString(PSTR("TMC_REGISTER_COMMAND: "));
                 printInteger( *p_data );
                 printPgmString(PSTR("\n"));
+                execute_TMC_command(p_data, data_len);
             }
             else{ //if (data_len == xx){
                 report_status_message(ASMCNC_RTL_LEN_ERROR);

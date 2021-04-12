@@ -42,6 +42,7 @@
 #include "config.h"
 #include "nuts_bolts.h"
 #include "settings.h"
+#include "ASMCNC.h"
 #include "system.h"
 #include "defaults.h"
 #include "cpu_map.h"
@@ -61,9 +62,7 @@
 #include "stepper.h"
 #include "jog.h"
 #include "sleep.h"
-#include "ASMCNC.h"
-//#include "TMC_interface.h"
-#include "spi_to_tmc.h"
+#include "TMC_interface.h"
 #include "ADC_utils.h"
 
 

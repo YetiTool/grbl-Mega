@@ -165,7 +165,7 @@ typedef struct {
   uint8_t report_wco_counter;  // Tracks when to add work coordinate offset data to status reports.
   uint8_t report_adc_counter;  // Tracks when to add ADC data to status reports.
   #ifdef ENABLE_TMC_FEEDBACK_MONITOR  
-  uint8_t report_tmc_counter;  // Tracks when to add ADC data to status reports.
+  uint8_t report_tmc_counter;  // Tracks when to add TMC data to status reports.
   #endif
   #ifdef ENABLE_PARKING_OVERRIDE_CONTROL
     uint8_t override_ctrl;     // Tracks override control states.

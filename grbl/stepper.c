@@ -20,8 +20,7 @@
 */
 
 #include "grbl.h"
-
-
+#include <inttypes.h>
 // Some useful constants.
 #define DT_SEGMENT (1.0/(ACCELERATION_TICKS_PER_SECOND*60.0)) // min/segment
 #define REQ_MM_INCREMENT_SCALAR 1.25
@@ -89,6 +88,8 @@ typedef struct {
     uint8_t prescaler;      // Without AMASS, a prescaler is required to adjust for slow timing.
   #endif
   uint16_t spindle_pwm;
+  uint8_t step_period_idx[N_AXIS]; /* index into LUT "SG_step_periods_us" step time in microseconds, max 64ms which is 1s per full step or 1rev per 200s (0.3rpm), slowest speed for SG detection is 1rpm, so should be good enough for London */
+  uint16_t step_period[N_AXIS];   /*  step time in microseconds, max 64ms which is 1s per full step or 1rev per 200s (0.3rpm), slowest speed for SG detection is 1rpm, so should be good enough for London */
 } segment_t;
 static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
 
@@ -251,7 +252,7 @@ void st_wake_up()
   #else
     //if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
     //else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
-    //system_set_exec_tmc_command_flag(TMC_ACTIVE_COMMAND);
+    system_set_exec_tmc_command_flag(TMC_ACTIVE_COMMAND);
     // Initialize stepper output bits to ensure first ISR call does not step.
     st.step_outbits = step_port_invert_mask;
   #endif // Ramps Board
@@ -275,6 +276,14 @@ void st_wake_up()
 // Stepper shutdown
 void st_go_idle()
 {
+    
+  // BK: stepper shutdown happens in short periods for example under direction change. Only applicable for single axis, for multiaxis more complex accumulation of step time is required
+  //debug_pin_write(1, DEBUG_1_PIN);
+  // reset skip counters for all axes:
+  st_tmc.SG_skips_counter[X_AXIS] = 0;
+  st_tmc.SG_skips_counter[Y_AXIS] = 0;
+  st_tmc.SG_skips_counter[Z_AXIS] = 0; 
+
   // Disable Stepper Driver Interrupt. Allow Stepper Port Reset Interrupt to finish, if active.
   TIMSK1 &= ~(1<<OCIE1A); // Disable Timer1 interrupt
   TCCR1B = (TCCR1B & ~((1<<CS12) | (1<<CS11))) | (1<<CS10); // Reset clock to no prescaling.
@@ -304,7 +313,40 @@ void st_go_idle()
     //else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
     //system_set_exec_tmc_command_flag(TMC_STANDSTILL_COMMAND);
   #endif // Ramps Board
+  //debug_pin_write(0, DEBUG_1_PIN);    
 }
+
+
+/* Function st_tmc_fire_SG_read is the main interface between the stepper and the TMC hardware. 
+   It lets main loop know when it is time to read the SG value and also keeps track of current speed 
+   of each motor so this information could be used to apply all necessary corrections to the SG readings and analysis 
+   * function overhead is 5.5us, 7.5us when SG read is scheduled. this includes debug pin toggle which is ~1us
+   */
+void st_tmc_fire_SG_read(uint8_t axis, uint8_t command){ 
+
+#ifdef SG_SKIP_DEBUG_ENABLED
+debug_pin_write(1, DEBUG_0_PIN);
+#endif
+    /* if feed is too slow reset SG counter the moment the step is too long */
+    if ( st.exec_segment->step_period_idx[X_AXIS] <= min_step_period_idx_to_read_SG[X_AXIS] )     {         st_tmc.SG_skips_counter[X_AXIS] = 0;     }
+    if ( st.exec_segment->step_period_idx[Y_AXIS] <= min_step_period_idx_to_read_SG[Y_AXIS] )     {         st_tmc.SG_skips_counter[Y_AXIS] = 0;     }
+    if ( st.exec_segment->step_period_idx[Z_AXIS] <= min_step_period_idx_to_read_SG[Z_AXIS] )     {         st_tmc.SG_skips_counter[Z_AXIS] = 0;     }
+    
+    /* schedule SG read every SG_READ_STEP_COUNT steps */
+    if (st_tmc.step_counter[axis]++ >= SG_READ_STEP_COUNT) 
+    {
+        st_tmc.this_reading_direction[axis] = st.dir_outbits;        
+        st_tmc.step_period_idx[axis]        = st.exec_segment->step_period_idx[axis];
+        st_tmc.step_period[axis]            = st.exec_segment->step_period[axis];       
+        st_tmc.step_counter[axis]           = 0;
+        system_set_exec_tmc_command_flag(command);  
+    }
+#ifdef SG_SKIP_DEBUG_ENABLED
+debug_pin_write(0, DEBUG_0_PIN);
+#endif
+
+}
+
 
 
 /* "The Stepper Driver Interrupt" - This timer interrupt is the workhorse of Grbl. Grbl employs
@@ -363,6 +405,10 @@ ISR(TIMER1_COMPA_vect)
 
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
 
+#ifdef DEBUG_STEPPER_ENABLED
+    debug_pin_write(1, DEBUG_0_PIN);
+#endif
+
   // Set the direction pins a couple of nanoseconds before we step the steppers
   #ifdef DEFAULTS_RAMPS_BOARD
     DIRECTION_PORT(0) = (DIRECTION_PORT(0) & ~(1 << DIRECTION_BIT(0))) | st.dir_outbits[0];
@@ -384,21 +430,36 @@ ISR(TIMER1_COMPA_vect)
       STEP_PORT(2) = (STEP_PORT(2) & ~(1 << STEP_BIT(2))) | st.step_outbits[2];
     #endif
   #else  
-    #ifdef STEP_PULSE_DELAY
-      st.step_bits = (STEP_PORT & ~STEP_MASK) | st.step_outbits; // Store out_bits to prevent overwriting.
-    #else  // Normal operation
+    //#ifdef STEP_PULSE_DELAY
+      //st.step_bits = (STEP_PORT & ~STEP_MASK) | st.step_outbits; // Store out_bits to prevent overwriting.
+    //#else  // Normal operation
       STEP_PORT = (STEP_PORT & ~STEP_MASK) | st.step_outbits;
-    #endif
+    //#endif
   #endif // Ramps Board
 
   // Enable step pulse reset timer so that The Stepper Port Reset Interrupt can reset the signal after
   // exactly settings.pulse_microseconds microseconds, independent of the main Timer1 prescaler.
-  TCNT0 = st.step_pulse_time; // Reload Timer0 counter
-  TCCR0B = (1<<CS01); // Begin Timer0. Full speed, 1/8 prescaler
+  //TCNT0 = st.step_pulse_time; // Reload Timer0 counter
+  //TCCR0B = (1<<CS01); // Begin Timer0. Full speed, 1/8 prescaler
 
   busy = true;
-  sei(); // Re-enable interrupts to allow Stepper Port Reset Interrupt to fire on-time.
+  //sei(); // Re-enable interrupts to allow Stepper Port Reset Interrupt to fire on-time.
          // NOTE: The remaining code in this ISR will finish before returning to main program.
+         // BK: disable sei here to raise the priority of this ISR to max and not get blocked by TMC/SPI ISRs.
+         //     Side effect is that pulse length uncertainty is increased (was 10us+/-1us, now 25us +/-10us)
+         //     Should not matter as TMC drivers use rising edge of the pulse.
+         //     This ISR execution time is ~15us, so pulse cannot be shorter than that.
+
+   
+   /* BK: finish step pulse. TMC2590 step pulse should be longer than 20ns, so 630ns is good to cover all corners, including optos delays and bandwidth
+    * update 2020-Oct: due to heavy filtering requirements pulse length is increased to 1.26us using ASM instruction insertion
+    * update 2020-Jan: due to heavy filtering requirements pulse length is increased to (630+10*187.5)=2.7us using ASM instruction insertion 
+	*/
+   //delay_us(1);
+    uint8_t __count=10; /* each count adds 3 CPU cycles (3*1/16): 62.5ns x 3 = 187ns*/   
+	__asm__ volatile (	"1: dec %0" "\n\t"	"brne 1b"	: "=r" (__count)	: "0" (__count)	);
+   
+   STEP_PORT = (STEP_PORT & ~STEP_MASK) | (step_port_invert_mask & STEP_MASK);
 
   // If there is no step segment, attempt to pop one from the stepper buffer
   if (st.exec_segment == NULL) {
@@ -447,6 +508,10 @@ ISR(TIMER1_COMPA_vect)
       // Ensure pwm is set properly upon completion of rate-controlled motion.
       if (st.exec_block->is_pwm_rate_adjusted) { spindle_set_speed(SPINDLE_PWM_OFF_VALUE); }
       system_set_exec_state_flag(EXEC_CYCLE_STOP); // Flag main program for cycle end
+#ifdef DEBUG_STEPPER_ENABLED
+    debug_pin_write(0, DEBUG_0_PIN);
+#endif
+
       return; // Nothing to do but exit.
     }
   }
@@ -482,6 +547,7 @@ ISR(TIMER1_COMPA_vect)
       st.counter_x -= st.exec_block->step_event_count;
       if (st.exec_block->direction_bits & (1<<X_DIRECTION_BIT)) { sys_position[X_AXIS]--; }
       else { sys_position[X_AXIS]++; }
+      st_tmc_fire_SG_read(X_AXIS, TMC_SPI_READ_SG_X_COMMAND); /* fire SG read every SG_READ_STEP_COUNT steps */
     }
   #endif // Ramps Board
 
@@ -503,6 +569,7 @@ ISR(TIMER1_COMPA_vect)
       st.counter_y -= st.exec_block->step_event_count;
       if (st.exec_block->direction_bits & (1<<Y_DIRECTION_BIT)) { sys_position[Y_AXIS]--; }
       else { sys_position[Y_AXIS]++; }
+      st_tmc_fire_SG_read(Y_AXIS, TMC_SPI_READ_SG_Y_COMMAND); /* fire SG read every SG_READ_STEP_COUNT steps */   
     }
   #endif // Ramps Board
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
@@ -523,6 +590,7 @@ ISR(TIMER1_COMPA_vect)
       st.counter_z -= st.exec_block->step_event_count;
       if (st.exec_block->direction_bits & (1<<Z_DIRECTION_BIT)) { sys_position[Z_AXIS]--; }
       else { sys_position[Z_AXIS]++; }
+      st_tmc_fire_SG_read(Z_AXIS, TMC_SPI_READ_SG_Z_COMMAND); /* fire SG read every SG_READ_STEP_COUNT steps */   
     }
   #endif // Ramps Board
 
@@ -546,6 +614,11 @@ ISR(TIMER1_COMPA_vect)
     st.step_outbits ^= step_port_invert_mask;  // Apply step port invert mask
   #endif // Ramps Board
   busy = false;
+
+#ifdef DEBUG_STEPPER_ENABLED
+    debug_pin_write(0, DEBUG_0_PIN);
+#endif
+
 }
 
 
@@ -560,35 +633,35 @@ ISR(TIMER1_COMPA_vect)
 // This interrupt is enabled by ISR_TIMER1_COMPAREA when it sets the motor port bits to execute
 // a step. This ISR resets the motor port after a short period (settings.pulse_microseconds)
 // completing one step cycle.
-ISR(TIMER0_OVF_vect)
-{
-  // Reset stepping pins (leave the direction pins)
-  #ifdef DEFAULTS_RAMPS_BOARD
-    STEP_PORT(0) = (STEP_PORT(0) & ~(1 << STEP_BIT(0))) | step_port_invert_mask[0];
-    STEP_PORT(1) = (STEP_PORT(1) & ~(1 << STEP_BIT(1))) | step_port_invert_mask[1];
-    STEP_PORT(2) = (STEP_PORT(2) & ~(1 << STEP_BIT(2))) | step_port_invert_mask[2];
-  #else
-    STEP_PORT = (STEP_PORT & ~STEP_MASK) | (step_port_invert_mask & STEP_MASK);
-  #endif // Ramps Board
-  TCCR0B = 0; // Disable Timer0 to prevent re-entering this interrupt when it's not needed.
-}
-#ifdef STEP_PULSE_DELAY
-  // This interrupt is used only when STEP_PULSE_DELAY is enabled. Here, the step pulse is
-  // initiated after the STEP_PULSE_DELAY time period has elapsed. The ISR TIMER2_OVF interrupt
-  // will then trigger after the appropriate settings.pulse_microseconds, as in normal operation.
-  // The new timing between direction, step pulse, and step complete events are setup in the
-  // st_wake_up() routine.
-  ISR(TIMER0_COMPA_vect)
-  {
-    #ifdef DEFAULTS_RAMPS_BOARD
-      STEP_PORT(0) = st.step_bits[0]; // Begin step pulse.
-      STEP_PORT(1) = st.step_bits[1]; // Begin step pulse.
-      STEP_PORT(2) = st.step_bits[2]; // Begin step pulse.
-    #else
-      STEP_PORT = st.step_bits; // Begin step pulse.
-    #endif // Ramps Board
-  }
-#endif
+//ISR(TIMER0_OVF_vect)
+//{
+  //// Reset stepping pins (leave the direction pins)
+  //#ifdef DEFAULTS_RAMPS_BOARD
+    //STEP_PORT(0) = (STEP_PORT(0) & ~(1 << STEP_BIT(0))) | step_port_invert_mask[0];
+    //STEP_PORT(1) = (STEP_PORT(1) & ~(1 << STEP_BIT(1))) | step_port_invert_mask[1];
+    //STEP_PORT(2) = (STEP_PORT(2) & ~(1 << STEP_BIT(2))) | step_port_invert_mask[2];
+  //#else
+    //STEP_PORT = (STEP_PORT & ~STEP_MASK) | (step_port_invert_mask & STEP_MASK);
+  //#endif // Ramps Board
+  //TCCR0B = 0; // Disable Timer0 to prevent re-entering this interrupt when it's not needed.
+//}
+//#ifdef STEP_PULSE_DELAY
+  //// This interrupt is used only when STEP_PULSE_DELAY is enabled. Here, the step pulse is
+  //// initiated after the STEP_PULSE_DELAY time period has elapsed. The ISR TIMER2_OVF interrupt
+  //// will then trigger after the appropriate settings.pulse_microseconds, as in normal operation.
+  //// The new timing between direction, step pulse, and step complete events are setup in the
+  //// st_wake_up() routine.
+  //ISR(TIMER0_COMPA_vect)
+  //{
+    //#ifdef DEFAULTS_RAMPS_BOARD
+      //STEP_PORT(0) = st.step_bits[0]; // Begin step pulse.
+      //STEP_PORT(1) = st.step_bits[1]; // Begin step pulse.
+      //STEP_PORT(2) = st.step_bits[2]; // Begin step pulse.
+    //#else
+      //STEP_PORT = st.step_bits; // Begin step pulse.
+    //#endif // Ramps Board
+  //}
+//#endif
 
 
 // Generates the step and direction port invert masks used in the Stepper Interrupt Driver.
@@ -1140,6 +1213,56 @@ void st_prep_buffer()
         }
       }
     #endif
+    
+    /* calculate and store the step time in us for each axis */
+    /* log the instantaneous rotational speed that was effective during this SG read, store it as a SG_period_us. 
+        * Pulse duration or step period in us = ( 1 + number of timer cycles per step pulse ) / 16Mhz
+        * number of timer cycles per step pulse =  number of ticks per step pulse * cycles_per_tick       number of 16M timer cycles per step pulse
+        * number of ticks per step pulse = st.exec_block->step_event_count / st.steps[_AXIS]              number of timer fire events (ticks) per step pulse
+        * 
+        * Examples:
+        * Y motor - mm/min - step_period_us - rpm 
+        *           10000  - 106            - 177
+        *           3000   - 353            - 53.1
+        *           500    - 2117           - 8.85
+        */        
+        
+    #ifdef SG_CAL_DEBUG_ENABLED
+    /* total compute takes 850-900us depend on location in LUT. Bubble search could be optimised*/
+    debug_pin_write(1, DEBUG_2_PIN);
+    #endif    
+    /* calculate step_period_us using float logic. For loop below takes 300-400us due to float division */
+    for (uint8_t thisAxis=0; thisAxis<N_AXIS; thisAxis++) { 
+        uint32_t us_per_step;
+        uint16_t step_period_us;
+        float steps, ratio;
+        steps = st_prep_block->steps[thisAxis];
+        steps = steps ? steps : 1; /* catch divide by zero - for very low speeds */
+        ratio = st_prep_block->step_event_count / steps;    /* all this ratio business is to keep calculation within 32 bit*/     
+        ratio = ratio * (1 << prep_segment->amass_level);        
+        us_per_step = (prep_segment->cycles_per_tick * ratio) / 16 ; /* timer cycles per step divided by timer speed (16M) */
+        if (us_per_step < (1UL << 16)) { step_period_us = us_per_step; } // < 65536: 64ms which is 1s per full step or 1rev per 200s (0.3rpm), slowest speed for SG detection is 1rpm, so should be good enough 
+        else { step_period_us = 0xffff; } // Just set the max period possible                           
+           
+        /* using LUT is improving real-time execution time as only computation is required in planning (here). Later only index is used to look into the LUT and extract the GS calibrated values */
+        
+        /* find entry in step_period_us lookup table corresponding to this step size. function takes up to 500ms to execute */    
+        prep_segment->step_period_idx[thisAxis] = TMC_SG_PROFILE_POINTS-1; /* init the table with max index value, this will ensure anything above max feed would fall in the last bin */
+        prep_segment->step_period[thisAxis] = step_period_us;
+        for (uint8_t idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
+            if ( step_period_us > pgm_read_word_near(SG_step_periods_us + idx) ){ //if storing in PROGMEM then use this: if ( st_tmc.step_period_us[thisAxis] > pgm_read_word_near(SG_step_periods_us + idx) ){
+                prep_segment->step_period_idx[thisAxis] = idx;                
+                break; /* for loop */
+            } // if ( prep_segment->step_period_us[thisAxis] > pgm_read_word_near(SG_step_periods_us + idx) ){
+        } //for (uint8_t idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
+            
+    } //for (uint8_t idx=0; idx<N_AXIS; idx++) { 
+    
+    
+    #ifdef SG_CAL_DEBUG_ENABLED
+    debug_pin_write(0, DEBUG_2_PIN);
+    #endif
+
 
     // Segment complete! Increment segment buffer indices, so stepper ISR can immediately execute it.
     segment_buffer_head = segment_next_head;

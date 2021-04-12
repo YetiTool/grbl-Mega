@@ -105,7 +105,7 @@
 #define ENABLE_TEMPERATURE_MONITOR  // enable temperatuer monitoring, apply to ZH2 and newer
 
 #define ENABLE_LASER_POINTER_CONTROL // Laser cross unit control
-//#define ENABLE_TMC_FEEDBACK_MONITOR  // print feedback from TMC motor controllers
+#define ENABLE_TMC_FEEDBACK_MONITOR  // print feedback from TMC motor controllers
 
 /* RGB HEX Rx state machine state */
 enum rgbHexStates{
@@ -190,6 +190,7 @@ void asmcnc_RGB_set(uint8_t R, uint8_t G, uint8_t B);
 
 uint8_t asmcnc_execute_line(char *line);
 
+void enable_watchdog(void);
 #define UNUSED_VARIABLE(X)  ((void)(X))
 #define UNUSED_PARAMETER(X) UNUSED_VARIABLE(X)
 

@@ -252,12 +252,18 @@ void asmcnc_init(void)
 	TCNT3=0; 											/* Zero timer 3 */
 
 
-	spi_hw_init(); /* enable heartbeat timer 5 */
+	//spi_hw_init(); /* enable heartbeat timer 5 */
 
     #if defined(ENABLE_SPINDLE_LOAD_MONITOR) || defined(ENABLE_TEMPERATURE_MONITOR)
     asmcnc_init_ADC();
     #endif
 	
+    init_TMC(); /* initialise TMC motor controllers */
+    
+    enable_watchdog();    
+    
+    /* report TMC registers */
+    system_set_exec_tmc_cal_command_flag(TMC_REGISTERS_REPORT);
 	flashStatisticsInit();
 
     /* AC live enable pin interrupt. Using sleep module to utilise TIMER5 */

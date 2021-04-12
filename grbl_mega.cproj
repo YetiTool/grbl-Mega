@@ -168,7 +168,22 @@
     <Compile Include="grbl\TMC\ADC_utils.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="grbl\TMC\ADC_utils.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="grbl\TMC\CRC.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="grbl\TMC\Functions.c">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="grbl\TMC\spi_to_tmc.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="grbl\TMC\TMC2590.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="grbl\TMC\TMC_interface.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="grbl\TMC\watchdog.c">

@@ -217,6 +217,8 @@ void mc_homing_cycle(uint8_t cycle_mask)
   #endif
 
   limits_disable(); // Disable hard limits pin change register for cycle duration
+  
+  tmc_homing_mode_set(TMC_MODE_HOMING);
 
   // -------------------------------------------------------------------------------------
   // Perform homing routine. NOTE: Special motion case. Only system reset works.
@@ -240,7 +242,11 @@ void mc_homing_cycle(uint8_t cycle_mask)
   }
 
   protocol_execute_realtime(); // Check for reset and set system abort.
-  if (sys.abort) { return; } // Did not complete. Alarm state set by mc_alarm.
+  if (sys.abort) { 
+      /* reset TMC mode */
+      tmc_homing_mode_set(TMC_MODE_IDLE);
+      return; 
+      } // Did not complete. Alarm state set by mc_alarm.
 
   // Homing cycle complete! Setup system for normal operation.
   // -------------------------------------------------------------------------------------
@@ -251,6 +257,10 @@ void mc_homing_cycle(uint8_t cycle_mask)
 
   // If hard limits feature enabled, re-enable hard limits pin change register after homing cycle.
   limits_init();
+  
+  /* reset TMC mode */
+  tmc_homing_mode_set(TMC_MODE_IDLE);
+
 }
 
 

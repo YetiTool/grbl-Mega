@@ -74,13 +74,15 @@ void limits_init()
     #endif // DISABLE_HW_LIMITS
   #else // DEFAULTS_RAMPS_BOARD
         SPCR = 0;
-    LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins
+    //LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins    
+    LIMIT_DDR |= (LIMIT_MASK); // Set as output pins to allow software interrupts - to emulate the limit switch toggle by function from StallGuard detection.
+    LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Set pin high to trigger ISR
 
-    #ifdef DISABLE_LIMIT_PIN_PULL_UP
-      LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Requires external pull-down.
-    #else
-      LIMIT_PORT |= (LIMIT_MASK);  // Enable internal pull-up resistors. Normal high operation.
-    #endif
+//    #ifdef DISABLE_LIMIT_PIN_PULL_UP
+//      LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Requires external pull-down.
+//    #else
+//      LIMIT_PORT |= (LIMIT_MASK);  // Enable internal pull-up resistors. Normal high operation.
+//    #endif
 //ASM Modification to allow limit red LED's to function HARD LIMIT ENABLED check moved to interrupt
 //    if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) {
       LIMIT_PCMSK |= LIMIT_ISR_MASK; // Enable specific pins of the Pin Change Interrupt
@@ -452,14 +454,19 @@ void limits_go_home(uint8_t cycle_mask)
       sys.step_control = STEP_CONTROL_EXECUTE_SYS_MOTION; // Set to execute homing motion and clear existing flags.
       st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
       st_wake_up(); // Initiate motion
+      
+      /* clear limit switch at the beginning of each homing cycle */
+      tmc_homing_reset_limits();
 
       do { //} while (STEP_MASK & axislock);
         if (approach) {
+          /* BK: replace limits read with SPI actions */
+          tmc_read_sg_and_trigger_limits(); /* schedule single read of stall guard, analyse response and set limits accordingly */
           // Check limit state. Lock out cycle axes when they change.
           limit_state = limits_get_state();
-          for (idx=0; idx<N_AXIS; idx++) {
-            if (axislock & step_pin[idx]) {
-              if (limit_state & (1 << idx)) {
+          for (idx=0; idx<N_AXIS; idx++) { // cycle through each axis
+            if (axislock & step_pin[idx]) { // if axis is currently active
+              if (limit_state & (1 << idx)) { // check if pin is triggered
                 #ifdef COREXY
                   if (idx==Z_AXIS) { axislock &= ~(step_pin[Z_AXIS]); }
                   else { axislock &= ~(step_pin[A_MOTOR]|step_pin[B_MOTOR]); }
