@@ -73,7 +73,7 @@ void limits_init()
       #endif
     #endif // DISABLE_HW_LIMITS
   #else // DEFAULTS_RAMPS_BOARD
-        SPCR = 0;
+    //    SPCR = 0;
     //LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins    
     LIMIT_DDR |= (LIMIT_MASK); // Set as output pins to allow software interrupts - to emulate the limit switch toggle by function from StallGuard detection.
     LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Set pin high to trigger ISR
