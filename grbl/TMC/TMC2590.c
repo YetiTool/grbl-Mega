@@ -482,7 +482,7 @@ void tmc_report_calibration(void){
     uint8_t controller_id;
     uint8_t idx;
     for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
-        printPgmString(PSTR("<|TCAL:M"));
+        printPgmString(PSTR("<Idle|TCAL:M"));
         printInteger( controller_id );        
         printPgmString(PSTR(":"));
         for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){

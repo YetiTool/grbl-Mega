@@ -15,17 +15,17 @@ static const uint8_t tmc2590_defaultStandStillCurrentScale[TOTAL_TMCS] =
 {
     11,   /* X1 motor */
     11,   /* X2 motor */
-    25,   /* Y1 motor */
-    25,   /* Y2 motor */
+    18,   /* Y1 motor */
+    18,   /* Y2 motor */
     5     /* Z motor  */
 };
 
 static const uint8_t tmc2590_defaultActiveCurrentScale[TOTAL_TMCS] =
 {
-    31,   /* X1 motor */
-    31,   /* X2 motor */
-    31,   /* Y1 motor */
-    31,   /* Y2 motor */
+    26,   /* X1 motor */
+    26,   /* X2 motor */
+    21,   /* Y1 motor */
+    21,   /* Y2 motor */
     31     /* Z motor  */
 };
 

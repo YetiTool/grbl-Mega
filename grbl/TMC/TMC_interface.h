@@ -3,7 +3,7 @@
  *
  * Created: 28/08/2020 23:00:55
  *  Author: bk
- */ 
+ */
 
 
 #ifndef TMC_INTERFACE_H_
@@ -74,7 +74,7 @@ typedef struct {
     uint8_t  last_reading_direction[N_AXIS];// variables to hold the direction applied at last SG reading, used to reset SG reading skip counter under direction change
     uint8_t  step_counter[N_AXIS];          // Counter variables for firing SG read. TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled
     uint8_t  SG_skips_counter[N_AXIS];      // Counter variables for blocking stall analysis due to preceding slow speed. Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis */
-    uint8_t  current_scale_state;           // global holding effective current scale 
+    uint8_t  current_scale_state;           // global holding effective current scale
     uint8_t  sg_read_active_axes;           // global variable to hold list of axes that is being read
     uint8_t  stall_alarm_enabled;           // global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm
     uint8_t  calibration_enabled;           // SG calibration ongoing
@@ -82,33 +82,33 @@ typedef struct {
 
 
 typedef struct {
-	uint16_t mStepCurrentValue;
-	uint8_t coolStepCurrentValue;
-	uint8_t stallGuardShortValue;
-	uint16_t stallGuardCurrentValue;
-	uint16_t StatusBits;
-	uint16_t DiagnosticBits;
+    uint16_t mStepCurrentValue;
+    uint8_t coolStepCurrentValue;
+    uint8_t stallGuardShortValue;
+    uint16_t stallGuardCurrentValue;
+    uint16_t StatusBits;
+    uint16_t DiagnosticBits;
 } TMC2590Response;
 
 
 // Usage note: use 1 TypeDef per IC
 typedef struct {
-    
+
     /* TMC config parameters */
     /* Parameters stored in EEPROM */
-	int32_t shadowRegister[TMC2590_REGISTER_COUNT]; /* latest state of each config register */
-	uint16_t stallGuardAlarmThreshold;              /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
-	uint16_t temperatureCoefficient;                /* correction for temperatures other than calibration */
-	uint8_t standStillCurrentScale;                 /* standstill current - to reduce energy consumption while job is idle */
+    int32_t shadowRegister[TMC2590_REGISTER_COUNT]; /* latest state of each config register */
+    uint16_t stallGuardAlarmThreshold;              /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
+    uint16_t temperatureCoefficient;                /* correction for temperatures other than calibration */
+    uint8_t standStillCurrentScale;                 /* standstill current - to reduce energy consumption while job is idle */
     uint8_t activeCurrentScale;                     /* active current 0 - 31 where 31 is max */
-    
-    /* running variables */    
-	uint8_t channel;                                /* pio index defining SPI channel */
-	uint8_t thisMotor;                              /* this motor index */
-	uint8_t thisAxis;                               /* this motor Axis */    
-	uint16_t stallGuardAlarmValue;                  /* when current SG reading is lower than this value corresponded axis alarm will be triggered */
-	int16_t stallGuardDelta;                        /* difference between current SG reading and calibrated curve */
-    uint8_t respIdx;                                /* current rdsel to know which response is coming next */    
+
+    /* running variables */
+    uint8_t channel;                                /* pio index defining SPI channel */
+    uint8_t thisMotor;                              /* this motor index */
+    uint8_t thisAxis;                               /* this motor Axis */
+    uint16_t stallGuardAlarmValue;                  /* when current SG reading is lower than this value corresponded axis alarm will be triggered */
+    int16_t stallGuardDelta;                        /* difference between current SG reading and calibrated curve */
+    uint8_t respIdx;                                /* current rdsel to know which response is coming next */
     int32_t response[TMC2590_RESPONSE3+1];          /* raw response from controllers */
     TMC2590Response resp;                           /* decoded response from controllers */
 
@@ -128,7 +128,7 @@ typedef struct {
     uint16_t temperatureCoefficient[TOTAL_TMCS];                    /* coefficient defining thermal offset applied to calibration curve */
     uint16_t stallGuardAlarmThreshold[TOTAL_TMCS];                  /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
     uint8_t standStillCurrentScale[TOTAL_TMCS];                     /* standstill current - to reduce energy consumption while job is idle */
-    uint8_t activeCurrentScale[TOTAL_TMCS];                         /* active current */    
+    uint8_t activeCurrentScale[TOTAL_TMCS];                         /* active current */
 } FlashTMCconfig;
 
 
@@ -142,9 +142,9 @@ typedef struct {
 #define SET_CHOPCONF           TMC2590_CHOPCONF
 #define SET_SMARTEN            TMC2590_SMARTEN
 #define SET_SGCSCONF           TMC2590_SGCSCONF
-#define SET_DRVCONF            TMC2590_DRVCONF 
+#define SET_DRVCONF            TMC2590_DRVCONF
 #define SET_IDLE_CURRENT       5  // set the current scale applied when no pulses are detected on the given axis
-#define SET_ACTIVE_CURRENT     6  // set the active current scale 
+#define SET_ACTIVE_CURRENT     6  // set the active current scale
 #define SET_MOTOR_ENERGIZED    7  // energize or shut off the motor completely, for example to let user move turret easier
 #define SET_SG_ALARM_TRSHLD    8  // SG alarm threshold: when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered
 #define SET_THERMAL_COEFF      9  // coefficient defining thermal offset applied to calibration curve
@@ -153,8 +153,8 @@ typedef struct {
 // common commands to be applied to whole system
 #define SET_SG_ALARM           100  // desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm
 #define SET_CALIBR_MODE        101  // 1: reset all calibrations and prepare for new one, 2: complete calibration, compute , 3: print calibration coefficients
-#define GET_STATISTICS         102  
-#define GET_TMC_STATUS         103  
+#define GET_STATISTICS         102
+#define GET_TMC_STATUS         103
 #define RESTORE_TMC_DEFAULTS   104  // restore all TMC default settings from flash - safety net in case parameters are completely bollocked
 #define STORE_TMC_PARAMS       105  // store existing (tuned) paraeters to the flash
 #define GET_REGISTERS          106
