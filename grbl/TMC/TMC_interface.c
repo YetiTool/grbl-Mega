@@ -762,5 +762,18 @@ void tmc_store_stall_info(uint8_t  lastStallsMotor, uint16_t lastStallsSG, uint1
     if ( !homing_sg_read_ongoing ) {
         /* store stall only if it is not due to homing, where stall is used to detect the end stop */
         store_stall_info(lastStallsMotor, lastStallsSG, lastStallsSGcalibrated,  lastStallsStepUs);
+
+        printPgmString(PSTR(BK_INITIATOR));
+        printPgmString(PSTR("SGALARM:"));
+        printInteger( lastStallsMotor);
+        printPgmString(PSTR(","));
+        printInteger( lastStallsStepUs ); /* actual step in us */
+        printPgmString(PSTR(","));
+        printInteger( lastStallsSG);
+        printPgmString(PSTR(","));
+        printInteger( lastStallsSGcalibrated );
+        printPgmString(PSTR(BK_TERMINATOR));
+        
     }//if ( !homing_sg_read_ongoing ) {
 }
+
