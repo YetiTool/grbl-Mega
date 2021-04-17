@@ -19,9 +19,9 @@ static uint16_t VDD_5V_Atmega_mV               = 0;            // global variabl
 static uint16_t VDD_5V_dustshoe_mV             = 0;            // global variable for latest VDD_5V_dustshoe value
 static uint16_t VDD_24V_mV                     = 0;            // global variable for latest VDD_24V value
 static uint16_t Spindle_speed_Signal_mV        = 0;            // global variable for latest Spindle_speed_Signal_mV value
-static uint16_t temperature_TMC_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
-static uint16_t temperature_PCB_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
-static uint16_t temperature_MOT_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
+static int16_t temperature_TMC_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
+static int16_t temperature_PCB_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
+static int16_t temperature_MOT_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
 static uint16_t latest_ADC_measurement          = 0;            // global variable to store
 static uint8_t spindle_speed_feedback_update_is_enabled = 0; /* change to 1 to enable spindle feedback auto-adaptation */
 static float spindle_sig_gradient; // Precalulated value to speed up rpm to PWM conversions.
@@ -42,7 +42,7 @@ long k[] = {TEMP_K0, TEMP_K1, TEMP_K2, TEMP_K3, TEMP_K4, TEMP_K5, TEMP_K6};
  * of Thermistor_0402_Panasonic_2kOhm_ERT-J0EG202GM, or ERT-J0EG202HM
  * function takes 270us ~ 4320 cycles
 */
-uint16_t convert_temperature (uint16_t temperature_ADC_reading){
+int16_t convert_temperature (uint16_t temperature_ADC_reading){
 #ifdef DEBUG_ADC_ENABLED
 debug_pin_write(0, DEBUG_2_PIN);
 #endif
@@ -66,12 +66,12 @@ debug_pin_write(0, DEBUG_2_PIN);
 #ifdef DEBUG_ADC_ENABLED
 debug_pin_write(1, DEBUG_2_PIN);
 #endif
-    return (uint16_t) temperature_instantaneous * 100;
+    return (int16_t) temperature_instantaneous * 100;
 }
 
 
 void convert_TMC_temperature (uint16_t temperature_ADC_reading){
-    uint16_t temperature_instantaneous = convert_temperature (temperature_ADC_reading);
+    int16_t temperature_instantaneous = convert_temperature (temperature_ADC_reading);
     temperature_TMC_cent_celsius = filter_fir_int16(temperature_TMC_cent_celsius, temperature_instantaneous); /* 7us */
 #ifdef DEBUG_ADC_ENABLED
 debug_pin_write(0, DEBUG_2_PIN);
@@ -82,12 +82,12 @@ debug_pin_write(1, DEBUG_2_PIN);
 }
 
 void convert_PCB_temperature (uint16_t temperature_ADC_reading){
-    uint16_t temperature_instantaneous = convert_temperature (temperature_ADC_reading);
+    int16_t temperature_instantaneous = convert_temperature (temperature_ADC_reading);
     temperature_PCB_cent_celsius = filter_fir_int16(temperature_PCB_cent_celsius, temperature_instantaneous); /* 7us */
 }
 
 void convert_MOT_temperature (uint16_t temperature_ADC_reading){
-    uint16_t temperature_instantaneous = convert_temperature (temperature_ADC_reading);
+    int16_t temperature_instantaneous = convert_temperature (temperature_ADC_reading);
     temperature_MOT_cent_celsius = filter_fir_int16(temperature_MOT_cent_celsius, temperature_instantaneous); /* 7us */
 }
 

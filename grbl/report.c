@@ -605,23 +605,15 @@ void report_realtime_status()
 	  
 	  
       printPgmString(PSTR("|TC:"));
-      int temperature = get_TMC_temperature();
-      printInteger( temperature );
-      printPgmString(PSTR(","));
-      temperature = get_PCB_temperature();
-      printInteger( temperature );
-      printPgmString(PSTR("|V:"));
-      int VDD_mv = get_VDD_5V_Atmega_mV();
-      printInteger( VDD_mv );
-      printPgmString(PSTR(","));
-      VDD_mv = get_VDD_5V_dustshoe_mV();
-      printInteger( VDD_mv );
-      printPgmString(PSTR(","));
-      VDD_mv = get_VDD_24V_mV();
-      printInteger( VDD_mv );
-      printPgmString(PSTR(","));
-      VDD_mv = get_Spindle_speed_Signal_mV();
-      printInteger( VDD_mv );
+      
+      printInteger( get_TMC_temperature()           ); printPgmString(PSTR(","));
+      printInteger( get_PCB_temperature()           ); printPgmString(PSTR(","));
+      printInteger( get_MOT_temperature()           );
+      printPgmString(PSTR("|V:"));      
+      printInteger( get_VDD_5V_Atmega_mV()          ); printPgmString(PSTR(","));
+      printInteger( get_VDD_5V_dustshoe_mV()        ); printPgmString(PSTR(","));
+      printInteger( get_VDD_24V_mV()                ); printPgmString(PSTR(","));
+      printInteger( get_Spindle_speed_Signal_mV()   );
 } //    if (sys.report_adc_counter > 0) { sys.report_adc_counter--; }
 
   #endif //#ifdef ENABLE_TEMPERATURE_MONITOR

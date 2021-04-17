@@ -20,7 +20,7 @@
 #define VDD_24V_ADC_PERIOD_MS               1000                    /* how often ADC should measure 24V mains channel */
 #define TEMPERATURE_TMC_ADC_PERIOD_MS       2000                    /* how often ADC should measure temperature 1 channel */
 #define TEMPERATURE_PCB_ADC_PERIOD_MS       2000                    /* how often ADC should measure temperature 2 channel */
-#define TEMPERATURE_MOT_ADC_PERIOD_MS       ADC_PERIOD_DISABLE      /* how often ADC should measure temperature 2 channel */
+#define TEMPERATURE_MOT_ADC_PERIOD_MS       2000                    /* how often ADC should measure temperature 2 channel */
 #define SPINDLE_SPEED_ADC_PERIOD_MS         1000                    /* how often ADC should measure Spindle speed channel */
 
 #define SPINDLE_LOAD_ADC_CHANNEL            SPINDLE_LOAD_MONITOR // ADC1,  PF1
@@ -62,24 +62,23 @@ enum adc_channels{
 //#define TEMP_K1 -1684
 //#define TEMP_K0  162
 
-/* temperature coefficients for 10k thermistor, 10k ref, 5V VDD and 2.048V ref source */
-#define TEMP_K6  2968
-#define TEMP_K5 -10456
-#define TEMP_K4  14709
-#define TEMP_K3 -10616
-#define TEMP_K2  4250
-#define TEMP_K1 -1020
-#define TEMP_K0  201
+///* temperature coefficients for 10k thermistor, 10k ref, 5V VDD and 2.048V ref source */
+//#define TEMP_K6  2968
+//#define TEMP_K5 -10456
+//#define TEMP_K4  14709
+//#define TEMP_K3 -10616
+//#define TEMP_K2  4250
+//#define TEMP_K1 -1020
+//#define TEMP_K0  201
 
-///* temperature coefficients for 10k thermistor, 10k ref, 2.048V VDD and 2.048V ref source */
-//#define TEMP_K6  11536
-//#define TEMP_K5 -34816
-//#define TEMP_K4  41347
-//#define TEMP_K3 -24694
-//#define TEMP_K2  7900
-//#define TEMP_K1 -1442
-//#define TEMP_K0  180
-
+/* temperature coefficients for 10k thermistor, 10k ref, 2.048V VDD and 2.048V ref source */
+#define TEMP_K6  6287
+#define TEMP_K5 -21401
+#define TEMP_K4  28457
+#define TEMP_K3 -18922
+#define TEMP_K2  6690
+#define TEMP_K1 -1337
+#define TEMP_K0  177
 
 /* ADC state machine structure */
 typedef struct {
