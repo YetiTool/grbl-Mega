@@ -77,7 +77,7 @@ void limits_init()
     //LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins    
     LIMIT_DDR |= (LIMIT_MASK); // Set as output pins to allow software interrupts - to emulate the limit switch toggle by function from StallGuard detection.
     LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Set pin high to trigger ISR
-
+    delay_us(50); //BK: delay to deal with 1uF charged to 5V capacitors on the limit port pins
 //    #ifdef DISABLE_LIMIT_PIN_PULL_UP
 //      LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Requires external pull-down.
 //    #else
