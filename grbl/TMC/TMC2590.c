@@ -706,15 +706,23 @@ debug_pin_write(1, DEBUG_1_PIN);
                         tmc2590->stallGuardDeltaAxis  = stallGuardDeltaAxisCurrent;}
                     }  // if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {
 
-                if (SGcurrentValue < stallGuardAlarmValue) {
-                    /* trigger alarm */
-                    tmc_trigger_stall_alarm(tmc2590->thisAxis);
-                    /* store stall info to flash */
-                    tmc_store_stall_info(tmc2590->thisMotor, tmc2590->resp.stallGuardCurrentValue, stallGuardAlarmValue + tmc2590->stallGuardAlarmThreshold, st_tmc.step_period[tmc2590->thisAxis]);
-                    /* reset SG period to max as alarm will immediately stop the stepper and period will remain as it was at the point of trigger */
-                    st_tmc.step_period_idx[tmc2590->thisAxis] = 0;
-                    
-                } //if (SGcurrentValue < tmc2590->stallGuardAlarmValue) {
+                /* alram trigger block */
+                if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) || (tmc2590->thisMotor == TMC_Z) ) {
+                    uint8_t raise_alarm = 0;
+                    if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) { //X or Y axis, dual motors
+                        if (tmc2590->stallGuardDeltaAxis > (int16_t)tmc2590->stallGuardAlarmThreshold)   { raise_alarm = 1; } }
+                    else { //Z axis, single motor
+                        if (tmc2590->stallGuardDelta > (int16_t)tmc2590->stallGuardAlarmThreshold)       { raise_alarm = 1; } }
+                    if ( raise_alarm == 1 ){
+                        /* trigger alarm */
+                        tmc_trigger_stall_alarm(tmc2590->thisAxis);
+                        /* store stall info to flash */
+                        tmc_store_stall_info(tmc2590->thisMotor, tmc2590->resp.stallGuardCurrentValue, stallGuardAlarmValue, st_tmc.step_period[tmc2590->thisAxis]);
+                        /* reset SG period to max as alarm will immediately stop the stepper and period will remain as it was at the point of trigger */
+                        st_tmc.step_period_idx[tmc2590->thisAxis] = 0;                    
+                    } //if ( raise_alarm == 1 )
+
+                } //if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) || (tmc2590->thisMotor == TMC_Z) ) {
    
             } //if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )
                 
