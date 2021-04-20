@@ -648,6 +648,7 @@ void stall_guard_statistics_reset(void ){
     for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
         tmc2590 = get_TMC_controller(controller_id);
         tmc2590->stallGuardDelta = -999;
+        tmc2590->stallGuardDeltaAxis = -999;
     }
 }
 

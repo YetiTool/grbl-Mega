@@ -108,6 +108,8 @@ typedef struct {
     uint8_t thisAxis;                               /* this motor Axis */
     uint16_t stallGuardAlarmValue;                  /* when current SG reading is lower than this value corresponded axis alarm will be triggered */
     int16_t stallGuardDelta;                        /* difference between current SG reading and calibrated curve */
+    int16_t stallGuardDeltaCurrent;                 /* difference between current SG reading and calibrated curve */
+    int16_t stallGuardDeltaAxis;                    /* Average delta for axis */
     uint8_t respIdx;                                /* current rdsel to know which response is coming next */
     int32_t response[TMC2590_RESPONSE3+1];          /* raw response from controllers */
     TMC2590Response resp;                           /* decoded response from controllers */

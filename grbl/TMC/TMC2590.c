@@ -507,8 +507,16 @@ void tmc_report_SG_delta(void){
     for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
 	    tmc2590 = get_TMC_controller(controller_id);
         printInteger( tmc2590->stallGuardDelta );
-        if (controller_id < TOTAL_TMCS-1) {printPgmString(PSTR(","));}
+        printPgmString(PSTR(","));
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+
+    /* print average delta for X and Y axes */
+    tmc2590 = get_TMC_controller(TMC_X2);
+    printInteger( tmc2590->stallGuardDeltaAxis  );
+    printPgmString(PSTR(","));
+    tmc2590 = get_TMC_controller(TMC_Y2);
+    printInteger( tmc2590->stallGuardDeltaAxis  );
+
     stall_guard_statistics_reset();          
 }
 
@@ -688,6 +696,16 @@ debug_pin_write(1, DEBUG_1_PIN);
                 if (tmc2590->stallGuardDelta < stallGuardDelta) {
                     tmc2590->stallGuardDelta  = stallGuardDelta;}
 
+                /* average delta SG for X and Y axes */
+                tmc2590->stallGuardDeltaCurrent = stallGuardDelta;
+                if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {
+                    TMC2590TypeDef *tmc2590_1;
+                    tmc2590_1 = get_TMC_controller(tmc2590->thisMotor - 1);
+                    int16_t stallGuardDeltaAxisCurrent = ( (tmc2590->stallGuardDeltaCurrent + tmc2590_1->stallGuardDeltaCurrent) >> 1 );
+                    if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {
+                        tmc2590->stallGuardDeltaAxis  = stallGuardDeltaAxisCurrent;}
+                    }  // if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {
+
                 if (SGcurrentValue < stallGuardAlarmValue) {
                     /* trigger alarm */
                     tmc_trigger_stall_alarm(tmc2590->thisAxis);
@@ -725,7 +743,17 @@ debug_pin_write(1, DEBUG_1_PIN);
                 stallGuardDelta = SG_calibration_value[tmc2590->thisMotor][idx] - SGcurrentValue;
                 /* find maximum stallGuardDelta over reporting period */
                 if (tmc2590->stallGuardDelta < stallGuardDelta) {
-                    tmc2590->stallGuardDelta  = stallGuardDelta;}                
+                    tmc2590->stallGuardDelta  = stallGuardDelta;}         
+
+                /* average delta SG for X and Y axes */
+                tmc2590->stallGuardDeltaCurrent = stallGuardDelta;
+                if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {
+                    TMC2590TypeDef *tmc2590_1;
+                    tmc2590_1 = get_TMC_controller(tmc2590->thisMotor - 1);
+                    int16_t stallGuardDeltaAxisCurrent = ( (tmc2590->stallGuardDeltaCurrent + tmc2590_1->stallGuardDeltaCurrent) >> 1 );
+                    if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {
+                        tmc2590->stallGuardDeltaAxis  = stallGuardDeltaAxisCurrent;}
+                    }  // if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {       
             }
         }
 
