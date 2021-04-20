@@ -8,6 +8,7 @@
 #include "grbl.h"
 
 #define     FIR_COEFF_TEMPC                         30      /**< 0-255 defines how quickly FIR converges 255-fastest */
+#define     FIRST_FIR_READING                       0x7FFF
 #define     SPINDLE_SPEED_FEEDBACK_N_CONVERGES      10      /* how many times to read and nudge spindle speed signal */
 #define     SPINDLE_SIG_MAX_MILLIVOLTS              10300
 #define     SPINDLE_SIG_MIN_MILLIVOLTS              0
@@ -19,9 +20,9 @@ static uint16_t VDD_5V_Atmega_mV               = 0;            // global variabl
 static uint16_t VDD_5V_dustshoe_mV             = 0;            // global variable for latest VDD_5V_dustshoe value
 static uint16_t VDD_24V_mV                     = 0;            // global variable for latest VDD_24V value
 static uint16_t Spindle_speed_Signal_mV        = 0;            // global variable for latest Spindle_speed_Signal_mV value
-static int16_t temperature_TMC_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
-static int16_t temperature_PCB_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
-static int16_t temperature_MOT_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
+static int16_t temperature_TMC_cent_celsius   = FIRST_FIR_READING;  // global variable for latest temperature value in hundredths of degree celsius
+static int16_t temperature_PCB_cent_celsius   = FIRST_FIR_READING;  // global variable for latest temperature value in hundredths of degree celsius
+static int16_t temperature_MOT_cent_celsius   = FIRST_FIR_READING;  // global variable for latest temperature value in hundredths of degree celsius
 static uint16_t latest_ADC_measurement          = 0;            // global variable to store
 static uint8_t spindle_speed_feedback_update_is_enabled = 0; /* change to 1 to enable spindle feedback auto-adaptation */
 static float spindle_sig_gradient; // Precalulated value to speed up rpm to PWM conversions.
@@ -30,7 +31,8 @@ static int16_t currentSpindleSpeedNreadings = 0; /* counter of number of reading
 static uint16_t currentSpindleSpeedSignalTargetmV = 0;
 
 int filter_fir_int16(long in_global_16, long in_16) {
-    return (int)( ((FIR_COEFF_TEMPC * in_16) + ( (1<<8) - FIR_COEFF_TEMPC) * in_global_16)>>8 );
+    if (in_global_16 == FIRST_FIR_READING)  { return (int)( in_16 ); }
+    else                                    { return (int)( ((FIR_COEFF_TEMPC * in_16) + ( (1<<8) - FIR_COEFF_TEMPC) * in_global_16)>>8 ); }
 }
 
 /* temperature coefficients */
@@ -447,6 +449,11 @@ int get_PCB_temperature(void){
 /* return global variable calculated earlier */
 int get_MOT_temperature(void){
     return temperature_MOT_cent_celsius/100;
+}
+
+/* return global variable calculated earlier */
+int get_MOT_temperature_cent(void){
+    return temperature_MOT_cent_celsius;
 }
 
 /* return global variable calculated earlier */

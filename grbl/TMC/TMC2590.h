@@ -86,6 +86,15 @@ static const int32_t tmc2590_defaultRegisterResetState[TOTAL_TMCS][TMC2590_REGIS
     }
 };
 
+/* Stall guard temperature compensation coefficients. Those are suitable for stepper motors used in SB1 */
+static const int16_t gradient_per_Celsius[TOTAL_TMCS] = {
+    3530, // X1 
+    3530, // X2
+    1999, // Y1
+    1999, // Y2
+    5114  // Z
+};
+
 /*
       
 static const int32_t tmc2590_defaultRegisterResetState[TMC2590_REGISTER_COUNT] =

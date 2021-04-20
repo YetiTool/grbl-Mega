@@ -11,6 +11,7 @@
 
 //uint16_t max_step_period_us_to_read_SG[] = { SG_MAX_VALID_PERIOD_X_US, SG_MAX_VALID_PERIOD_Y_US, SG_MAX_VALID_PERIOD_Z_US }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
 uint8_t min_step_period_idx_to_read_SG[] = { 0, 0, 0 }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
+int16_t SG_calibration_temperature[TOTAL_TMCS];
 
 #define HEX_BYTES_LEN 6
 char ByteArrayToHexViaLookup[] = "0123456789ABCDEF";
@@ -241,8 +242,7 @@ void tmc_trigger_stall_alarm(uint8_t axis){
 
 /* structure to hold live SG profile to track the load and alarm on stall detection*/
 uint8_t  SG_calibration_read_cnt[TOTAL_TMCS][TMC_SG_PROFILE_POINTS];  // counter for averaging of SG values at calibration
-uint16_t SG_calibration_value[TOTAL_TMCS][TMC_SG_PROFILE_POINTS];     // SG reads for each motor
-
+uint16_t SG_calibration_value[TOTAL_TMCS][TMC_SG_PROFILE_POINTS + 1];     // SG reads for each motor, last point is calibration temperature
 
 
 const uint16_t SG_step_periods_us[] PROGMEM =   /* must be size of TMC_SG_PROFILE_POINTS, can be put in PROGMEM  */
@@ -453,7 +453,10 @@ void tmc_compute_and_apply_calibration(void){
             else{
                 last_SG_read = SG_calibration_value[controller_id][TMC_SG_PROFILE_POINTS-1-idx];
             }
-        }        
+        }
+        /* store calibration temperature to the last table entry */
+        SG_calibration_value[controller_id][TMC_SG_PROFILE_POINTS] = get_MOT_temperature_cent();
+    
     }             
     
     #ifdef FLASH_DEBUG_ENABLED
@@ -485,7 +488,7 @@ void tmc_report_calibration(void){
         printPgmString(PSTR("<Idle|TCAL:M"));
         printInteger( controller_id );        
         printPgmString(PSTR(":"));
-        for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
+        for (idx=0; idx<TMC_SG_PROFILE_POINTS+1; idx++){
     	    printPgmString(PSTR(","));            
     	    printInteger( SG_calibration_value[controller_id][idx] );
         }
@@ -556,23 +559,31 @@ void tmc_report_status(void){
 
 
 void tmc_load_stall_guard_calibration(void){
+
+    uint8_t controller_id;
     
     if (!(memcpy_from_eeprom_with_checksum((char*)SG_calibration_value, EEPROM_ADDR_TMC_CALIBRATION, sizeof(SG_calibration_value)))) {
-        uint8_t controller_id;
+        // If no calibration in EEPROM then Reset with default thresholds vector
         uint8_t idx;
         TMC2590TypeDef *tmc2590;
         /* load TMC calibration from eeprom for each motor */
         for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
-                // If no calibration in EEPROM then Reset with default thresholds vector
                 /* init default calibration values */
                 tmc2590 = get_TMC_controller(controller_id);
                 for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
                     SG_calibration_value[controller_id][idx] = tmc2590->stallGuardAlarmValue + tmc2590->stallGuardAlarmThreshold;
-                }            
+                }
+                /* last point is calibration temperature in cents of Celcius */
+                SG_calibration_value[controller_id][idx] = 4500;
         } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
     
     } //if (!(memcpy_from_eeprom_with_checksum((char*)&flashTMCcalibration, EEPROM_ADDR_TMC_CALIBRATION, sizeof(FlashTMCcalibration)))) {
-        
+    
+    /* populate static variable from last point, that is calibration temperature in cents of Celcius */
+    for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+        SG_calibration_temperature[controller_id] = SG_calibration_value[controller_id][TMC_SG_PROFILE_POINTS];
+    }
+
     /*reset count to 1 to keep correct values in case that averaging is accidentally requested once again */
     memset(&SG_calibration_read_cnt, 1, sizeof(SG_calibration_read_cnt));
 
@@ -612,6 +623,14 @@ debug_pin_write(1, DEBUG_1_PIN);
     }        
 
     int16_t stallGuardDelta = -999; /* default to invalid SG delta reading */
+
+    /* find temperature compensation offset
+     * fixed point implementation to keep all in 32 bits with no divisions */               	
+	int32_t period_x_grad           =  ((uint32_t) st_tmc.step_period[tmc2590->thisAxis] * (uint32_t)gradient_per_Celsius[tmc2590->thisMotor]);
+	int32_t div_2pow13              =  period_x_grad >> 13 ;
+	int32_t period_x_grad_x_delta   =  div_2pow13 *  ( (int32_t)SG_calibration_temperature[tmc2590->thisMotor] - (int32_t)get_MOT_temperature_cent() );
+    int32_t compensation_SG_offset  =  period_x_grad_x_delta >> 13;
+    int16_t SGcurrentValue          = tmc2590->resp.stallGuardCurrentValue - compensation_SG_offset;
     
     if ( ( st_tmc.stall_alarm_enabled ) && ( st_tmc.current_scale_state == CURRENT_SCALE_ACTIVE ) ){
 
@@ -662,14 +681,14 @@ debug_pin_write(1, DEBUG_1_PIN);
                 /* keep track of how far the current SG value is from the calibrated level, this is printed to UART and used to indicate the current load. The bigger the value-> the higher the load.*/
                 if (stallGuardAlarmValue > 0){
                     /* SG reading is valid and enough headroom is remaining below calibrated value*/
-                    stallGuardDelta = SG_calibration_value[tmc2590->thisMotor][idx] - tmc2590->resp.stallGuardCurrentValue;
+                    stallGuardDelta = SG_calibration_value[tmc2590->thisMotor][idx] - SGcurrentValue;
                 }
                 
                 /* find maximum stallGuardDelta over reporting period */
                 if (tmc2590->stallGuardDelta < stallGuardDelta) {
                     tmc2590->stallGuardDelta  = stallGuardDelta;}
-                
-                if (tmc2590->resp.stallGuardCurrentValue    < stallGuardAlarmValue) {
+
+                if (SGcurrentValue < stallGuardAlarmValue) {
                     /* trigger alarm */
                     tmc_trigger_stall_alarm(tmc2590->thisAxis);
                     /* store stall info to flash */
@@ -677,7 +696,7 @@ debug_pin_write(1, DEBUG_1_PIN);
                     /* reset SG period to max as alarm will immediately stop the stepper and period will remain as it was at the point of trigger */
                     st_tmc.step_period_idx[tmc2590->thisAxis] = 0;
                     
-                } //if (tmc2590->resp.stallGuardCurrentValue    < tmc2590->stallGuardAlarmValue) {
+                } //if (SGcurrentValue < tmc2590->stallGuardAlarmValue) {
    
             } //if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )
                 
@@ -701,9 +720,9 @@ debug_pin_write(1, DEBUG_1_PIN);
                 //y2 = SG_calibration_value[tmc2590->thisMotor][idx];   /* SG calibration reading */                
                 ///* linear interpolation */
                 //y = y1 + (y2-y1)*(x-x1)/(x2-x1); /* interpolated SG calibration reading */                                                                    
-                //stallGuardDelta = y - tmc2590->resp.stallGuardCurrentValue;
+                //stallGuardDelta = y - SGcurrentValue;
                 
-                stallGuardDelta = SG_calibration_value[tmc2590->thisMotor][idx] - tmc2590->resp.stallGuardCurrentValue;
+                stallGuardDelta = SG_calibration_value[tmc2590->thisMotor][idx] - SGcurrentValue;
                 /* find maximum stallGuardDelta over reporting period */
                 if (tmc2590->stallGuardDelta < stallGuardDelta) {
                     tmc2590->stallGuardDelta  = stallGuardDelta;}                

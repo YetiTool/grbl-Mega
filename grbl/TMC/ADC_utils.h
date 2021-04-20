@@ -98,6 +98,7 @@ void asmcnc_start_ADC(void);        /* start ADC state machine from channel 1 */
 int get_TMC_temperature (void);
 int get_PCB_temperature (void);
 int get_MOT_temperature (void);
+int get_MOT_temperature_cent(void);
 int get_spindle_load_mV(void);
 int get_VDD_5V_Atmega_mV(void);
 int get_VDD_5V_dustshoe_mV(void);
