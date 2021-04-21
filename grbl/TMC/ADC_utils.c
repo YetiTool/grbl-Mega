@@ -15,20 +15,22 @@
 #define     SPINDLE_SIG_CONVERGENCE_DAMPING_FACTOR  0.5
 #define     ADC_EXTERNAL_VREF_2048mV                    // either ADC_EXTERNAL_VREF_2048mV or ADC_INTERNAL_VREF_1100mV
 
-static uint16_t spindle_load_mV                = 0;            // global variable for latest spindle load value
-static uint16_t VDD_5V_Atmega_mV               = 0;            // global variable for latest VDD_5V_Atmega value
-static uint16_t VDD_5V_dustshoe_mV             = 0;            // global variable for latest VDD_5V_dustshoe value
-static uint16_t VDD_24V_mV                     = 0;            // global variable for latest VDD_24V value
-static uint16_t Spindle_speed_Signal_mV        = 0;            // global variable for latest Spindle_speed_Signal_mV value
-static int16_t temperature_TMC_cent_celsius   = FIRST_FIR_READING;  // global variable for latest temperature value in hundredths of degree celsius
-static int16_t temperature_PCB_cent_celsius   = FIRST_FIR_READING;  // global variable for latest temperature value in hundredths of degree celsius
-static int16_t temperature_MOT_cent_celsius   = FIRST_FIR_READING;  // global variable for latest temperature value in hundredths of degree celsius
-static uint16_t latest_ADC_measurement          = 0;            // global variable to store
+static uint16_t spindle_load_mV                         = 0;            // global variable for latest spindle load value
+static uint16_t VDD_5V_Atmega_mV                        = 0;            // global variable for latest VDD_5V_Atmega value
+static uint16_t VDD_5V_dustshoe_mV                      = 0;            // global variable for latest VDD_5V_dustshoe value
+static uint16_t VDD_24V_mV                              = 0;            // global variable for latest VDD_24V value
+static uint16_t Spindle_speed_Signal_mV                 = 0;            // global variable for latest Spindle_speed_Signal_mV value
+static int16_t temperature_TMC_cent_celsius             = FIRST_FIR_READING;  // global variable for latest temperature value in hundredths of degree celsius
+static int16_t temperature_PCB_cent_celsius             = FIRST_FIR_READING;  // global variable for latest temperature value in hundredths of degree celsius
+static int16_t temperature_MOT_cent_celsius             = FIRST_FIR_READING;  // global variable for latest temperature value in hundredths of degree celsius
+static uint16_t latest_ADC_measurement                  = 0;            // global variable to store
 static uint8_t spindle_speed_feedback_update_is_enabled = 0; /* change to 1 to enable spindle feedback auto-adaptation */
 static float spindle_sig_gradient; // Precalulated value to speed up rpm to PWM conversions.
 static float currentSpindleSpeedRPM, correctedSpindleSpeedRPM;
-static int16_t currentSpindleSpeedNreadings = 0; /* counter of number of readings for spindle speed convergence routine */
-static uint16_t currentSpindleSpeedSignalTargetmV = 0;
+static int16_t currentSpindleSpeedNreadings             = 0; /* counter of number of readings for spindle speed convergence routine */
+static uint16_t currentSpindleSpeedSignalTargetmV       = 0;
+static uint8_t ADC_retry_count                          = 0; /* safety parameter (watchdog) for ADC FSM */
+
 
 int filter_fir_int16(long in_global_16, long in_16) {
     if (in_global_16 == FIRST_FIR_READING)  { return (int)( in_16 ); }
@@ -339,6 +341,17 @@ void asmcnc_start_ADC(void){
         ADCstMachine.adc_locked = 0;
 
     } //if (ADCstMachine.adc_locked == 0){
+    else {        
+        /* if ADC is locked for considerable amount of time (100 SPI ticks of 16.4ms = 1.6s) this would indicate the ADC error condition, reset the ADC FSM */
+        if (++ADC_retry_count > 100){
+            ADC_retry_count = 0;
+            /* reset state to idle, so next cycle will initialize ADC correctly */
+            ADCstMachine.adc_state = ADC_TOTAL_CHANNELS;
+            /* if none of the channels is to be measured this time then unlock the adc */
+            ADCstMachine.adc_locked = 0;
+            printPgmString(PSTR("\n!!! ADC FSM Reset !!!\n")); 
+        }
+    }
 }
 
 /* define ADC channels to be measured and start ADC conversions */
