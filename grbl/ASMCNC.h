@@ -8,8 +8,8 @@
 #ifndef ASMCNC_h
 #define ASMCNC_h
 
-#define ASMCNC_VERSION          "2.2.0"
-#define ASMCNC_VERSION_BUILD    "20210412"
+#define ASMCNC_VERSION          "2.2.1"
+#define ASMCNC_VERSION_BUILD    "20210421"
 
 /* proprietary error codes */
 #define ASMCNC_STATUS_INVALID_STATEMENT 39 //ASM Error code 39 if 'A' is followed by unrecognised command

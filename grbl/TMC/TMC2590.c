@@ -710,9 +710,12 @@ debug_pin_write(1, DEBUG_1_PIN);
                 if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) || (tmc2590->thisMotor == TMC_Z) ) {
                     uint8_t raise_alarm = 0;
                     if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) { //X or Y axis, dual motors
-                        if (tmc2590->stallGuardDeltaAxis > (int16_t)tmc2590->stallGuardAlarmThreshold)   { raise_alarm = 1; } }
+                        TMC2590TypeDef *tmc2590_1;
+                        tmc2590_1 = get_TMC_controller(tmc2590->thisMotor - 1);
+                        int16_t stallGuardDeltaAxisCurrent = ( (tmc2590->stallGuardDeltaCurrent + tmc2590_1->stallGuardDeltaCurrent) >> 1 );
+                        if (stallGuardDeltaAxisCurrent > (int16_t)tmc2590->stallGuardAlarmThreshold)   { raise_alarm = 1; } }
                     else { //Z axis, single motor
-                        if (tmc2590->stallGuardDelta > (int16_t)tmc2590->stallGuardAlarmThreshold)       { raise_alarm = 1; } }
+                        if (tmc2590->stallGuardDeltaCurrent > (int16_t)tmc2590->stallGuardAlarmThreshold)       { raise_alarm = 1; } }
                     if ( raise_alarm == 1 ){
                         /* trigger alarm */
                         tmc_trigger_stall_alarm(tmc2590->thisAxis);
