@@ -84,12 +84,12 @@ void limits_init()
 //      LIMIT_PORT |= (LIMIT_MASK);  // Enable internal pull-up resistors. Normal high operation.
 //    #endif
 //ASM Modification to allow limit red LED's to function HARD LIMIT ENABLED check moved to interrupt
-//    if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) {
+    if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) {
       LIMIT_PCMSK |= LIMIT_ISR_MASK; // Enable specific pins of the Pin Change Interrupt
       PCICR |= (1 << LIMIT_INT); // Enable Pin Change Interrupt
-//    } else {
-//     limits_disable();
-//    }
+    } else {
+     limits_disable();
+    }
   
     #ifdef ENABLE_SOFTWARE_DEBOUNCE
       MCUSR &= ~(1<<WDRF);
