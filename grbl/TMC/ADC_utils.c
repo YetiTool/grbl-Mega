@@ -300,7 +300,7 @@ void adc_state_machine(void){
             #ifdef DEBUG_ADC_ENABLED
             debug_pin_write(1, DEBUG_1_PIN);
             #endif
-            return; /* next conversion is started, return from ISR */
+            return; /* next conversion is started, return */
         }
         ADCstMachine.adc_state++;
     }
@@ -319,6 +319,7 @@ void adc_state_machine(void){
 void asmcnc_start_ADC(void){
     if (ADCstMachine.adc_locked == 0){
         ADCstMachine.adc_locked = 1;
+        ADC_retry_count = 0; 
         if (ADCstMachine.adc_state == ADC_TOTAL_CHANNELS){
 
             ADCstMachine.adc_state = ADC_0_SPINDLE_LOAD;

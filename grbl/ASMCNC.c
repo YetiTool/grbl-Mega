@@ -252,6 +252,19 @@ void asmcnc_init(void)
 	TCNT3=0; 											/* Zero timer 3 */
 
 
+
+#ifdef ANY_DEBUG_ENABLED
+    debug_pin_write(0, DEBUG_0_PIN);   //PC0, Blue debug LED
+    debug_pin_write(1, DEBUG_0_PIN);   
+    debug_pin_write(0, DEBUG_1_PIN);   //PC1, Red debug LED
+    debug_pin_write(1, DEBUG_1_PIN);   
+    debug_pin_write(0, DEBUG_2_PIN);    //PC2
+    debug_pin_write(1, DEBUG_2_PIN);
+    debug_pin_write(0, DEBUG_3_PIN);    //PC3, Green debug LED
+    debug_pin_write(1, DEBUG_3_PIN);
+#endif
+
+
 	//spi_hw_init(); /* enable heartbeat timer 5 */
 
     #if defined(ENABLE_SPINDLE_LOAD_MONITOR) || defined(ENABLE_TEMPERATURE_MONITOR)
