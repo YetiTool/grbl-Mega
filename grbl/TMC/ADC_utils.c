@@ -48,7 +48,7 @@ long k[] = {TEMP_K0, TEMP_K1, TEMP_K2, TEMP_K3, TEMP_K4, TEMP_K5, TEMP_K6};
 */
 int16_t convert_temperature (uint16_t temperature_ADC_reading){
 #ifdef DEBUG_ADC_ENABLED
-debug_pin_write(0, DEBUG_2_PIN);
+//debug_pin_write(0, DEBUG_2_PIN);
 #endif
 
     int i;
@@ -68,7 +68,7 @@ debug_pin_write(0, DEBUG_2_PIN);
         temperature_instantaneous += tmp;
     }
 #ifdef DEBUG_ADC_ENABLED
-debug_pin_write(1, DEBUG_2_PIN);
+//debug_pin_write(1, DEBUG_2_PIN);
 #endif
     return (int16_t) temperature_instantaneous * 100;
 }
@@ -78,8 +78,8 @@ void convert_TMC_temperature (uint16_t temperature_ADC_reading){
     int16_t temperature_instantaneous = convert_temperature (temperature_ADC_reading);
     temperature_TMC_cent_celsius = filter_fir_int16(temperature_TMC_cent_celsius, temperature_instantaneous); /* 7us */
 #ifdef DEBUG_ADC_ENABLED
-debug_pin_write(0, DEBUG_2_PIN);
-debug_pin_write(1, DEBUG_2_PIN);
+//debug_pin_write(0, DEBUG_2_PIN);
+//debug_pin_write(1, DEBUG_2_PIN);
 #endif
     //printInteger( temperature_TMC_cent_celsius );
     //printPgmString(PSTR(","));
@@ -320,6 +320,10 @@ void asmcnc_start_ADC(void){
     if (ADCstMachine.adc_locked == 0){
         ADCstMachine.adc_locked = 1;
         ADC_retry_count = 0; 
+        #ifdef DEBUG_ADC_ENABLED
+        debug_pin_write(0, DEBUG_2_PIN);
+        #endif
+
         if (ADCstMachine.adc_state == ADC_TOTAL_CHANNELS){
 
             ADCstMachine.adc_state = ADC_0_SPINDLE_LOAD;
@@ -340,11 +344,18 @@ void asmcnc_start_ADC(void){
         }
         /* if none of the channels is to be measured this time then unlock the adc */
         ADCstMachine.adc_locked = 0;
+        #ifdef DEBUG_ADC_ENABLED
+        debug_pin_write(1, DEBUG_2_PIN);
+        #endif
 
     } //if (ADCstMachine.adc_locked == 0){
     else {        
         /* if ADC is locked for considerable amount of time (100 SPI ticks of 16.4ms = 1.6s) this would indicate the ADC error condition, reset the ADC FSM */
-        if (++ADC_retry_count > 100){
+        if (++ADC_retry_count > 10){
+#ifdef DEBUG_ADC_ENABLED
+debug_pin_write(0, DEBUG_3_PIN);
+debug_pin_write(1, DEBUG_3_PIN);
+#endif
             ADC_retry_count = 0;
             /* reset state to idle, so next cycle will initialize ADC correctly */
             ADCstMachine.adc_state = ADC_TOTAL_CHANNELS;
@@ -375,6 +386,7 @@ void adc_setup_and_fire(void){
 debug_pin_write(0, DEBUG_0_PIN);
 debug_pin_write(1, DEBUG_0_PIN);
 #endif
+    uint8_t at_least_one_channel_to_measure = 0;
     /* loop over each channel in the list, find those that are required to be measured in this round and mark them in parameter "measure_channel"  */
     for (uint8_t adc_ch_idx = 0; adc_ch_idx < ADC_TOTAL_CHANNELS; adc_ch_idx++){
         if (ADCstMachine.max_count[adc_ch_idx] < ((64000000UL)/SPI_READ_OCR_PERIOD_US))  /* if max count is more than 64s then blank out this channel */
@@ -382,6 +394,7 @@ debug_pin_write(1, DEBUG_0_PIN);
             if (++ADCstMachine.tick_count[adc_ch_idx] % ADCstMachine.max_count[adc_ch_idx] == 0)  { /* fire at predefined interval */
                 ADCstMachine.measure_channel[adc_ch_idx] = 1;
                 ADCstMachine.tick_count[adc_ch_idx] = 0; /* reset tick counter for this channel */
+                at_least_one_channel_to_measure = 1;
             } //if (++ADCstMachine.tick_count[adc_ch_idx] % ADCstMachine.max_count[adc_ch_idx] == 0)  { /* fire at predefined interval */
 
         } //if (ADCstMachine.max_count[adc_ch_idx] < ((64000000UL)/SPI_READ_OCR_PERIOD_US))  /* if max count is more than 64s then blank out this channle */
@@ -389,7 +402,9 @@ debug_pin_write(1, DEBUG_0_PIN);
     } // for (uint8_t adc_ch_idx = 0; adc_ch_idx < ADC_TOTAL_CHANNELS; adc_ch_idx++){
 
     /* start first conversion */
-    asmcnc_start_ADC();
+    if (at_least_one_channel_to_measure==1){    
+        asmcnc_start_ADC(); 
+        }
 
 }
 
@@ -447,6 +462,10 @@ void adc_process_all_channels(void){
 
     /* ADC state machine completed the measurements, unlock it to allow next schedule*/
     ADCstMachine.adc_locked = 0;
+        #ifdef DEBUG_ADC_ENABLED
+        debug_pin_write(1, DEBUG_2_PIN);
+        #endif
+    
 }
 
 
