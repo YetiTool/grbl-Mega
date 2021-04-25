@@ -706,7 +706,7 @@ debug_pin_write(1, DEBUG_1_PIN);
                         tmc2590->stallGuardDeltaAxis  = stallGuardDeltaAxisCurrent;}
                     }  // if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {
 
-                /* alram trigger block */
+                /* alarm trigger block */
                 if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) || (tmc2590->thisMotor == TMC_Z) ) {
                     uint8_t raise_alarm = 0;
                     if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) { //X or Y axis, dual motors

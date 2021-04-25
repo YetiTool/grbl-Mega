@@ -43,8 +43,8 @@ typedef enum
 
 //#define RIGGY
 #define TMC_SG_PROFILE_POINTS               128
-#define SG_READ_STEP_COUNT                  32 // TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled. UART reads could halt the readings up to 6ms, so many unfiltered samples could be missed at high speed. So for now read filtered SG twice per change.
-#define SG_READING_SKIPS_AFTER_SLOW_FEED    7        /* Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis. Actually means 5 reads for dual axis and 10 for single */
+#define SG_READ_STEP_COUNT                  15 // TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled. UART reads could halt the readings up to 6ms, so many unfiltered samples could be missed at high speed. So for now read filtered SG twice per change.
+#define SG_READING_SKIPS_AFTER_SLOW_FEED    15        /* Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis. Actually means 5 reads for dual axis and 10 for single */
 #define DEFAULT_TMC_READ_SELECT             1 /* read of the SG is default state of the system */
 
 #define REPORT_TMC_REFRESH_COUNT            10 /* how often print full TMC statistics on UART */
@@ -57,7 +57,7 @@ typedef enum
 #else
 #define SG_MAX_VALID_PERIOD_X_US            2060    /* 9.1rpm (520mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 #define SG_MAX_VALID_PERIOD_Y_US            2060    /* 9.1rpm (520mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
-#define SG_MAX_VALID_PERIOD_Z_US            800     /* 25rpm  (90mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+#define SG_MAX_VALID_PERIOD_Z_US            800     /* 25rpm  (75mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 #endif
 
 /* max step period for calibration purposes */
