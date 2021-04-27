@@ -56,16 +56,18 @@
 #endif
 
 // Define EEPROM memory address location values for Grbl settings and parameters
-#define EEPROM_ADDR_GLOBAL          1U
-#define EEPROM_ADDR_PARAMETERS      512U
-#define EEPROM_ADDR_STARTUP_BLOCK   768U
-#define EEPROM_ADDR_BUILD_INFO      942U
-#define EEPROM_ADDR_TMC_SETTINS     1536U //TMC settings    0x600
-#define EEPROM_ADDR_TMC_CALIBRATION 1792U //TMC calibration 0x700 // Calibration for Trinamics drivers. 128 16-bit entries for 5 drivers + crc. 1281bytes
-#define EEPROM_ADDR_STATISTICS      3088U //statistics      0xC10
-#define EEPROM_ADDR_STACK_DUMP      3338U //stack dump      0xD0A
-#define EEPROM_ADDR_SERIAL          3904U //serial number   0xF40
-#define EEPROM_STACK_HDR_SIZE       8U
+#define EEPROM_ADDR_GLOBAL              1U
+#define EEPROM_ADDR_PARAMETERS          512U
+#define EEPROM_ADDR_STARTUP_BLOCK       768U
+#define EEPROM_ADDR_BUILD_INFO          942U
+#define EEPROM_ADDR_TMC_SETTINS         1536U //TMC settings    0x600
+#define EEPROM_ADDR_TMC_CALIBRATION_X   1792U //TMC calibration 0x700 // Calibration for Trinamics drivers. 128 16-bit entries for 5 drivers + temperatures + crcs. 1280+10+3bytes
+#define EEPROM_ADDR_TMC_CALIBRATION_Y   (EEPROM_ADDR_TMC_CALIBRATION_X + (TMC_SG_PROFILE_POINTS + 1) * 2 * 2 + 1)
+#define EEPROM_ADDR_TMC_CALIBRATION_Z   (EEPROM_ADDR_TMC_CALIBRATION_Y + (TMC_SG_PROFILE_POINTS + 1) * 2 * 2 + 1)
+#define EEPROM_ADDR_STATISTICS          3088U //statistics      0xC10
+#define EEPROM_ADDR_STACK_DUMP          3338U //stack dump      0xD0A
+#define EEPROM_ADDR_SERIAL              3904U //serial number   0xF40
+#define EEPROM_STACK_HDR_SIZE           8U
 
 // Define EEPROM address indexing for coordinate parameters
 #define N_COORDINATE_SYSTEM 6  // Number of supported work coordinate systems (from index 1)

@@ -80,6 +80,7 @@ typedef struct {
     uint8_t  sg_read_active_axes;           // global variable to hold list of axes that is being read
     uint8_t  stall_alarm_enabled;           // global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm
     uint8_t  calibration_enabled;           // SG calibration ongoing
+    uint8_t  calibration_axis;              // SG calibration axis    
 } stepper_tmc_t;
 
 
@@ -217,7 +218,7 @@ void tmc_homing_reset_limits(void); /* clear limit switch when pulling off */
 void tmc_globals_reset(void); /* reset all tmc global variables to known init state */
 
 /* calibration functions */
-void tmc_calibration_init(void); /* clear calibration matrix and get ready for data collection */
+void tmc_calibration_init(uint8_t calibration_axis); /* clear calibration matrix and get ready for data collection */
 void tmc_compute_and_apply_calibration(void); /* stop calibration and compute coefficients based on accumulated data */
 void tmc_report_calibration(void); /* print out calibration data */
 void tmc_report_status(void);

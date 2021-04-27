@@ -300,7 +300,7 @@ void process_global_command(uint8_t command, uint32_t value){
         /* 1: reset all calibrations and prepare for new one, 2: complete calibration, compute cal tables and apply correction, 4: print calibration coefficients */
         case SET_CALIBR_MODE:
             value = value & 0xFF;
-            if ( (value == TMC_CALIBRATION_INIT) || (value == TMC_CALIBRATION_COMPUTE) || (value == TMC_CALIBRATION_REPORT) )
+            if ( (value == TMC_CALIBRATION_INIT) || (value == TMC_CALIBRATION_COMPUTE) || (value == TMC_CALIBRATION_REPORT) || (value == TMC_CALIBRATION_INIT_X) || (value == TMC_CALIBRATION_INIT_Y) || (value == TMC_CALIBRATION_INIT_Z) )
                 {
                     system_set_exec_tmc_cal_command_flag(value);
                 }

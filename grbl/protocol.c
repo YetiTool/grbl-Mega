@@ -579,7 +579,16 @@ void protocol_exec_rt_system()
       
       /* clear calibration matrix and get ready for data collection */
       if (rt_exec & TMC_CALIBRATION_INIT) {
-          tmc_calibration_init(); 
+          tmc_calibration_init(X_AXIS);
+      }
+      if (rt_exec & TMC_CALIBRATION_INIT_X) {
+          tmc_calibration_init(X_AXIS);
+      }
+      if (rt_exec & TMC_CALIBRATION_INIT_Y) {
+          tmc_calibration_init(Y_AXIS);
+      }
+      if (rt_exec & TMC_CALIBRATION_INIT_Z) {
+          tmc_calibration_init(Z_AXIS);
       }
       
       /* stop calibration and compute coefficients based on accumulated data */

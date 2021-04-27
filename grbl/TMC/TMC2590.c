@@ -412,17 +412,30 @@ debug_pin_write(0, DEBUG_1_PIN);
 }
 
 /* clear calibration matrix and get ready for data collection */
-void tmc_calibration_init(void){
+void tmc_calibration_init(uint8_t calibration_axis){
+    st_tmc.calibration_axis = calibration_axis;
     st_tmc.calibration_enabled = 1;
     st_tmc.stall_alarm_enabled  = false;                  /* global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm      */    
 
-    allow_periodic_TMC_poll(0); /* disable TMC polls for home cycle duration*/
+    allow_periodic_TMC_poll(0); /* disable TMC polls for calibration cycle duration*/
 
     /* lower the max step period for calibration purposes */ 
     min_step_period_idx_compute();
     
-    memset(SG_calibration_read_cnt, 0, sizeof(SG_calibration_read_cnt));
-    memset(SG_calibration_value, 0, sizeof(SG_calibration_value));
+    if (st_tmc.calibration_axis ==          X_AXIS){
+        memset(&SG_calibration_read_cnt[TMC_X1][0]    , 0, sizeof(SG_calibration_read_cnt[  TMC_X1]) * 2);
+        memset(&SG_calibration_value[   TMC_X1][0]    , 0, sizeof(SG_calibration_value[     TMC_X1]) * 2);
+    }
+    else if (st_tmc.calibration_axis ==     Y_AXIS){
+        memset(&SG_calibration_read_cnt[TMC_Y1][0]    , 0, sizeof(SG_calibration_read_cnt[  TMC_Y1]) * 2);
+        memset(&SG_calibration_value[   TMC_Y1][0]    , 0, sizeof(SG_calibration_value[     TMC_Y1]) * 2);
+    }
+    else if (st_tmc.calibration_axis ==     Z_AXIS){
+        memset(&SG_calibration_read_cnt[TMC_Z ][0]    , 0, sizeof(SG_calibration_read_cnt[  TMC_Z ])    );
+        memset(&SG_calibration_value[   TMC_Z ][0]    , 0, sizeof(SG_calibration_value[     TMC_Z ])    );
+    }
+    
+    
 }
 
 /* stop calibration and compute coefficients based on accumulated data */
@@ -433,7 +446,17 @@ void tmc_compute_and_apply_calibration(void){
     uint8_t controller_id;
     uint8_t idx;
     uint16_t last_SG_read = 0;
-    for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+    uint8_t controller_start = TMC_Z, controller_stop = TMC_Z;
+    if (st_tmc.calibration_axis ==          X_AXIS){
+        controller_start = TMC_X1;
+        controller_stop  = TMC_X2;
+    }
+    else if (st_tmc.calibration_axis ==     Y_AXIS){
+        controller_start = TMC_Y1;
+        controller_stop  = TMC_Y2;
+    }
+    
+    for (controller_id = controller_start; controller_id <= controller_stop; controller_id++){
         /* first apply averaging and fill 0 entires with lower values */             
         for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
             if ( SG_calibration_read_cnt[controller_id][idx] > 0 ) { /* catch divide by 0 */
@@ -455,15 +478,29 @@ void tmc_compute_and_apply_calibration(void){
             }
         }
         /* store calibration temperature to the last table entry */
-        SG_calibration_value[controller_id][TMC_SG_PROFILE_POINTS] = get_MOT_temperature_cent();
-    
-    }             
+        SG_calibration_value[controller_id][TMC_SG_PROFILE_POINTS] = get_MOT_temperature_cent();    
+    }
     
     #ifdef FLASH_DEBUG_ENABLED
     debug_pin_write(1, DEBUG_1_PIN);
     #endif
     /* save calibration to eeprom */
-    memcpy_to_eeprom_with_checksum(EEPROM_ADDR_TMC_CALIBRATION, (char*)SG_calibration_value, sizeof(SG_calibration_value));    
+    /* default store parameters to Z axis and then update them according to st_tmc.calibration_axis */
+    uint32_t sizeof_SG_calibration_value    = sizeof( SG_calibration_value[TMC_Z ]);
+    uint32_t eeprom_addr_start              = EEPROM_ADDR_TMC_CALIBRATION_Z ;
+    char*    ram_addr_start                 = (char*)&SG_calibration_value[TMC_Z ][0];
+    if (st_tmc.calibration_axis ==          X_AXIS){
+        eeprom_addr_start = EEPROM_ADDR_TMC_CALIBRATION_X;
+        ram_addr_start = (char*)&SG_calibration_value[TMC_X1][0];
+        sizeof_SG_calibration_value *= 2;
+    }
+    else if (st_tmc.calibration_axis ==     Y_AXIS){
+        eeprom_addr_start = EEPROM_ADDR_TMC_CALIBRATION_Y;
+        ram_addr_start = (char*)&SG_calibration_value[TMC_Y1][0];
+        sizeof_SG_calibration_value *= 2;
+    }    
+    
+    memcpy_to_eeprom_with_checksum(eeprom_addr_start, ram_addr_start, sizeof_SG_calibration_value);    
     #ifdef FLASH_DEBUG_ENABLED
     debug_pin_write(0, DEBUG_1_PIN);
     #endif
@@ -569,24 +606,53 @@ void tmc_report_status(void){
 void tmc_load_stall_guard_calibration(void){
 
     uint8_t controller_id;
+    uint8_t idx;
+    TMC2590TypeDef *tmc2590;
     
-    if (!(memcpy_from_eeprom_with_checksum((char*)SG_calibration_value, EEPROM_ADDR_TMC_CALIBRATION, sizeof(SG_calibration_value)))) {
+    if (!(memcpy_from_eeprom_with_checksum((char*)&SG_calibration_value[TMC_X1][0], EEPROM_ADDR_TMC_CALIBRATION_X, sizeof( SG_calibration_value[TMC_X1])*2))) {
         // If no calibration in EEPROM then Reset with default thresholds vector
-        uint8_t idx;
-        TMC2590TypeDef *tmc2590;
         /* load TMC calibration from eeprom for each motor */
-        for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+        for (controller_id = TMC_X1; controller_id < TMC_Y1; controller_id++){
                 /* init default calibration values */
                 tmc2590 = get_TMC_controller(controller_id);
                 for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
                     SG_calibration_value[controller_id][idx] = tmc2590->stallGuardAlarmValue + tmc2590->stallGuardAlarmThreshold;
                 }
                 /* last point is calibration temperature in cents of Celcius */
-                SG_calibration_value[controller_id][idx] = 4500;
+                SG_calibration_value[controller_id][idx] = 4000;
         } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
     
     } //if (!(memcpy_from_eeprom_with_checksum((char*)&flashTMCcalibration, EEPROM_ADDR_TMC_CALIBRATION, sizeof(FlashTMCcalibration)))) {
+
+    if (!(memcpy_from_eeprom_with_checksum((char*)&SG_calibration_value[TMC_Y1][0], EEPROM_ADDR_TMC_CALIBRATION_Y, sizeof( SG_calibration_value[TMC_Y1])*2))) {
+        // If no calibration in EEPROM then Reset with default thresholds vector
+        /* load TMC calibration from eeprom for each motor */
+        for (controller_id = TMC_Y1; controller_id < TMC_Z; controller_id++){
+                /* init default calibration values */
+                tmc2590 = get_TMC_controller(controller_id);
+                for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
+                    SG_calibration_value[controller_id][idx] = tmc2590->stallGuardAlarmValue + tmc2590->stallGuardAlarmThreshold;
+                }
+                /* last point is calibration temperature in cents of Celcius */
+                SG_calibration_value[controller_id][idx] = 4000;
+        } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
     
+    } //if (!(memcpy_from_eeprom_with_checksum((char*)&flashTMCcalibration, EEPROM_ADDR_TMC_CALIBRATION, sizeof(FlashTMCcalibration)))) {
+
+    if (!(memcpy_from_eeprom_with_checksum((char*)&SG_calibration_value[TMC_Z][0], EEPROM_ADDR_TMC_CALIBRATION_Z, sizeof( SG_calibration_value[TMC_Z ])))) {
+        // If no calibration in EEPROM then Reset with default thresholds vector
+        /* load TMC calibration from eeprom for each motor */
+        controller_id = TMC_Z;
+        /* init default calibration values */
+        tmc2590 = get_TMC_controller(controller_id);
+        for (idx=0; idx<TMC_SG_PROFILE_POINTS; idx++){
+            SG_calibration_value[controller_id][idx] = tmc2590->stallGuardAlarmValue + tmc2590->stallGuardAlarmThreshold;
+        }
+        /* last point is calibration temperature in cents of Celcius */
+        SG_calibration_value[controller_id][idx] = 4000;
+    
+    } //if (!(memcpy_from_eeprom_with_checksum((char*)&flashTMCcalibration, EEPROM_ADDR_TMC_CALIBRATION, sizeof(FlashTMCcalibration)))) {
+            
     /* populate static variable from last point, that is calibration temperature in cents of Celcius */
     for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
         SG_calibration_temperature[controller_id] = SG_calibration_value[controller_id][TMC_SG_PROFILE_POINTS];
