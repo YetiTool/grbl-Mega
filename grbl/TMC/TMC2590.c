@@ -387,13 +387,14 @@ debug_pin_write(1, DEBUG_1_PIN);
 #endif    
     /* find entry in calibration table based on step_period_idx and add it */
     uint8_t idx = st_tmc.step_period_idx[thisAxis];
-    
+
+#ifdef CALIBRATION_BASED_ON_AVERAGED_SG
     /* option 1: calibration is based on average value */
-    //if (SG_calibration_read_cnt[thisMotor][idx] < TMC_SG_MAX_AVERAGE) { /* only accumulate until max average is reached to keep 10bit SG value in 16 bit accumulator */
-        //SG_calibration_value[thisMotor][idx] += stallGuardCurrentValue;
-        //SG_calibration_read_cnt[thisMotor][idx] ++;
-    //} /* end ot option 1 */ 
-    
+    if (SG_calibration_read_cnt[thisMotor][idx] < TMC_SG_MAX_AVERAGE) { /* only accumulate until max average is reached to keep 10bit SG value in 16 bit accumulator */
+        SG_calibration_value[thisMotor][idx] += stallGuardCurrentValue;
+        SG_calibration_read_cnt[thisMotor][idx] ++;
+    } /* end ot option 1 */ 
+#else    
     /* option 2: calibration is based on minimum value - better for harmonic distortions */
     if (SG_calibration_read_cnt[thisMotor][idx]==0){/* first entry */
         SG_calibration_value[thisMotor][idx] = stallGuardCurrentValue;
@@ -404,12 +405,32 @@ debug_pin_write(1, DEBUG_1_PIN);
             SG_calibration_value[thisMotor][idx] = stallGuardCurrentValue;    
         }        
     } /* end ot option 2 */ 
+#endif 
     
 #ifdef SG_CAL_DEBUG_ENABLED
 debug_pin_write(0, DEBUG_1_PIN);
 #endif
     
 }
+
+/* todo rewrite search algo to depend on last value - should be very close and hence search will be faster */
+/* profler: RAM: 300us per search;  PROGMEM: 350us per search*/
+void tmc_store_calibration_point_from_host(	uint8_t thisMotor, uint8_t idx, uint16_t stallGuardLoadedValue){
+    
+#ifdef SG_CAL_DEBUG_ENABLED
+debug_pin_write(1, DEBUG_1_PIN);
+#endif
+    SG_calibration_value[thisMotor][idx] = stallGuardLoadedValue;
+    /* don't touch SG_calibration_read_cnt for temperature entry */
+    if ( idx < TMC_SG_PROFILE_POINTS ){
+        SG_calibration_read_cnt[thisMotor][idx] = 1; }
+        
+#ifdef SG_CAL_DEBUG_ENABLED
+debug_pin_write(0, DEBUG_1_PIN);
+#endif
+        
+}
+
 
 /* clear calibration matrix and get ready for data collection */
 void tmc_calibration_init(uint8_t calibration_axis){
@@ -477,8 +498,10 @@ void tmc_compute_and_apply_calibration(void){
                 last_SG_read = SG_calibration_value[controller_id][TMC_SG_PROFILE_POINTS-1-idx];
             }
         }
-        /* store calibration temperature to the last table entry */
-        SG_calibration_value[controller_id][TMC_SG_PROFILE_POINTS] = get_MOT_temperature_cent();    
+        /* store calibration temperature to the last table entry. If non-zero then it was uploaded from file and file temperature shoul apply */
+        if (SG_calibration_value[controller_id][TMC_SG_PROFILE_POINTS] == 0) {
+            SG_calibration_value[controller_id][TMC_SG_PROFILE_POINTS] = get_MOT_temperature_cent(); }
+        SG_calibration_temperature[controller_id] = SG_calibration_value[controller_id][TMC_SG_PROFILE_POINTS]; /* update temperature in calibration table */
     }
     
     #ifdef FLASH_DEBUG_ENABLED

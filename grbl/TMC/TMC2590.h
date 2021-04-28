@@ -10,6 +10,8 @@
 
 #include "TMC_interface.h"
 
+#define CALIBRATION_BASED_ON_AVERAGED_SG
+
 /* thermal test to match rack cutter: X:34C, Y:40C; Z:30C */
 static const uint8_t tmc2590_defaultStandStillCurrentScale[TOTAL_TMCS] =
 {
@@ -144,5 +146,6 @@ void tmc_hw_init(void);
 void tmc_kick_spi_processing(void); /* flush the SPI queue starting from next SPI transfer */
 void tmc_load_stall_guard_calibration(void);
 void allow_periodic_TMC_poll(uint8_t allowed); /* set global variable allowing or blocking periodic polls */
+void tmc_store_calibration_point_from_host(	uint8_t thisMotor, uint8_t idx, uint16_t stallGuardLoadedValue);
 
 #endif /* TMC_IC_TMC2590_H_ */

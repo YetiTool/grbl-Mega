@@ -308,7 +308,25 @@ void process_global_command(uint8_t command, uint32_t value){
                     report_status_message(ASMCNC_PARAM_ERROR);
                 }
         break;
-
+        
+        case UPLOAD_CALIBR_VALUE:    // 1: upload calibration from host. Must be preceded by TMC_CALIBRATION_INIT_xxx             
+        {
+            uint8_t motor;
+            uint8_t idx;
+            uint16_t stallGuardLoadedValue;
+            motor                   = (uint8_t) ( (uint32_t)(value & 0xFF000000)>>24 );
+            idx                     = (uint8_t) ( (uint32_t)(value & 0x00FF0000)>>16 );
+            stallGuardLoadedValue   = (uint16_t)( (uint32_t)(value & 0x0000FFFF)     );
+            if ( ( motor < TOTAL_TMCS ) && ( idx < TMC_SG_PROFILE_POINTS + 1) && ( stallGuardLoadedValue < 10000) )
+            {
+                tmc_store_calibration_point_from_host(	motor, idx, stallGuardLoadedValue);
+            }
+            else{
+                report_status_message(ASMCNC_PARAM_ERROR);
+            }
+        }            
+        break;
+            
         /* print out 2560 statistics */
         case GET_STATISTICS:
             system_set_exec_tmc_cal_command_flag(TMC_STATISTICS_REPORT);

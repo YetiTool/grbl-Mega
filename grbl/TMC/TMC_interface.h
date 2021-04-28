@@ -165,6 +165,7 @@ typedef struct {
 #define GET_REGISTERS          106
 #define WDT_TMC_TEST           107 // value = 0x10: disable WD feed; other value: report EEPROM dump
 #define REPORT_STALLS          108 // report list of last stalls with associated freeze frame
+#define UPLOAD_CALIBR_VALUE    109  // 1: upload calibration from host. Must be preceded by TMC_CALIBRATION_INIT_xxx 
 
 #define SET_MRES            1   /* Microstep resolution for STEP/DIR mode. Microsteps per fullstep: %0000: 256; %0001: 128; %0010: 64; %0011: 32; %0100: 16; %0101: 8; %0110: 4; %0111: 2 (halfstep); %1000: 1 (fullstep) */
 #define SET_DEDGE           2   /*  */
