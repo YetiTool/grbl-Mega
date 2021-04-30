@@ -57,9 +57,10 @@ typedef enum
 #else
 #define SG_MAX_VALID_PERIOD_X_US            2060    /* 9.1rpm (520mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 #define SG_MAX_VALID_PERIOD_Y_US            2060    /* 9.1rpm (520mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+#define SG_MAX_VALID_PERIOD_Z_US            400     /* 50rpm  (150mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 //#define SG_MAX_VALID_PERIOD_X_US            1060    /* 20rpm (1120mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 //#define SG_MAX_VALID_PERIOD_Y_US            1060    /* 20rpm (1120mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
-#define SG_MAX_VALID_PERIOD_Z_US            800     /* 25rpm  (75mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+//#define SG_MAX_VALID_PERIOD_Z_US            800     /* 25rpm  (75mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 //#define SG_MAX_VALID_PERIOD_X_US            8000    /* 2.3rpm (132mm/min feed). for riggy: X motor 17HS15-0404S - 100 rpm */
 //#define SG_MAX_VALID_PERIOD_Y_US            8000    /* 2.3rpm (132mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 //#define SG_MAX_VALID_PERIOD_Z_US            6000     /* 25rpm  (75mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
@@ -105,7 +106,7 @@ typedef struct {
     /* Parameters stored in EEPROM */
     int32_t shadowRegister[TMC2590_REGISTER_COUNT]; /* latest state of each config register */
     uint16_t stallGuardAlarmThreshold;              /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
-    uint16_t temperatureCoefficient;                /* correction for temperatures other than calibration */
+    uint16_t gradient_per_Celsius;                  /* correction for temperatures other than calibration */
     uint8_t standStillCurrentScale;                 /* standstill current - to reduce energy consumption while job is idle */
     uint8_t activeCurrentScale;                     /* active current 0 - 31 where 31 is max */
 
@@ -134,9 +135,9 @@ typedef struct {
 // modules that are upgraded will have zero in the new fields. This ensures that an upgrade does
 // not wipe out the old settings.
 typedef struct {
-    //uint32_t flashTMCconfigVersion;                               /* Current flashConfigVersion, required to decide which fields to be updated under DFU, CURRENT_FLASHCONFIG_VER*/
+    uint32_t flashTMCconfigVersion;                                 /* Current flashConfigVersion, required to decide which fields to be updated under DFU, CURRENT_FLASHCONFIG_VER*/
     int32_t  registerState[TOTAL_TMCS][TMC2590_REGISTER_COUNT];     /* TMC registers for each of 5 controllers: DRVCTRL, CHOPCONF, SMARTEN, SGCSCONF, DRVCONF. 160 bytes */
-    uint16_t temperatureCoefficient[TOTAL_TMCS];                    /* coefficient defining thermal offset applied to calibration curve */
+    uint16_t gradient_per_Celsius[TOTAL_TMCS];                      /* coefficient defining thermal offset applied to calibration curve */
     uint16_t stallGuardAlarmThreshold[TOTAL_TMCS];                  /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
     uint8_t standStillCurrentScale[TOTAL_TMCS];                     /* standstill current - to reduce energy consumption while job is idle */
     uint8_t activeCurrentScale[TOTAL_TMCS];                         /* active current */

@@ -722,8 +722,8 @@ debug_pin_write(1, DEBUG_1_PIN);
     int16_t stallGuardDelta = -999; /* default to invalid SG delta reading */
 
     /* find temperature compensation offset: compensation_SG_offset = gradient_per_Celsius/1000000 * delta_to_current_temperature * step_us
-     * fixed point implementation to keep all in 32 bits with no divisions */               	
-	int32_t period_x_grad           =  ((uint32_t) st_tmc.step_period[tmc2590->thisAxis] * (uint32_t)gradient_per_Celsius[tmc2590->thisMotor]);
+     * fixed point implementation to keep all in 32 bits with no divisions */
+	int32_t period_x_grad           =  ((uint32_t) st_tmc.step_period[tmc2590->thisAxis] * (uint32_t) tmc2590->gradient_per_Celsius);
 	int32_t div_2pow13              =  period_x_grad >> 13 ;
 	int32_t period_x_grad_x_delta   =  div_2pow13 *  ( (int32_t)SG_calibration_temperature[tmc2590->thisMotor] - (int32_t)get_MOT_temperature_cent() );
     int32_t compensation_SG_offset  =  period_x_grad_x_delta >> 13;

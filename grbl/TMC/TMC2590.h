@@ -32,13 +32,17 @@ static const uint8_t tmc2590_defaultActiveCurrentScale[TOTAL_TMCS] =
     31     /* Z motor  */
 };
 
-static const uint16_t tmc2590_defaultTemperatureCoefficient[TOTAL_TMCS] =
-{
-    11,   /* X1 motor */
-    11,   /* X2 motor */
-    25,   /* Y1 motor */
-    25,   /* Y2 motor */
-    5     /* Z motor  */
+/* Stall guard temperature compensation coefficients. Those are suitable for stepper motors used in SB1 */
+/* full power: 3530x 1999y 5114z*/
+/* medium power: 2500x 2500y 2000z*/
+/* medium power practical: 5000x 2000y 2000z*/
+
+static const uint16_t tmc2590_defaultTemperatureCoefficient[TOTAL_TMCS] = {
+    5000, // X1 23HS22-2804S
+    5000, // X2
+    2000, // Y1 23HS33-4008S
+    2000, // Y2
+    2000  // Z  17HS19-2004S1
 };
 
 static const uint16_t tmc2590_defaultStallGuardAlarmThreshold[TOTAL_TMCS] =
@@ -47,59 +51,47 @@ static const uint16_t tmc2590_defaultStallGuardAlarmThreshold[TOTAL_TMCS] =
     200,   /* X2 motor */
     200,   /* Y1 motor */
     200,   /* Y2 motor */
-    200    /* Z motor  */
+    150    /* Z motor  */
 };
+
 
 static const int32_t tmc2590_defaultRegisterResetState[TOTAL_TMCS][TMC2590_REGISTER_COUNT] =
 {
     {
         0x00000204,  // 0: X1 DRVCTRL
-        0x00093125,  // 4: X1 CHOPCONF
+        0x000931a4,  // 4: X1 CHOPCONF
         0x000a8100,  // 5: X1 SMARTEN
-        0x000d071f,  // 6: X1 SGCSCONF
+        0x000c0517,  // 6: X1 SGCSCONF
         0x000ef011   // 7: X1 DRVCONF
     },
     {
         0x00000204,  // 0: X2 DRVCTRL
-        0x00093125,  // 4: X2 CHOPCONF
+        0x000931a4,  // 4: X2 CHOPCONF
         0x000a8100,  // 5: X2 SMARTEN
-        0x000d061f,  // 6: X2 SGCSCONF
+        0x000c0517,  // 6: X2 SGCSCONF
         0x000ef011   // 7: X2 DRVCONF
     },                    
     {                     
         0x00000204,  // 0: Y1 DRVCTRL
-        0x000932d4,  // 4: Y1 CHOPCONF
+        0x000932d5,  // 4: Y1 CHOPCONF
         0x000a8100,  // 5: Y1 SMARTEN
-        0x000d031f,  // 6: Y1 SGCSCONF
+        0x000c0413,  // 6: Y1 SGCSCONF
         0x000ef011   // 7: Y1 DRVCONF
     },                     
     {                      
         0x00000204,  // 0: Y2 DRVCTRL
-        0x000932d4,  // 4: Y2 CHOPCONF
+        0x000932d5,  // 4: Y2 CHOPCONF
         0x000a8100,  // 5: Y2 SMARTEN
-        0x000d031f,  // 6: Y2 SGCSCONF
+        0x000c0413,  // 6: Y2 SGCSCONF
         0x000ef011   // 7: Y2 DRVCONF
     },                     
     {                      
         0x00000204,  // 0: Z  DRVCTRL
         0x000932d5,  // 4: Z  CHOPCONF
         0x000a8100,  // 5: Z  SMARTEN
-        0x000d061f,  // 6: Z  SGCSCONF
+        0x000c0515,  // 6: Z  SGCSCONF
         0x000ef011   // 7: Z  DRVCONF
     }
-};
-
-/* Stall guard temperature compensation coefficients. Those are suitable for stepper motors used in SB1 */
-/* full power: 3530x 1999y 5114z*/
-/* medium power: 2500x 2500y 2000z*/
-/* medium power practical: 5000x 2000y 2000z*/
-
-static const int16_t gradient_per_Celsius[TOTAL_TMCS] = {
-    5000, // X1 23HS22-2804S	
-    5000, // X2
-    2000, // Y1 23HS33-4008S	
-    2000, // Y2
-    2000  // Z  17HS19-2004S1
 };
 
 /*
