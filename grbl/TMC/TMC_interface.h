@@ -55,11 +55,14 @@ typedef enum
 #define SG_MAX_VALID_PERIOD_Y_US            8000    /* 2.3rpm (132mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 #define SG_MAX_VALID_PERIOD_Z_US            4000    /* 12.5rpm (37.5mm/min feed). Z motor 17HS19-2004S1*/
 #else
-//#define SG_MAX_VALID_PERIOD_X_US            2060    /* 9.1rpm (520mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
-//#define SG_MAX_VALID_PERIOD_Y_US            2060    /* 9.1rpm (520mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
-#define SG_MAX_VALID_PERIOD_X_US            1060    /* 20rpm (1120mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
-#define SG_MAX_VALID_PERIOD_Y_US            1060    /* 20rpm (1120mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+#define SG_MAX_VALID_PERIOD_X_US            2060    /* 9.1rpm (520mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+#define SG_MAX_VALID_PERIOD_Y_US            2060    /* 9.1rpm (520mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+//#define SG_MAX_VALID_PERIOD_X_US            1060    /* 20rpm (1120mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+//#define SG_MAX_VALID_PERIOD_Y_US            1060    /* 20rpm (1120mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 #define SG_MAX_VALID_PERIOD_Z_US            800     /* 25rpm  (75mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+//#define SG_MAX_VALID_PERIOD_X_US            8000    /* 2.3rpm (132mm/min feed). for riggy: X motor 17HS15-0404S - 100 rpm */
+//#define SG_MAX_VALID_PERIOD_Y_US            8000    /* 2.3rpm (132mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
+//#define SG_MAX_VALID_PERIOD_Z_US            6000     /* 25rpm  (75mm/min feed). Slow or 0 feed causes invalid SG reading. This parameter specifies max SG read period that resiult in vaild reading. Anything above it (slower speed) will result in invalid reading. */
 #endif
 
 /* max step period for calibration purposes */
@@ -72,6 +75,7 @@ typedef enum
 typedef struct {
     uint16_t step_period[N_AXIS];           // variables to hold the step period which is direct reflection of shaft rotational speed at the time when SG read was fired.
     uint8_t  step_period_idx[N_AXIS];       // variables to hold the step period index which is direct mapping of step period, used to maximise computational speed.
+    uint8_t  step_period_idx_past[N_AXIS];       // variables to hold the step period index which is direct mapping of step period, used to maximise computational speed.
     uint8_t  this_reading_direction[N_AXIS];// variables to hold the direction applied at current SG reading, used to reset SG reading skip counter under direction change
     uint8_t  last_reading_direction[N_AXIS];// variables to hold the direction applied at last SG reading, used to reset SG reading skip counter under direction change
     uint8_t  step_counter[N_AXIS];          // Counter variables for firing SG read. TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled
@@ -113,6 +117,8 @@ typedef struct {
     int16_t stallGuardDelta;                        /* difference between current SG reading and calibrated curve */
     int16_t stallGuardDeltaCurrent;                 /* difference between current SG reading and calibrated curve */
     int16_t stallGuardDeltaAxis;                    /* Average delta for axis */
+    int16_t stallGuardDeltaPast;                 /* difference between current SG reading and calibrated curve */
+    int16_t stallGuardDeltaAxisPast;                    /* Average delta for axis */
     uint8_t respIdx;                                /* current rdsel to know which response is coming next */
     int32_t response[TMC2590_RESPONSE3+1];          /* raw response from controllers */
     TMC2590Response resp;                           /* decoded response from controllers */

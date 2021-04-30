@@ -762,7 +762,7 @@ debug_pin_write(1, DEBUG_1_PIN);
                 debug_pin_write(1, DEBUG_1_PIN);
                 #endif    
                 /* find entry in calibration table based on step_period_idx and extract SG calibrated level from there */
-                uint8_t idx = st_tmc.step_period_idx[tmc2590->thisAxis];
+                uint8_t idx = ((st_tmc.step_period_idx[tmc2590->thisAxis] + st_tmc.step_period_idx_past[tmc2590->thisAxis]) / 2 );
                 /* entry found, apply threshold */
                 if (SG_calibration_value[tmc2590->thisMotor][idx] > tmc2590->stallGuardAlarmThreshold){ /* only do so if there is enough headroom below the caliration value to track the SG, otherwise keep it "0" which is ALARM_DIASBLED*/
                     stallGuardAlarmValue = SG_calibration_value[tmc2590->thisMotor][idx] - tmc2590->stallGuardAlarmThreshold ;                                
@@ -782,8 +782,22 @@ debug_pin_write(1, DEBUG_1_PIN);
                 }
                 
                 /* find maximum stallGuardDelta over reporting period */
+#ifdef SG_SAMPLE_FILTERING_ENABLED
+                if (tmc2590->stallGuardDelta < stallGuardDelta) {
+                    if (tmc2590->stallGuardDeltaPast < stallGuardDelta){
+                        /* peak found, apply filtering */
+                        /* single sample filtering implementation: release the minimum of two samples - to minimize the chance of false triggering*/
+                        tmc2590->stallGuardDelta = tmc2590->stallGuardDeltaPast;
+                    }
+                    else{
+                        tmc2590->stallGuardDelta  = stallGuardDelta;
+                    }
+                } // if (tmc2590->stallGuardDelta < stallGuardDelta) {
+                tmc2590->stallGuardDeltaPast = stallGuardDelta; /* store current sample for next iteration */
+#else
                 if (tmc2590->stallGuardDelta < stallGuardDelta) {
                     tmc2590->stallGuardDelta  = stallGuardDelta;}
+#endif                    
 
                 /* average delta SG for X and Y axes */
                 tmc2590->stallGuardDeltaCurrent = stallGuardDelta;
@@ -791,8 +805,22 @@ debug_pin_write(1, DEBUG_1_PIN);
                     TMC2590TypeDef *tmc2590_1;
                     tmc2590_1 = get_TMC_controller(tmc2590->thisMotor - 1);
                     int16_t stallGuardDeltaAxisCurrent = ( (tmc2590->stallGuardDeltaCurrent + tmc2590_1->stallGuardDeltaCurrent) >> 1 );
+#ifdef SG_SAMPLE_FILTERING_ENABLED
+                    if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {
+                        if (tmc2590->stallGuardDeltaAxisPast < stallGuardDeltaAxisCurrent){
+                        /* peak found, apply filtering */
+                        /* single sample filtering implementation: release the minimum of two samples - to minimize the chance of false triggering*/
+                            tmc2590->stallGuardDeltaAxis  = tmc2590->stallGuardDeltaAxisPast;
+                        }
+                        else{
+                            tmc2590->stallGuardDeltaAxis  = stallGuardDeltaAxisCurrent;
+                        }
+                    } // if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {                       
+                    tmc2590->stallGuardDeltaAxisPast = stallGuardDeltaAxisCurrent; /* store current sample for next iteration */
+#else                    
                     if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {
                         tmc2590->stallGuardDeltaAxis  = stallGuardDeltaAxisCurrent;}
+#endif                        
                     }  // if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {
 
                 /* alarm trigger block */
@@ -819,6 +847,14 @@ debug_pin_write(1, DEBUG_1_PIN);
             } //if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )
                 
         } // if ( st_tmc.step_period_idx[tmc2590->thisAxis] > min_step_period_idx_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
+        else {
+
+#ifdef SG_SKIP_DEBUG_ENABLED
+debug_pin_write(1, DEBUG_3_PIN);
+debug_pin_write(0, DEBUG_3_PIN);
+#endif
+            
+        }            
             
         /* if above "if" is not entered then feed is slow, and SG_skips_counter is being reset by st_tmc_fire_SG_read() */
             
@@ -840,20 +876,51 @@ debug_pin_write(1, DEBUG_1_PIN);
                 //y = y1 + (y2-y1)*(x-x1)/(x2-x1); /* interpolated SG calibration reading */                                                                    
                 //stallGuardDelta = y - SGcurrentValue;
                 
+                
+                
                 stallGuardDelta = SG_calibration_value[tmc2590->thisMotor][idx] - SGcurrentValue;
                 /* find maximum stallGuardDelta over reporting period */
+#ifdef SG_SAMPLE_FILTERING_ENABLED
                 if (tmc2590->stallGuardDelta < stallGuardDelta) {
-                    tmc2590->stallGuardDelta  = stallGuardDelta;}         
-
+                    if (tmc2590->stallGuardDeltaPast < stallGuardDelta){
+                        /* peak found, apply filtering */
+                        /* single sample filtering implementation: release the minimum of two samples - to minimize the chance of false triggering*/
+                        tmc2590->stallGuardDelta = tmc2590->stallGuardDeltaPast;
+                    }
+                    else{
+                        tmc2590->stallGuardDelta  = stallGuardDelta;
+                    }
+                } // if (tmc2590->stallGuardDelta < stallGuardDelta) {
+                tmc2590->stallGuardDeltaPast = stallGuardDelta; /* store current sample for next iteration */
+#else
+                if (tmc2590->stallGuardDelta < stallGuardDelta) {
+                    tmc2590->stallGuardDelta  = stallGuardDelta;} 
+#endif
+                
                 /* average delta SG for X and Y axes */
                 tmc2590->stallGuardDeltaCurrent = stallGuardDelta;
                 if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {
                     TMC2590TypeDef *tmc2590_1;
                     tmc2590_1 = get_TMC_controller(tmc2590->thisMotor - 1);
                     int16_t stallGuardDeltaAxisCurrent = ( (tmc2590->stallGuardDeltaCurrent + tmc2590_1->stallGuardDeltaCurrent) >> 1 );
+#ifdef SG_SAMPLE_FILTERING_ENABLED
+                    if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {
+                        if (tmc2590->stallGuardDeltaAxisPast < stallGuardDeltaAxisCurrent){
+                        /* peak found, apply filtering */
+                        /* single sample filtering implementation: release the minimum of two samples - to minimize the chance of false triggering*/
+                            tmc2590->stallGuardDeltaAxis  = tmc2590->stallGuardDeltaAxisPast;
+                        }
+                        else{
+                            tmc2590->stallGuardDeltaAxis  = stallGuardDeltaAxisCurrent;
+                        }
+                    } // if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {                       
+                    tmc2590->stallGuardDeltaAxisPast = stallGuardDeltaAxisCurrent; /* store current sample for next iteration */
+#else
                     if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {
                         tmc2590->stallGuardDeltaAxis  = stallGuardDeltaAxisCurrent;}
-                    }  // if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {       
+#endif
+                        
+                }  // if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {       
             }
         }
 

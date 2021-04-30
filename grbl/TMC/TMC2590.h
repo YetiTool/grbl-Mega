@@ -10,7 +10,8 @@
 
 #include "TMC_interface.h"
 
-#define CALIBRATION_BASED_ON_AVERAGED_SG
+#define CALIBRATION_BASED_ON_AVERAGED_SG /* uncomment to change calibration strategy to averaged over each measured sample point as opposed to minimum */
+#define SG_SAMPLE_FILTERING_ENABLED      /* uncomment to enable filtering out peaks in SG readings */
 
 /* thermal test to match rack cutter: X:34C, Y:40C; Z:30C */
 static const uint8_t tmc2590_defaultStandStillCurrentScale[TOTAL_TMCS] =
@@ -91,6 +92,7 @@ static const int32_t tmc2590_defaultRegisterResetState[TOTAL_TMCS][TMC2590_REGIS
 /* Stall guard temperature compensation coefficients. Those are suitable for stepper motors used in SB1 */
 /* full power: 3530x 1999y 5114z*/
 /* medium power: 2500x 2500y 2000z*/
+/* medium power practical: 5000x 2000y 2000z*/
 
 static const int16_t gradient_per_Celsius[TOTAL_TMCS] = {
     5000, // X1 23HS22-2804S	

@@ -336,8 +336,9 @@ debug_pin_write(1, DEBUG_0_PIN);
     if (st_tmc.step_counter[axis]++ >= SG_READ_STEP_COUNT) 
     {
         st_tmc.this_reading_direction[axis] = st.dir_outbits;        
+        st_tmc.step_period_idx_past[axis]   = st_tmc.step_period_idx[axis];
         st_tmc.step_period_idx[axis]        = st.exec_segment->step_period_idx[axis];
-        st_tmc.step_period[axis]            = st.exec_segment->step_period[axis];       
+        st_tmc.step_period[axis]            = st.exec_segment->step_period[axis];
         st_tmc.step_counter[axis]           = 0;
         system_set_exec_tmc_command_flag(command);  
     }
