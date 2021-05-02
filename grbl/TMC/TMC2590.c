@@ -566,7 +566,17 @@ void tmc_report_SG_delta(void){
     printPgmString(PSTR("|TSG:"));
     for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
 	    tmc2590 = get_TMC_controller(controller_id);
+
+#ifdef SG_AVG_OVER_REPORT_ENABLED
+        if (tmc2590->stallGuardDeltaCount > 0){
+            printInteger( tmc2590->stallGuardDeltaSum / tmc2590->stallGuardDeltaCount);
+        }
+        else{
+            printInteger( tmc2590->stallGuardDelta );
+        } 
+#else
         printInteger( tmc2590->stallGuardDelta );
+#endif        
         printPgmString(PSTR(","));
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
 
@@ -799,6 +809,12 @@ debug_pin_write(1, DEBUG_1_PIN);
                     tmc2590->stallGuardDelta  = stallGuardDelta;}
 #endif                    
 
+#ifdef SG_AVG_OVER_REPORT_ENABLED
+                /*  averaging individual motor SG readings over reporting period */
+                tmc2590->stallGuardDeltaSum += stallGuardDelta;
+                tmc2590->stallGuardDeltaCount++;
+#endif
+
                 /* average delta SG for X and Y axes */
                 tmc2590->stallGuardDeltaCurrent = stallGuardDelta;
                 if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {
@@ -827,19 +843,20 @@ debug_pin_write(1, DEBUG_1_PIN);
                 if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) || (tmc2590->thisMotor == TMC_Z) ) {
                     uint8_t raise_alarm = 0;
                     if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) { //X or Y axis, dual motors
-                        TMC2590TypeDef *tmc2590_1;
-                        tmc2590_1 = get_TMC_controller(tmc2590->thisMotor - 1);
-                        int16_t stallGuardDeltaAxisCurrent = ( (tmc2590->stallGuardDeltaCurrent + tmc2590_1->stallGuardDeltaCurrent) >> 1 );
-                        if (stallGuardDeltaAxisCurrent > (int16_t)tmc2590->stallGuardAlarmThreshold)   { raise_alarm = 1; } }
+                        //TMC2590TypeDef *tmc2590_1;
+                        //tmc2590_1 = get_TMC_controller(tmc2590->thisMotor - 1);
+                        //int16_t stallGuardDeltaAxisCurrent = ( (tmc2590->stallGuardDeltaCurrent + tmc2590_1->stallGuardDeltaCurrent) >> 1 );
+                        if (tmc2590->stallGuardDeltaAxis > (int16_t)tmc2590->stallGuardAlarmThreshold)   { raise_alarm = 1; } }
                     else { //Z axis, single motor
-                        if (tmc2590->stallGuardDeltaCurrent > (int16_t)tmc2590->stallGuardAlarmThreshold)       { raise_alarm = 1; } }
+                        if (tmc2590->stallGuardDelta     > (int16_t)tmc2590->stallGuardAlarmThreshold)   { raise_alarm = 1; } }
                     if ( raise_alarm == 1 ){
                         /* trigger alarm */
                         tmc_trigger_stall_alarm(tmc2590->thisAxis);
                         /* store stall info to flash */
                         tmc_store_stall_info(tmc2590->thisMotor, tmc2590->resp.stallGuardCurrentValue, stallGuardAlarmValue, st_tmc.step_period[tmc2590->thisAxis]);
                         /* reset SG period to max as alarm will immediately stop the stepper and period will remain as it was at the point of trigger */
-                        st_tmc.step_period_idx[tmc2590->thisAxis] = 0;                    
+                        st_tmc.step_period_idx[tmc2590->thisAxis] = 0;
+                        stall_guard_statistics_reset();
                     } //if ( raise_alarm == 1 )
 
                 } //if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) || (tmc2590->thisMotor == TMC_Z) ) {

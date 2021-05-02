@@ -667,9 +667,15 @@ void stall_guard_statistics_reset(void ){
         tmc2590 = get_TMC_controller(controller_id);
         tmc2590->stallGuardDelta            = -999;
         tmc2590->stallGuardDeltaAxis        = -999;
+#ifdef SG_SAMPLE_FILTERING_ENABLED
         tmc2590->stallGuardDeltaPast        = -999;
         tmc2590->stallGuardDeltaAxisPast    = -999;
-
+#endif  
+#ifdef SG_AVG_OVER_REPORT_ENABLED
+        tmc2590->stallGuardDeltaSum         = 0;
+        tmc2590->stallGuardDeltaCount       = 0;
+#endif       
+        
     }
 }
 

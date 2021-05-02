@@ -14,6 +14,10 @@
 #include "TMC2590_Macros.h"
 #include "TMC2590_Register.h"
 
+#define CALIBRATION_BASED_ON_AVERAGED_SG /* uncomment to change calibration strategy to averaged over each measured sample point as opposed to minimum */
+//#define SG_SAMPLE_FILTERING_ENABLED      /* uncomment to enable filtering out peaks in SG readings */
+#define SG_AVG_OVER_REPORT_ENABLED      /* uncomment to enable averaging individual motor SG readings over reporting period */
+
 /* Controller types. */
 typedef enum
 {
@@ -118,13 +122,21 @@ typedef struct {
     int16_t stallGuardDelta;                        /* difference between current SG reading and calibrated curve */
     int16_t stallGuardDeltaCurrent;                 /* difference between current SG reading and calibrated curve */
     int16_t stallGuardDeltaAxis;                    /* Average delta for axis */
-    int16_t stallGuardDeltaPast;                 /* difference between current SG reading and calibrated curve */
-    int16_t stallGuardDeltaAxisPast;                    /* Average delta for axis */
     uint8_t respIdx;                                /* current rdsel to know which response is coming next */
     int32_t response[TMC2590_RESPONSE3+1];          /* raw response from controllers */
     TMC2590Response resp;                           /* decoded response from controllers */
 
     uint8_t SlowDecayDuration;                      /* Off time/MOSFET disable. Duration of slow decay phase. If TOFF is 0, the MOSFETs are shut off. If TOFF is nonzero, slow decay time is a multiple of system clock periods: NCLK= 24 + (32 x TOFF) (Minimum time is 64clocks.), %0000: Driver disable, all bridges off, %0001: 1 (use with TBL of minimum 24 clocks) %0010 ... %1111: 2 ... 15 */
+
+#ifdef SG_SAMPLE_FILTERING_ENABLED
+    int16_t stallGuardDeltaPast;                 /* difference between current SG reading and calibrated curve */
+    int16_t stallGuardDeltaAxisPast;                    /* Average delta for axis */
+#endif
+
+#ifdef SG_AVG_OVER_REPORT_ENABLED      
+    int16_t stallGuardDeltaSum;                     /* sum of difference between current SG reading and calibrated curve */
+    int8_t stallGuardDeltaCount;                    /* sum of difference between current SG reading and calibrated curve */
+#endif
 
 } TMC2590TypeDef;
 
@@ -141,6 +153,7 @@ typedef struct {
     uint16_t stallGuardAlarmThreshold[TOTAL_TMCS];                  /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
     uint8_t standStillCurrentScale[TOTAL_TMCS];                     /* standstill current - to reduce energy consumption while job is idle */
     uint8_t activeCurrentScale[TOTAL_TMCS];                         /* active current */
+    int16_t squarenessMSTEPS[2];                                    /* lag of the first motor vs second */
 } FlashTMCconfig;
 
 
