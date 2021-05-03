@@ -772,10 +772,24 @@ debug_pin_write(1, DEBUG_1_PIN);
                 debug_pin_write(1, DEBUG_1_PIN);
                 #endif    
                 /* find entry in calibration table based on step_period_idx and extract SG calibrated level from there */
-                uint8_t idx = ((st_tmc.step_period_idx[tmc2590->thisAxis] + st_tmc.step_period_idx_past[tmc2590->thisAxis]) / 2 );
+                //uint8_t idx = ((st_tmc.step_period_idx[tmc2590->thisAxis] + st_tmc.step_period_idx_past[tmc2590->thisAxis]) / 2 );
+                /* select min of two points to avoid false triggering*/
+                uint8_t idx1, idx2;
+                uint16_t SG_calibration_value1, SG_calibration_value2, SG_cal_value_min;
+                idx1 = st_tmc.step_period_idx[tmc2590->thisAxis];
+                SG_calibration_value1 = SG_calibration_value[tmc2590->thisMotor][idx1];
+                idx2 = st_tmc.step_period_idx_past[tmc2590->thisAxis];
+                SG_calibration_value2 = SG_calibration_value[tmc2590->thisMotor][idx2];
+                /* select min */
+                if ( SG_calibration_value2 < SG_calibration_value1 ){
+                    SG_cal_value_min = SG_calibration_value2;}
+                else {
+                    SG_cal_value_min = SG_calibration_value1;}
+                
+                
                 /* entry found, apply threshold */
-                if (SG_calibration_value[tmc2590->thisMotor][idx] > tmc2590->stallGuardAlarmThreshold){ /* only do so if there is enough headroom below the caliration value to track the SG, otherwise keep it "0" which is ALARM_DIASBLED*/
-                    stallGuardAlarmValue = SG_calibration_value[tmc2590->thisMotor][idx] - tmc2590->stallGuardAlarmThreshold ;                                
+                if (SG_cal_value_min > tmc2590->stallGuardAlarmThreshold){ /* only do so if there is enough headroom below the caliration value to track the SG, otherwise keep it "0" which is ALARM_DIASBLED*/
+                    stallGuardAlarmValue = SG_cal_value_min - tmc2590->stallGuardAlarmThreshold ;                                
                 }
                 else{
                     /* silence the alarm: only entries with positive Alarm values will trigger alarm */ 
@@ -788,7 +802,7 @@ debug_pin_write(1, DEBUG_1_PIN);
                 /* keep track of how far the current SG value is from the calibrated level, this is printed to UART and used to indicate the current load. The bigger the value-> the higher the load.*/
                 if (stallGuardAlarmValue > 0){
                     /* SG reading is valid and enough headroom is remaining below calibrated value*/
-                    stallGuardDelta = SG_calibration_value[tmc2590->thisMotor][idx] - SGcurrentValue;
+                    stallGuardDelta = SG_cal_value_min - SGcurrentValue;
                 }
                 
                 /* find maximum stallGuardDelta over reporting period */
