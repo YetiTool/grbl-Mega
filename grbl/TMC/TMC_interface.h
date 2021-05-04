@@ -81,8 +81,6 @@ typedef struct {
     uint16_t step_period[N_AXIS];           // variables to hold the step period which is direct reflection of shaft rotational speed at the time when SG read was fired.
     uint8_t  step_period_idx[N_AXIS];       // variables to hold the step period index which is direct mapping of step period, used to maximise computational speed.
     uint8_t  step_period_idx_past[N_AXIS];       // variables to hold the step period index which is direct mapping of step period, used to maximise computational speed.
-    uint8_t  this_reading_direction[N_AXIS];// variables to hold the direction applied at current SG reading, used to reset SG reading skip counter under direction change
-    uint8_t  last_reading_direction[N_AXIS];// variables to hold the direction applied at last SG reading, used to reset SG reading skip counter under direction change
     uint8_t  step_counter[N_AXIS];          // Counter variables for firing SG read. TMC chip reports SG every 16 pulses (1 full step) or every 64 steps (4 full steps) if filtering is enabled
     uint8_t  SG_skips_counter[N_AXIS];      // Counter variables for blocking stall analysis due to preceding slow speed. Slow or 0 feed causes invalid SG reading for several cycles even after the nominal speed was reached. Skip this many readins after feed exceeds nominal (period gets less than max_step_period_us_to_read_SG) for this axis */
     uint8_t  current_scale_state;           // global holding effective current scale

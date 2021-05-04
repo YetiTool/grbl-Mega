@@ -181,6 +181,7 @@ typedef struct {
 } st_prep_t;
 static st_prep_t prep;
 
+static uint8_t directionChangedSticky = 0; /* sticky bits to track directon chnage for each axis*/
 
 /*    BLOCK VELOCITY PROFILE DEFINITION
           __________________________
@@ -320,7 +321,7 @@ void st_go_idle()
 /* Function st_tmc_fire_SG_read is the main interface between the stepper and the TMC hardware. 
    It lets main loop know when it is time to read the SG value and also keeps track of current speed 
    of each motor so this information could be used to apply all necessary corrections to the SG readings and analysis 
-   * function overhead is 5.5us, 7.5us when SG read is scheduled. this includes debug pin toggle which is ~1us
+   * function overhead is 4.5us, 8.5us when SG read is scheduled. this includes debug pin toggle which is ~1us
    */
 void st_tmc_fire_SG_read(uint8_t axis, uint8_t command){ 
 
@@ -328,14 +329,23 @@ void st_tmc_fire_SG_read(uint8_t axis, uint8_t command){
 debug_pin_write(1, DEBUG_0_PIN);
 #endif
     /* if feed is too slow reset SG counter the moment the step is too long */
-    if ( st.exec_segment->step_period_idx[X_AXIS] <= min_step_period_idx_to_read_SG[X_AXIS] )     {         st_tmc.SG_skips_counter[X_AXIS] = 0;     }
-    if ( st.exec_segment->step_period_idx[Y_AXIS] <= min_step_period_idx_to_read_SG[Y_AXIS] )     {         st_tmc.SG_skips_counter[Y_AXIS] = 0;     }
-    if ( st.exec_segment->step_period_idx[Z_AXIS] <= min_step_period_idx_to_read_SG[Z_AXIS] )     {         st_tmc.SG_skips_counter[Z_AXIS] = 0;     }
+    if ( st.exec_segment->step_period_idx[axis] <= min_step_period_idx_to_read_SG[axis] )     {         st_tmc.SG_skips_counter[axis] = 0;     }
+
+    /* check whether direction has changed, if yes then reset skip counter */
+    uint8_t direction_pin_mask = get_direction_pin_mask(axis);
+    if (directionChangedSticky & direction_pin_mask) {
+        /* direction change detected, reset skip counter */
+        #ifdef SG_SKIP_DEBUG_ENABLED
+        debug_pin_write(1, DEBUG_3_PIN);
+        debug_pin_write(0, DEBUG_3_PIN);
+        #endif
+        st_tmc.SG_skips_counter[axis] = 0;
+        directionChangedSticky &=~ direction_pin_mask; /* clear sticky bit */
+    }
     
     /* schedule SG read every SG_READ_STEP_COUNT steps */
     if (st_tmc.step_counter[axis]++ >= SG_READ_STEP_COUNT) 
-    {
-        st_tmc.this_reading_direction[axis] = st.dir_outbits;        
+    {        
         st_tmc.step_period_idx_past[axis]   = st_tmc.step_period_idx[axis];
         st_tmc.step_period_idx[axis]        = st.exec_segment->step_period_idx[axis];
         st_tmc.step_period[axis]            = st.exec_segment->step_period[axis];
@@ -416,6 +426,10 @@ ISR(TIMER1_COMPA_vect)
     DIRECTION_PORT(1) = (DIRECTION_PORT(1) & ~(1 << DIRECTION_BIT(1))) | st.dir_outbits[1];
     DIRECTION_PORT(2) = (DIRECTION_PORT(2) & ~(1 << DIRECTION_BIT(2))) | st.dir_outbits[2];
   #else
+  
+    uint8_t directionChanged = DIRECTION_PORT ^ st.dir_outbits;  /* set bit is direction bit changed*/
+    directionChangedSticky |= directionChanged;  /* set sticky bit is direction bit changed*/
+    
     DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | (st.dir_outbits & DIRECTION_MASK);
   #endif // Ramps Boafd
 
@@ -1297,7 +1311,7 @@ void st_prep_buffer()
       }
     }
 
-  }
+  } //while (segment_buffer_tail != segment_next_head) { // Check if we need to fill the buffer.
 }
 
 

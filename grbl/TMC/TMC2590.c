@@ -740,18 +740,7 @@ debug_pin_write(1, DEBUG_1_PIN);
     int16_t SGcurrentValue          = tmc2590->resp.stallGuardCurrentValue - compensation_SG_offset;
     
     if ( ( st_tmc.stall_alarm_enabled ) && ( st_tmc.current_scale_state == CURRENT_SCALE_ACTIVE ) ){
-
-        /* check whether direction has changed, if so, reset skip counter */
-        uint8_t last_direction = st_tmc.last_reading_direction[tmc2590->thisAxis] & get_direction_pin_mask(tmc2590->thisAxis);
-        uint8_t this_direction = st_tmc.this_reading_direction[tmc2590->thisAxis] & get_direction_pin_mask(tmc2590->thisAxis);
-        st_tmc.last_reading_direction[tmc2590->thisAxis] = st_tmc.this_reading_direction[tmc2590->thisAxis];
-        if (last_direction != this_direction) {
-            /* direction changed, reset skip counter */
-            //debug_pin_write(1, DEBUG_1_PIN);
-            st_tmc.SG_skips_counter[tmc2590->thisAxis] = 0;
-            //debug_pin_write(0, DEBUG_1_PIN);
-        }                
-        
+                   
         /* start reading SG if rotational speed is sufficiently high */                       
         /* feed speed validation. If feed was slow then SG_skips_counter gets reset, then decrement till reaches 0, only after that SG analysis for stall detection is allowed */
         if ( st_tmc.step_period_idx[tmc2590->thisAxis] > min_step_period_idx_to_read_SG[tmc2590->thisAxis] ) {  /* check stall only if feed is higher than defined for this motor */
@@ -881,8 +870,8 @@ debug_pin_write(1, DEBUG_1_PIN);
         else {
 
 #ifdef SG_SKIP_DEBUG_ENABLED
-debug_pin_write(1, DEBUG_3_PIN);
-debug_pin_write(0, DEBUG_3_PIN);
+//debug_pin_write(1, DEBUG_3_PIN);
+//debug_pin_write(0, DEBUG_3_PIN);
 #endif
             
         }            
