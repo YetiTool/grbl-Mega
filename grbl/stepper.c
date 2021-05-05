@@ -321,7 +321,7 @@ void st_go_idle()
 /* Function st_tmc_fire_SG_read is the main interface between the stepper and the TMC hardware. 
    It lets main loop know when it is time to read the SG value and also keeps track of current speed 
    of each motor so this information could be used to apply all necessary corrections to the SG readings and analysis 
-   * function overhead is 4.5us, 8.5us when SG read is scheduled. this includes debug pin toggle which is ~1us
+   * function overhead is 5us, 8.5us when SG read is scheduled. this includes debug pin toggle which is ~1us
    */
 void st_tmc_fire_SG_read(uint8_t axis, uint8_t command){ 
 
@@ -329,7 +329,9 @@ void st_tmc_fire_SG_read(uint8_t axis, uint8_t command){
 debug_pin_write(1, DEBUG_0_PIN);
 #endif
     /* if feed is too slow reset SG counter the moment the step is too long */
-    if ( st.exec_segment->step_period_idx[axis] <= min_step_period_idx_to_read_SG[axis] )     {         st_tmc.SG_skips_counter[axis] = 0;     }
+    if ( st.exec_segment->step_period_idx[X_AXIS] <= min_step_period_idx_to_read_SG[X_AXIS] )     {         st_tmc.SG_skips_counter[X_AXIS] = 0;     }
+    if ( st.exec_segment->step_period_idx[Y_AXIS] <= min_step_period_idx_to_read_SG[Y_AXIS] )     {         st_tmc.SG_skips_counter[Y_AXIS] = 0;     }
+    if ( st.exec_segment->step_period_idx[Z_AXIS] <= min_step_period_idx_to_read_SG[Z_AXIS] )     {         st_tmc.SG_skips_counter[Z_AXIS] = 0;     }
 
     /* check whether direction has changed, if yes then reset skip counter */
     uint8_t direction_pin_mask = get_direction_pin_mask(axis);
