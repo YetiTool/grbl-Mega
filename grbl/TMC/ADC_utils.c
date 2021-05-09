@@ -7,34 +7,37 @@
 
 #include "grbl.h"
 
-#define     FIR_COEFF_TEMPC 					    30		/**< 0-255 defines how quickly FIR converges 255-fastest */
+#define     FIR_COEFF_TEMPC                         30      /**< 0-255 defines how quickly FIR converges 255-fastest */
+#define     FIRST_FIR_READING                       0x7FFF
 #define     SPINDLE_SPEED_FEEDBACK_N_CONVERGES      10      /* how many times to read and nudge spindle speed signal */
 #define     SPINDLE_SIG_MAX_MILLIVOLTS              10300   
 #define     SPINDLE_SIG_MIN_MILLIVOLTS              0   
 #define     SPINDLE_SIG_CONVERGENCE_DAMPING_FACTOR  0.5
-#define		ADC_EXTERNAL_VREF_2048mV					// either ADC_EXTERNAL_VREF_2048mV or ADC_INTERNAL_VREF_1100mV
+#define     ADC_EXTERNAL_VREF_2048mV                    // either ADC_EXTERNAL_VREF_2048mV or ADC_INTERNAL_VREF_1100mV
 
 static uint16_t spindle_load_mV                = 0;            // global variable for latest spindle load value
 static uint16_t VDD_5V_Atmega_mV               = 0;            // global variable for latest VDD_5V_Atmega value
 static uint16_t VDD_5V_dustshoe_mV             = 0;            // global variable for latest VDD_5V_dustshoe value
 static uint16_t VDD_24V_mV                     = 0;            // global variable for latest VDD_24V value
 static uint16_t Spindle_speed_Signal_mV        = 0;            // global variable for latest Spindle_speed_Signal_mV value
-static uint16_t temperature_TMC_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
-static uint16_t temperature_PCB_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
-static uint16_t temperature_MOT_cent_celsius   = 2500;  // global variable for latest temperature value in hundredths of degree celsius
-static uint16_t latest_ADC_measurement			= 0;			// global variable to store
+static int16_t temperature_TMC_cent_celsius             = FIRST_FIR_READING;  // global variable for latest temperature value in hundredths of degree celsius
+static int16_t temperature_PCB_cent_celsius             = FIRST_FIR_READING;  // global variable for latest temperature value in hundredths of degree celsius
+static int16_t temperature_MOT_cent_celsius             = FIRST_FIR_READING;  // global variable for latest temperature value in hundredths of degree celsius
+static uint16_t latest_ADC_measurement          = 0;            // global variable to store
 static uint8_t spindle_speed_feedback_update_is_enabled = 0; /* change to 1 to enable spindle feedback auto-adaptation */
 static float spindle_sig_gradient; // Precalulated value to speed up rpm to PWM conversions.
 static float currentSpindleSpeedRPM, correctedSpindleSpeedRPM;
 static int16_t currentSpindleSpeedNreadings = 0; /* counter of number of readings for spindle speed convergence routine */
 static uint16_t currentSpindleSpeedSignalTargetmV = 0;
+static uint8_t ADC_retry_count                          = 0; /* safety parameter (watchdog) for ADC FSM */
 
 int filter_fir_int16(long in_global_16, long in_16) {
-    return (int)( ((FIR_COEFF_TEMPC * in_16) + ( (1<<8) - FIR_COEFF_TEMPC) * in_global_16)>>8 );
+    if (in_global_16 == FIRST_FIR_READING)  { return (int)( in_16 ); }
+    else                                    { return (int)( ((FIR_COEFF_TEMPC * in_16) + ( (1<<8) - FIR_COEFF_TEMPC) * in_global_16)>>8 ); }
 }
 
 /* temperature coefficients */ 
-long k[] = {TEMP_K0, TEMP_K1, TEMP_K2, TEMP_K3, TEMP_K4, TEMP_K5, TEMP_K6};
+long k[7];
 
 /* function to calculate temperature based on ADC value
  * written as a loop to keep calculation within 32 bit integer number
@@ -42,36 +45,36 @@ long k[] = {TEMP_K0, TEMP_K1, TEMP_K2, TEMP_K3, TEMP_K4, TEMP_K5, TEMP_K6};
  * of Thermistor_0402_Panasonic_2kOhm_ERT-J0EG202GM, or ERT-J0EG202HM
  * function takes 270us ~ 4320 cycles
 */
-uint16_t convert_temperature (uint16_t temperature_ADC_reading){
+int16_t convert_temperature (uint16_t temperature_ADC_reading){
 #ifdef DEBUG_ADC_ENABLED
 debug_pin_write(0, DEBUG_2_PIN);
 #endif
     
-	int i;
-	int pow;
-	long tmp;    
-	int temperature_instantaneous = 0;
-	temperature_instantaneous =  k[0];
-	for (i = 1 ; i<=6; i++){
-		pow = i;
-		tmp = k[i];
-		while (pow > 0){
-			tmp *= temperature_ADC_reading;
-			tmp += (1<<9); /* round vs floor*/
-			tmp >>= 10;
-			pow --;
-		}
-		temperature_instantaneous += tmp;
-	}	
+    int i;
+    int pow;
+    long tmp;    
+    int temperature_instantaneous = 0;
+    temperature_instantaneous =  k[0];
+    for (i = 1 ; i<=6; i++){
+        pow = i;
+        tmp = k[i];
+        while (pow > 0){
+            tmp *= temperature_ADC_reading;
+            tmp += (1<<9); /* round vs floor*/
+            tmp >>= 10;
+            pow --;
+        }
+        temperature_instantaneous += tmp;
+    }   
 #ifdef DEBUG_ADC_ENABLED
 debug_pin_write(1, DEBUG_2_PIN);
 #endif  
-    return (uint16_t) temperature_instantaneous * 100;
+    return (int16_t) temperature_instantaneous * 100;
 }
 
 
 void convert_TMC_temperature (uint16_t temperature_ADC_reading){
-    uint16_t temperature_instantaneous = convert_temperature (temperature_ADC_reading);
+    int16_t temperature_instantaneous = convert_temperature (temperature_ADC_reading);
     temperature_TMC_cent_celsius = filter_fir_int16(temperature_TMC_cent_celsius, temperature_instantaneous); /* 7us */
 #ifdef DEBUG_ADC_ENABLED
 debug_pin_write(0, DEBUG_2_PIN);
@@ -82,12 +85,12 @@ debug_pin_write(1, DEBUG_2_PIN);
 }
 
 void convert_PCB_temperature (uint16_t temperature_ADC_reading){
-    uint16_t temperature_instantaneous = convert_temperature (temperature_ADC_reading);
+    int16_t temperature_instantaneous = convert_temperature (temperature_ADC_reading);
     temperature_PCB_cent_celsius = filter_fir_int16(temperature_PCB_cent_celsius, temperature_instantaneous); /* 7us */
 }
 
 void convert_MOT_temperature (uint16_t temperature_ADC_reading){
-    uint16_t temperature_instantaneous = convert_temperature (temperature_ADC_reading);
+    int16_t temperature_instantaneous = convert_temperature (temperature_ADC_reading);
     temperature_MOT_cent_celsius = filter_fir_int16(temperature_MOT_cent_celsius, temperature_instantaneous); /* 7us */
 }
 
@@ -164,8 +167,8 @@ void convert_VDD_24V_mV (uint16_t ADC_reading){
 }
 
 void convert_Spindle_speed_Signal_mV (uint16_t ADC_reading){
-	/* output range is 0-10V, convert 10bits ADC output into mV: */
-	Spindle_speed_Signal_mV = convert_adc_10V(ADC_reading);
+    /* output range is 0-10V, convert 10bits ADC output into mV: */
+    Spindle_speed_Signal_mV = convert_adc_10V(ADC_reading);
 }
 
 /* three options are possible:
@@ -207,7 +210,7 @@ void converge_Spindle_speed (void){
     float rpm_delta_update = 0.0;    
     /* output range is 0-10V, convert 10bits ADC output into mV: */
     uint16_t Spindle_speed_Signal_mV_instantaneous = Spindle_speed_Signal_mV;
-	
+    
     //Spindle_speed_Signal_mV = filter_fir_int16(Spindle_speed_Signal_mV, Spindle_speed_Signal_mV_instantaneous); /* 7us */
     
     /* if digital spindle is installed use actual RPM to correct the spindle speed */
@@ -241,31 +244,32 @@ void asmcnc_start_ADC_single(void){
 
     uint8_t ADCchannel = ADCstMachine.channel[ADCstMachine.adc_state];
 
-	//select ADC channel with safety mask. First check whether the channel is in port K
-	if (ADCchannel > 7){
-		ADCchannel -= 8;
-		ADCSRB |= (1<<MUX5);
-	}
+    //select ADC channel with safety mask. First check whether the channel is in port K
+    if (ADCchannel > 7){
+        ADCchannel -= 8;
+        ADCSRB |= (1<<MUX5);
+    }
     else{
         ADCSRB &=~(1<<MUX5);
     }        
-	ADMUX = (ADMUX & 0xF0) | (ADCchannel & 0x0F);
+    ADMUX = (ADMUX & 0xF0) | (ADCchannel & 0x0F);
 
-	//start conversion in Single Conversion Mode
-	ADCSRA |= (1<<ADSC);
-	
+    //start conversion in Single Conversion Mode
+    ADCSRA |= (1<<ADSC);
+    
 }
 
 /* ADC conversion complete interrupt */
 ISR(ADC_vect)
 {
     /* routine takes 3.26us ~ 50 cycles */
+    sei(); // Re-enable interrupts to allow Stepper Interrupt to fire on-time.
 #ifdef DEBUG_ADC_ENABLED
 debug_pin_write(0, DEBUG_0_PIN);
 #endif
 
-	latest_ADC_measurement = ADC;
-	system_set_exec_heartbeat_command_flag(ADC_CONVERGENCE_COMPLETED);
+    latest_ADC_measurement = ADC;
+    system_set_exec_heartbeat_command_flag(ADC_CONVERGENCE_COMPLETED);
 
 #ifdef DEBUG_ADC_ENABLED
 debug_pin_write(1, DEBUG_0_PIN);
@@ -287,15 +291,15 @@ void adc_state_machine(void){
     /* advance to next channel */
     ADCstMachine.adc_state++;
     while ( ADCstMachine.adc_state < ADC_TOTAL_CHANNELS ){
-	    if (ADCstMachine.measure_channel[ADCstMachine.adc_state] == 1)
-	    { /* start next conversion */
-		    asmcnc_start_ADC_single();
-			#ifdef DEBUG_ADC_ENABLED
-			debug_pin_write(1, DEBUG_1_PIN);
-			#endif
-		    return; /* next conversion is started, return from ISR */
-	    }
-	    ADCstMachine.adc_state++;
+        if (ADCstMachine.measure_channel[ADCstMachine.adc_state] == 1)
+        { /* start next conversion */
+            asmcnc_start_ADC_single();
+            #ifdef DEBUG_ADC_ENABLED
+            debug_pin_write(1, DEBUG_1_PIN);
+            #endif
+            return; /* next conversion is started, return from ISR */
+        }
+        ADCstMachine.adc_state++;
     }
     
     /* if the code progressed to this point then all channels are done and it is time to signal to main loop to process all results */
@@ -304,36 +308,55 @@ void adc_state_machine(void){
     #ifdef DEBUG_ADC_ENABLED
     debug_pin_write(1, DEBUG_1_PIN);
     #endif
-	
+    
 }
 
 
 /* start ADC state machine from channel 0 */
 void asmcnc_start_ADC(void){
-	if (ADCstMachine.adc_locked == 0){
-		ADCstMachine.adc_locked = 1;
-		if (ADCstMachine.adc_state == ADC_TOTAL_CHANNELS){
+    if (ADCstMachine.adc_locked == 0){
+        ADCstMachine.adc_locked = 1;
+        ADC_retry_count = 0; 
+        #ifdef DEBUG_ADC_ENABLED
+        debug_pin_write(0, DEBUG_2_PIN);
+        #endif
+        if (ADCstMachine.adc_state == ADC_TOTAL_CHANNELS){
         
-			ADCstMachine.adc_state = ADC_0_SPINDLE_LOAD;
+            ADCstMachine.adc_state = ADC_0_SPINDLE_LOAD;
         
-			/* check if any of channels are to be measured and fire measurement on first required channel, other remaining channels will be managed by adc_state_machine() */
-			while ( ADCstMachine.adc_state < ADC_TOTAL_CHANNELS ){
-				if (ADCstMachine.measure_channel[ADCstMachine.adc_state] == 1)
-				{ /* start next conversion */ 
-					asmcnc_start_ADC_single();
-					return; /* next conversion is started, return from function immediately */
-				}
-				ADCstMachine.adc_state++;
-			}
-		}
-		else{
-			/* should not really come here, but if happened, reset state to idle, so next cycle will initialize ADC correctly */
-			ADCstMachine.adc_state = ADC_TOTAL_CHANNELS;
-		}
-		/* if none of the channels is to be measured this time then unlock the adc */        
-		ADCstMachine.adc_locked = 0;
-		
-	} //if (ADCstMachine.adc_locked == 0){
+            /* check if any of channels are to be measured and fire measurement on first required channel, other remaining channels will be managed by adc_state_machine() */
+            while ( ADCstMachine.adc_state < ADC_TOTAL_CHANNELS ){
+                if (ADCstMachine.measure_channel[ADCstMachine.adc_state] == 1)
+                { /* start next conversion */ 
+                    asmcnc_start_ADC_single();
+                    return; /* next conversion is started, return from function immediately */
+                }
+                ADCstMachine.adc_state++;
+            }
+        }
+        else{
+            /* should not really come here, but if happened, reset state to idle, so next cycle will initialize ADC correctly */
+            ADCstMachine.adc_state = ADC_TOTAL_CHANNELS;
+        }
+        /* if none of the channels is to be measured this time then unlock the adc */        
+        ADCstMachine.adc_locked = 0;
+        #ifdef DEBUG_ADC_ENABLED
+        debug_pin_write(1, DEBUG_2_PIN);
+        #endif
+        
+    } //if (ADCstMachine.adc_locked == 0){
+    else {        
+        if (++ADC_retry_count > 10){
+#ifdef DEBUG_ADC_ENABLED
+debug_pin_write(0, DEBUG_3_PIN);
+debug_pin_write(1, DEBUG_3_PIN);
+#endif
+            ADC_retry_count = 0;
+            ADCstMachine.adc_state = ADC_TOTAL_CHANNELS;
+            ADCstMachine.adc_locked = 0;
+            printPgmString(PSTR("\n!!! ADC FSM Reset !!!\n")); 
+        }
+    } //if (ADCstMachine.adc_locked == 0){
 }
 
 /* define ADC channels to be measured and start ADC conversions */
@@ -356,6 +379,7 @@ void adc_setup_and_fire(void){
 debug_pin_write(0, DEBUG_0_PIN);
 debug_pin_write(1, DEBUG_0_PIN);
 #endif    
+    uint8_t at_least_one_channel_to_measure = 0;
     /* loop over each channel in the list, find those that are required to be measured in this round and mark them in parameter "measure_channel"  */
     for (uint8_t adc_ch_idx = 0; adc_ch_idx < ADC_TOTAL_CHANNELS; adc_ch_idx++){
         if (ADCstMachine.max_count[adc_ch_idx] < ((64000000UL)/SPI_READ_OCR_PERIOD_US))  /* if max count is more than 64s then blank out this channel */
@@ -363,6 +387,7 @@ debug_pin_write(1, DEBUG_0_PIN);
             if (++ADCstMachine.tick_count[adc_ch_idx] % ADCstMachine.max_count[adc_ch_idx] == 0)  { /* fire at predefined interval */
                 ADCstMachine.measure_channel[adc_ch_idx] = 1;            
                 ADCstMachine.tick_count[adc_ch_idx] = 0; /* reset tick counter for this channel */            
+                at_least_one_channel_to_measure = 1;
             } //if (++ADCstMachine.tick_count[adc_ch_idx] % ADCstMachine.max_count[adc_ch_idx] == 0)  { /* fire at predefined interval */
                 
         } //if (ADCstMachine.max_count[adc_ch_idx] < ((64000000UL)/SPI_READ_OCR_PERIOD_US))  /* if max count is more than 64s then blank out this channle */
@@ -370,7 +395,9 @@ debug_pin_write(1, DEBUG_0_PIN);
     } // for (uint8_t adc_ch_idx = 0; adc_ch_idx < ADC_TOTAL_CHANNELS; adc_ch_idx++){
         
     /* start first conversion */
+    if (at_least_one_channel_to_measure==1){    
     asmcnc_start_ADC();
+        }
     
 } 
 
@@ -426,8 +453,11 @@ void adc_process_all_channels(void){
 
     } //for (uint8_t adc_ch_idx = 0; adc_ch_idx < ADC_TOTAL_CHANNELS; adc_ch_idx++){
 
-	/* ADC state machine completed the measurements, unlock it to allow next schedule*/
-	ADCstMachine.adc_locked = 0;
+    /* ADC state machine completed the measurements, unlock it to allow next schedule*/
+    ADCstMachine.adc_locked = 0;
+        #ifdef DEBUG_ADC_ENABLED
+        debug_pin_write(1, DEBUG_2_PIN);
+        #endif
 }
 
 
@@ -445,6 +475,9 @@ int get_PCB_temperature(void){
 int get_MOT_temperature(void){
     return temperature_MOT_cent_celsius/100;
 }
+int get_MOT_temperature_cent(void){
+    return temperature_MOT_cent_celsius;
+}
 
 /* return global variable calculated earlier */
 int get_spindle_load_mV(void){    
@@ -454,22 +487,22 @@ int get_spindle_load_mV(void){
 
 /* return global variable calculated earlier */
 int get_VDD_5V_Atmega_mV(void){
-	return VDD_5V_Atmega_mV;
+    return VDD_5V_Atmega_mV;
 }
 
 /* return global variable calculated earlier */
 int get_VDD_5V_dustshoe_mV(void){
-	return VDD_5V_dustshoe_mV;
+    return VDD_5V_dustshoe_mV;
 }
 
 /* return global variable calculated earlier */
 int get_VDD_24V_mV(void){
-	return VDD_24V_mV;
+    return VDD_24V_mV;
 }
 
 /* return global variable calculated earlier */
 int get_Spindle_speed_Signal_mV(void){
-	return Spindle_speed_Signal_mV;
+    return Spindle_speed_Signal_mV;
 }
 
 
@@ -487,9 +520,9 @@ int get_Spindle_speed_Signal_mV(void){
 void asmcnc_init_ADC(void)
 {
 
-	/* there are 2 ports on mega2560, port F (channels 0-7) and port K (channels 8-15).
-	 * On Z-head HW ver < 5 pin 89 (channel 8) is used. For this channel MSB of the MUX (MUX5) need to be used
-	 * it is located in register B: ADCSRB. Therefore if channel Number is higher than 7 then ADCSRB need to be written */
+    /* there are 2 ports on mega2560, port F (channels 0-7) and port K (channels 8-15).
+     * On Z-head HW ver < 5 pin 89 (channel 8) is used. For this channel MSB of the MUX (MUX5) need to be used
+     * it is located in register B: ADCSRB. Therefore if channel Number is higher than 7 then ADCSRB need to be written */
 
 
     static uint8_t ADC_Spindle_load_channel     = SPINDLE_LOAD_ADC_CHANNEL    ;
@@ -502,15 +535,36 @@ void asmcnc_init_ADC(void)
     static uint8_t ADC_Spindle_speed_channel    = SPINDLE_SPEED_ADC_CHANNEL   ;
 
     /* apply correction for HW version */
-	if (PIND <= 5){ /* if HW version is 5 and lower*/
-    	ADC_Spindle_load_channel          = 8;
-	}
-	else if (PIND <= 15){ /* if HW version is between 5 and 15 ADC channel is 3*/
-    	ADC_Spindle_load_channel          = 3;
-	}
+    if (PIND <= 5){ /* if HW version is 5 and lower*/
+        ADC_Spindle_load_channel          = 8;
+    }
+    else if (PIND <= 15){ /* if HW version is between 5 and 15 ADC channel is 3*/
+        ADC_Spindle_load_channel          = 3;
+    }
+    /* Starting from HW version 18 Z-head thermistors are connected to 2.048V reference */
+    if (PIND == 17) {
+        /* temperature coefficients for 10k thermistor, 10k ref, 5V VDD and 2.048V ref source */
+        k[6] = TEMP_K6_HW17;
+        k[5] = TEMP_K5_HW17;
+        k[4] = TEMP_K4_HW17;
+        k[3] = TEMP_K3_HW17;
+        k[2] = TEMP_K2_HW17;
+        k[1] = TEMP_K1_HW17;
+        k[0] = TEMP_K0_HW17;
+    }        
+    else if (PIND > 17) {
+        /* temperature coefficients for 10k thermistor, 10k ref, 2.048V VDD and 2.048V ref source */
+        k[6] = TEMP_K6_HW18;
+        k[5] = TEMP_K5_HW18;
+        k[4] = TEMP_K4_HW18;
+        k[3] = TEMP_K3_HW18;
+        k[2] = TEMP_K2_HW18;
+        k[1] = TEMP_K1_HW18;
+        k[0] = TEMP_K0_HW18;        
+    }
 
-	ADCstMachine.adc_state	= ADC_TOTAL_CHANNELS;
-	ADCstMachine.adc_locked = 0;
+    ADCstMachine.adc_state  = ADC_TOTAL_CHANNELS;
+    ADCstMachine.adc_locked = 0;
     ADCstMachine.channel[ADC_0_SPINDLE_LOAD   ] = ADC_Spindle_load_channel ;
     ADCstMachine.channel[ADC_1_VDD_5V_ATMEGA  ] = ADC_5V_Atmega_channel    ;
     ADCstMachine.channel[ADC_2_VDD_5V_DUSTSHOE] = ADC_5V_dustshoe_channel  ;
@@ -534,19 +588,19 @@ void asmcnc_init_ADC(void)
         ADCstMachine.tick_count[adc_ch_idx] = ADCstMachine.max_count[adc_ch_idx] - 2 ; /* -2 to start first conversion soon after boot */
     }
 
-	// reference voltage selection : all commented = external VREF
-	//ADMUX |= (1<<REFS1); // Select Internal 1.1V Voltage Reference with external capacitor at AREF pin
-	//ADMUX |= (1<<REFS0); //both REFS0 a REFS1 pins means 2.56V Voltage Reference
-	//ADMUX |= (1<<REFS0);// Select Vref=AVCC with external capacitor at AREF pin
+    // reference voltage selection : all commented = external VREF
+    //ADMUX |= (1<<REFS1); // Select Internal 1.1V Voltage Reference with external capacitor at AREF pin
+    //ADMUX |= (1<<REFS0); //both REFS0 a REFS1 pins means 2.56V Voltage Reference
+    //ADMUX |= (1<<REFS0);// Select Vref=AVCC with external capacitor at AREF pin
 
-	//set prescaller to 128 and enable ADC. Pre-scaler 128 with 16M clock corresponds to ~100us long conversion.
-	ADCSRA |= (1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)|(1<<ADEN);
+    //set prescaller to 128 and enable ADC. Pre-scaler 128 with 16M clock corresponds to ~100us long conversion.
+    ADCSRA |= (1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)|(1<<ADEN);
 
-	//enable Auto Triggering of the ADC. Free Running mode is default mode of the ADC
-	//ADCSRA |= (1<<ADATE);
+    //enable Auto Triggering of the ADC. Free Running mode is default mode of the ADC
+    //ADCSRA |= (1<<ADATE);
 
-	//enable ADC interrupt
-	ADCSRA |= (1<<ADIE);
+    //enable ADC interrupt
+    ADCSRA |= (1<<ADIE);
 
 
     spindle_sig_gradient = (SPINDLE_SIG_MAX_MILLIVOLTS-SPINDLE_SIG_MIN_MILLIVOLTS)/(settings.rpm_max-settings.rpm_min);

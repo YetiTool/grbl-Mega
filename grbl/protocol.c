@@ -1131,15 +1131,11 @@ void execute_RTL_command(){
 
         case TMC_COMMAND:
             /* data must be exactly 1 bytes*/
-            if ( data_len == (TMC_GBL_CMD_LENGTH + 1) ) {
-                printPgmString(PSTR("TMC_COMMAND: "));
-                printInteger( *p_data );
-                printPgmString(PSTR("\n"));
-            }
-            else if ( data_len == (TMC_REG_CMD_LENGTH + 1) ) {
-                printPgmString(PSTR("TMC_REGISTER_COMMAND: "));
-                printInteger( *p_data );
-                printPgmString(PSTR("\n"));
+            if ( ( data_len == (TMC_GBL_CMD_LENGTH + 1) ) || ( data_len == (TMC_REG_CMD_LENGTH + 1) ) ) {
+                //printPgmString(PSTR("TMC_CMD: "));
+                //printInteger( *p_data );
+                //printPgmString(PSTR("\n"));
+                //execute_TMC_command(p_data, data_len);
             }
             else{ //if (data_len == xx){
                 report_status_message(ASMCNC_RTL_LEN_ERROR);
