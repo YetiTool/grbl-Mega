@@ -606,7 +606,7 @@ void report_realtime_status()
 	  
       printPgmString(PSTR("|TC:"));
       printInteger( get_TMC_temperature()           ); printPgmString(PSTR(","));
-      printInteger( get_PCB_temperature()           ); printPgmString(PSTR(","));
+      printInteger( get_PCB_temperature()           ); //printPgmString(PSTR(","));
       //printInteger( get_MOT_temperature_cent()      );
       printPgmString(PSTR("|V:"));
       printInteger( get_VDD_5V_Atmega_mV()          ); printPgmString(PSTR(","));
