@@ -74,7 +74,34 @@ void asmcnc_TMC_Timer2_setup(void){
 }
 
 
+void tmc_configure_standalone(void){
+    /* Starting from HW version 18 Z-head Trinamic drivers could be configured by FW in "standalone" or "Smart" mode */
+    if (PIND > 17) {
+        TMC_DDR     |=TMC_PORT_MASK; /* enable output direction of the port */
+        
+        /* common for both motors: */
+        tmc_pin_write(1, SPI_SCK_PIN);      /* pull SCK input of both TMCs up to enable Small motor option (low hysteresis), CFG2 = 1 */
+        tmc_pin_write(1, SPI_MOSI_PIN);     /* pull SDI input of both TMCs up to enable MRES=16 option, CFG3 = 1 */
+
+        /* motors X */
+        tmc_pin_write(1, TMC_X_ST_ALONE);   /* pull ST_ALONE input of the Z-TMC up to enable standalone mode */        
+        tmc_pin_write(1, SPI_CS_X_PIN);     /* pull CS input of Z-TMCs up to enable full current mode, CFG1 = 1 */
+        
+        /* motor Z */
+        tmc_pin_write(1, TMC_Z_ST_ALONE);   /* pull ST_ALONE input of the Z-TMC up to enable standalone mode */
+        tmc_pin_write(1, SPI_CS_Z_PIN);     /* pull CS input of Z-TMCs up to enable full current mode, CFG1 = 1 */
+    }
+}
+
+ /* initialise TMC motor controllers */
+void init_TMC(void){
+    tmc_configure_standalone();
+}
+
+
 void spi_hw_init(void){
+
+    init_TMC();
 
 	//SPI_MasterInit();
     
