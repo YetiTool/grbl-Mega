@@ -794,16 +794,18 @@ debug_pin_write(1, DEBUG_1_PIN);
                     stallGuardDelta = SG_cal_value_min - SGcurrentValue;
                 }
                 
+                
                 /* find maximum stallGuardDelta over reporting period */
 #ifdef SG_SAMPLE_FILTERING_ENABLED
                 if (tmc2590->stallGuardDelta < stallGuardDelta) {
-                    if (tmc2590->stallGuardDeltaPast < stallGuardDelta){
-                        /* peak found, apply filtering */
-                        /* single sample filtering implementation: release the minimum of two samples - to minimize the chance of false triggering*/
+                    /* glitch filter of SG=0 error (TMC HW glitch). If read StallGuard value is 0 it might be not really the issue, need to read again and only trust it if it 0 once again. */
+                    if ( (tmc2590->stallGuardDeltaPast < stallGuardDelta) && (tmc2590->resp.stallGuardCurrentValue == 0) ){
+                        /* peak found, apply glitch filtering */
+                        /* single sample filtering implementation: release the minimum of two samples, keeping track of the past sample, to release the peak only in case the same low is seen next time round  - to minimize the chance of false triggering*/
                         tmc2590->stallGuardDelta = tmc2590->stallGuardDeltaPast;
                     }
                     else{
-                        tmc2590->stallGuardDelta  = stallGuardDelta;
+                        tmc2590->stallGuardDelta  = stallGuardDelta; /* peak is seen second time, release it*/
                     }
                 } // if (tmc2590->stallGuardDelta < stallGuardDelta) {
                 tmc2590->stallGuardDeltaPast = stallGuardDelta; /* store current sample for next iteration */
@@ -826,13 +828,14 @@ debug_pin_write(1, DEBUG_1_PIN);
                     int16_t stallGuardDeltaAxisCurrent = ( (tmc2590->stallGuardDeltaCurrent + tmc2590_1->stallGuardDeltaCurrent) >> 1 );
 #ifdef SG_SAMPLE_FILTERING_ENABLED
                     if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {
-                        if (tmc2590->stallGuardDeltaAxisPast < stallGuardDeltaAxisCurrent){
-                        /* peak found, apply filtering */
-                        /* single sample filtering implementation: release the minimum of two samples - to minimize the chance of false triggering*/
+                        /* glitch filter of SG=0 error (TMC HW glitch). If read StallGuard value is 0 it might be not really the issue, need to read again and only trust it if it 0 once again. */
+                        if ( (tmc2590->stallGuardDeltaAxisPast < stallGuardDeltaAxisCurrent) && ( (tmc2590->resp.stallGuardCurrentValue == 0) || (tmc2590_1->resp.stallGuardCurrentValue == 0) )  ){
+                        /* peak found, apply glitch filtering */
+                        /* single sample filtering implementation: release the minimum of two samples, keeping track of the past sample, to release the peak only in case the same low is seen next time round  - to minimize the chance of false triggering*/
                             tmc2590->stallGuardDeltaAxis  = tmc2590->stallGuardDeltaAxisPast;
                         }
                         else{
-                            tmc2590->stallGuardDeltaAxis  = stallGuardDeltaAxisCurrent;
+                            tmc2590->stallGuardDeltaAxis  = stallGuardDeltaAxisCurrent; /* peak is seen second time, release it*/
                         }
                     } // if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {                       
                     tmc2590->stallGuardDeltaAxisPast = stallGuardDeltaAxisCurrent; /* store current sample for next iteration */
