@@ -78,12 +78,22 @@ void protocol_main_loop()
   uint8_t char_counter = 0;
   uint8_t c;
   for (;;) {
+    #ifdef DEBUG_CPU_LOAD_ENABLED
+    debug_pin_write(1, DEBUG_0_PIN);
+    #endif
 
     // Process one line of incoming serial data, as the data becomes available. Performs an
     // initial filtering by removing spaces and comments and capitalizing all letters.
     while((c = serial_read()) != SERIAL_NO_DATA) {
+      #ifdef DEBUG_CPU_LOAD_ENABLED
+      debug_pin_write(1, DEBUG_1_PIN);
+      #endif        
       if ((c == '\n') || (c == '\r')) { // End of line reached
-
+        #ifdef DEBUG_CPU_LOAD_ENABLED
+        debug_pin_write(1, DEBUG_2_PIN);
+        debug_pin_write(0, DEBUG_2_PIN);
+        debug_pin_write(1, DEBUG_2_PIN);
+        #endif
         protocol_execute_realtime(); // Runtime command check point.
         if (sys.abort) { return; } // Bail to calling function upon system abort
 
@@ -122,6 +132,10 @@ void protocol_main_loop()
         // Reset tracking data for next line.
         line_flags = 0;
         char_counter = 0;
+        
+        #ifdef DEBUG_CPU_LOAD_ENABLED
+        debug_pin_write(0, DEBUG_2_PIN);
+        #endif        
 
       } else {
 
@@ -164,6 +178,9 @@ void protocol_main_loop()
         }
 
       }
+      #ifdef DEBUG_CPU_LOAD_ENABLED
+      debug_pin_write(0, DEBUG_1_PIN);
+      #endif      
     }
 
     // If there are no more characters in the serial read buffer to be processed and executed,
@@ -178,6 +195,9 @@ void protocol_main_loop()
       // Check for sleep conditions and execute auto-park, if timeout duration elapses.
       sleep_check();
     #endif
+    #ifdef DEBUG_CPU_LOAD_ENABLED
+    debug_pin_write(0, DEBUG_0_PIN);
+    #endif    
   }
 
   return; /* Never reached */
@@ -224,8 +244,15 @@ void protocol_auto_cycle_start()
 // limit switches, or the main program.
 void protocol_execute_realtime()
 {
+#ifdef DEBUG_CPU_LOAD_ENABLED
+debug_pin_write(1, DEBUG_3_PIN);
+#endif    
   protocol_exec_rt_system();
   if (sys.suspend) { protocol_exec_rt_suspend(); }
+#ifdef DEBUG_CPU_LOAD_ENABLED
+debug_pin_write(0, DEBUG_3_PIN);
+#endif
+          
 }
 
 

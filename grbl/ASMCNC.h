@@ -102,7 +102,7 @@
 #define THERMISTOR_MONITOR   3    /* MEGA2560 Analog Pin PF3, 2k NTC thermistor monitor*/
 
 #define ENABLE_SPINDLE_LOAD_MONITOR // enable spindle load monitoring, apply to Mafell spindles
-#define ENABLE_TEMPERATURE_MONITOR  // enable temperatuer monitoring, apply to ZH2 and newer
+#define ENABLE_TEMPERATURE_MONITOR  // enable temperature monitoring, apply to ZH2 and newer
 
 #define ENABLE_LASER_POINTER_CONTROL // Laser cross unit control
 #define ENABLE_TMC_FEEDBACK_MONITOR  // print feedback from TMC motor controllers
@@ -160,9 +160,10 @@ enum rgbHexStates{
 //#define SG_SKIP_DEBUG_ENABLED // enable to debug stall guard masking engine
 //#define SG_CAL_DEBUG_ENABLED // enable to debug stall guard calibration engine
 //#define FLASH_DEBUG_ENABLED // enable to debug EEPROM storage
-#define DEBUG_LED_ENABLED // enable to drive indication (second) RGB LED light
+//#define DEBUG_LED_ENABLED // enable to drive indication (second) RGB LED light
+#define DEBUG_CPU_LOAD_ENABLED // enable to drive indication (second) RGB LED light
 
-#if defined(DEBUG_SPI_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED) || defined(SG_CAL_DEBUG_ENABLED) || defined(FLASH_DEBUG_ENABLED) || defined(DEBUG_LED_ENABLED)
+#if defined(DEBUG_SPI_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED) || defined(SG_CAL_DEBUG_ENABLED) || defined(FLASH_DEBUG_ENABLED) || defined(DEBUG_LED_ENABLED)  || defined(DEBUG_CPU_LOAD_ENABLED)
 #define ANY_DEBUG_ENABLED //
 #endif
 
