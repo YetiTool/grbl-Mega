@@ -736,8 +736,9 @@ debug_pin_write(1, DEBUG_1_PIN);
 	int32_t period_x_grad           =  ((uint32_t) st_tmc.step_period[tmc2590->thisAxis] * (uint32_t) tmc2590->gradient_per_Celsius);
 	int32_t div_2pow13              =  period_x_grad >> 13 ;
 	int32_t period_x_grad_x_delta   =  div_2pow13 *  ( (int32_t)SG_calibration_temperature[tmc2590->thisMotor] - (int32_t)get_MOT_temperature_cent() );
-    int32_t compensation_SG_offset  =  period_x_grad_x_delta >> 13;
-    int16_t SGcurrentValue          = tmc2590->resp.stallGuardCurrentValue - compensation_SG_offset;
+    int32_t temperature_compensation_SG_offset  =  period_x_grad_x_delta >> 13;
+    //uint16_t rpm_compensation_SG_offset  =  st_tmc.step_period[tmc2590->thisAxis] / 20;
+    int16_t SGcurrentValue          = tmc2590->resp.stallGuardCurrentValue - temperature_compensation_SG_offset;// + rpm_compensation_SG_offset;
     
     if ( ( st_tmc.stall_alarm_enabled ) && ( st_tmc.current_scale_state == CURRENT_SCALE_ACTIVE ) ){
                    

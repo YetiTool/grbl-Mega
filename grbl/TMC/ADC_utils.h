@@ -63,22 +63,22 @@ enum adc_channels{
 //#define TEMP_K0  162
 
 ///* temperature coefficients for 10k thermistor, 10k ref, 5V VDD and 2.048V ref source */
-//#define TEMP_K6  2968
-//#define TEMP_K5 -10456
-//#define TEMP_K4  14709
-//#define TEMP_K3 -10616
-//#define TEMP_K2  4250
-//#define TEMP_K1 -1020
-//#define TEMP_K0  201
+#define TEMP_K6_HW17  2968
+#define TEMP_K5_HW17 -10456
+#define TEMP_K4_HW17  14709
+#define TEMP_K3_HW17 -10616
+#define TEMP_K2_HW17  4250
+#define TEMP_K1_HW17 -1020
+#define TEMP_K0_HW17  201
 
 /* temperature coefficients for 10k thermistor, 10k ref, 2.048V VDD and 2.048V ref source */
-#define TEMP_K6  6287
-#define TEMP_K5 -21401
-#define TEMP_K4  28457
-#define TEMP_K3 -18922
-#define TEMP_K2  6690
-#define TEMP_K1 -1337
-#define TEMP_K0  177
+#define TEMP_K6_HW18  6287
+#define TEMP_K5_HW18 -21401
+#define TEMP_K4_HW18  28457
+#define TEMP_K3_HW18 -18922
+#define TEMP_K2_HW18  6690
+#define TEMP_K1_HW18 -1337
+#define TEMP_K0_HW18  177
 
 /* ADC state machine structure */
 typedef struct {

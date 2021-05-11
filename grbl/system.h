@@ -146,11 +146,6 @@
 #define TMC_CALIBRATION_INIT_Y          bit(6)       /* 64 initialise calibration for Y axis only */
 #define TMC_CALIBRATION_INIT_Z          bit(7)       /* 128 initialise calibration for Z axis only */
 
-#define TMC_CALIBRATION_LOAD_X          bit(0)       /* 1: reset all calibrations and prepare for new one,               */
-#define TMC_CALIBRATION_LOAD_Y          bit(0)       /* 1: reset all calibrations and prepare for new one,               */
-#define TMC_CALIBRATION_LOAD_Z          bit(0)       /* 1: reset all calibrations and prepare for new one,               */
-
-
 // Define global system variables
 typedef struct {
   uint8_t state;               // Tracks the current system state of Grbl.

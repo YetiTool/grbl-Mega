@@ -38,7 +38,7 @@ int filter_fir_int16(long in_global_16, long in_16) {
 }
 
 /* temperature coefficients */
-long k[] = {TEMP_K0, TEMP_K1, TEMP_K2, TEMP_K3, TEMP_K4, TEMP_K5, TEMP_K6};
+long k[7];
 
 /* function to calculate temperature based on ADC value
  * written as a loop to keep calculation within 32 bit integer number
@@ -550,6 +550,27 @@ void asmcnc_init_ADC(void)
     }
     else if (PIND <= 15){ /* if HW version is between 5 and 15 ADC channel is 3*/
         ADC_Spindle_load_channel          = 3;
+    }
+    /* Starting from HW version 18 Z-head thermistors are connected to 2.048V reference */
+    if (PIND == 17) {
+        /* temperature coefficients for 10k thermistor, 10k ref, 5V VDD and 2.048V ref source */
+        k[6] = TEMP_K6_HW17;
+        k[5] = TEMP_K5_HW17;
+        k[4] = TEMP_K4_HW17;
+        k[3] = TEMP_K3_HW17;
+        k[2] = TEMP_K2_HW17;
+        k[1] = TEMP_K1_HW17;
+        k[0] = TEMP_K0_HW17;
+    }        
+    else if (PIND > 17) {
+        /* temperature coefficients for 10k thermistor, 10k ref, 2.048V VDD and 2.048V ref source */
+        k[6] = TEMP_K6_HW18;
+        k[5] = TEMP_K5_HW18;
+        k[4] = TEMP_K4_HW18;
+        k[3] = TEMP_K3_HW18;
+        k[2] = TEMP_K2_HW18;
+        k[1] = TEMP_K1_HW18;
+        k[0] = TEMP_K0_HW18;        
     }
 
     ADCstMachine.adc_state  = ADC_TOTAL_CHANNELS;

@@ -8,8 +8,8 @@
 #ifndef ASMCNC_h
 #define ASMCNC_h
 
-#define ASMCNC_VERSION          "2.2.1"
-#define ASMCNC_VERSION_BUILD    "20210421"
+#define ASMCNC_VERSION          "2.2.2"
+#define ASMCNC_VERSION_BUILD    "20210511"
 
 /* proprietary error codes */
 #define ASMCNC_STATUS_INVALID_STATEMENT 39 //ASM Error code 39 if 'A' is followed by unrecognised command
@@ -161,7 +161,7 @@ enum rgbHexStates{
 //#define SG_CAL_DEBUG_ENABLED // enable to debug stall guard calibration engine
 //#define FLASH_DEBUG_ENABLED // enable to debug EEPROM storage
 //#define DEBUG_LED_ENABLED // enable to drive indication (second) RGB LED light
-#define DEBUG_CPU_LOAD_ENABLED // enable to drive indication (second) RGB LED light
+//#define DEBUG_CPU_LOAD_ENABLED // enable to drive indication (second) RGB LED light
 
 #if defined(DEBUG_SPI_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED) || defined(SG_CAL_DEBUG_ENABLED) || defined(FLASH_DEBUG_ENABLED) || defined(DEBUG_LED_ENABLED)  || defined(DEBUG_CPU_LOAD_ENABLED)
 #define ANY_DEBUG_ENABLED //
