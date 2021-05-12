@@ -80,7 +80,7 @@ void SPI_MasterInit(void)
     /* Warning: if the SS pin ever becomes a LOW INPUT then SPI automatically switches to Slave, so the data direction of the SS pin MUST be kept as OUTPUT.
      * if the SS pin is not already configured as an output then set it high (to enable the internal pull-up resistor)
      * When the SS pin is set as OUTPUT, it can be used as a general purpose output port (it doesn't influence SPI operations). */
-    tmc_pin_write(1, SPI_SS_PIN);
+    //tmc_pin_write(1, SPI_SS_PIN);
 
     /* Set MOSI and SCK output, all others input */
     TMC_DDR         |= TMC_PORT_MASK;
@@ -108,7 +108,51 @@ void SPI_MasterInit(void)
 
 }
 
+
+void tmc_configure_standalone(void){
+    /* Starting from HW version 18 Z-head Trinamic drivers could be configured by FW in "standalone" or "Smart" mode */
+    if (PIND > 17) {
+        TMC_DDR     |=TMC_PORT_MASK; /* enable output direction of the port */
+        
+        /* common for both motors: */
+        tmc_pin_write(1, SPI_SCK_PIN);      /* pull SCK input of both TMCs up to enable Small motor option (low hysteresis), CFG2 = 1 */
+        tmc_pin_write(1, SPI_MOSI_PIN);     /* pull SDI input of both TMCs up to enable MRES=16 option, CFG3 = 1 */
+
+        /* motors X */
+        tmc_pin_write(1, TMC_X_ST_ALONE);   /* pull ST_ALONE input of the Z-TMC up to enable standalone mode */
+        tmc_pin_write(1, SPI_CS_X_PIN);     /* pull CS input of Z-TMCs up to enable full current mode, CFG1 = 1 */
+        
+        /* motor Z */
+        tmc_pin_write(1, TMC_Z_ST_ALONE);   /* pull ST_ALONE input of the Z-TMC up to enable standalone mode */
+        tmc_pin_write(1, SPI_CS_Z_PIN);     /* pull CS input of Z-TMCs up to enable full current mode, CFG1 = 1 */
+    }
+}
+
+void tmc_configure_smart(void){
+    /* Starting from HW version 18 Z-head Trinamic drivers could be configured by FW in "standalone" or "Smart" mode */
+    if (PIND > 17) {
+        TMC_DDR     |=TMC_PORT_MASK; /* enable output direction of the port */
+        
+        /* common for both motors: */
+        //tmc_pin_write(1, SPI_SCK_PIN);      /* pull SCK input of both TMCs up to enable Small motor option (low hysteresis), CFG2 = 1 */
+        //tmc_pin_write(1, SPI_MOSI_PIN);     /* pull SDI input of both TMCs up to enable MRES=16 option, CFG3 = 1 */
+
+        /* motors X */
+        tmc_pin_write(0, TMC_X_ST_ALONE);   /* pull ST_ALONE input of the Z-TMC up to enable standalone mode */
+        //tmc_pin_write(1, SPI_CS_X_PIN);     /* pull CS input of Z-TMCs up to enable full current mode, CFG1 = 1 */
+        
+        /* motor Z */
+        tmc_pin_write(0, TMC_Z_ST_ALONE);   /* pull ST_ALONE input of the Z-TMC up to enable standalone mode */
+        //tmc_pin_write(1, SPI_CS_Z_PIN);     /* pull CS input of Z-TMCs up to enable full current mode, CFG1 = 1 */
+    }
+}
+
+
+
 void spi_hw_init(void){
+
+    /* initialise TMC motor controllers */
+    tmc_configure_smart();
 
     SPI_MasterInit();
 
