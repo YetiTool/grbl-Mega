@@ -121,89 +121,89 @@ void tmc2590_single_read_sg(TMC2590TypeDef *tmc2590)
 }
 
 /************************************************ dual motors ***********************************************/
-
-void tmc2590_dual_writeInt(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t address)
-{
-    int32_t controller1_register_value, controller2_register_value, drvconf_register_value;
-
-    controller1_register_value = tmc2590_1->shadowRegister[TMC_ADDRESS(address)];
-    controller2_register_value = tmc2590_2->shadowRegister[TMC_ADDRESS(address)];
-    drvconf_register_value     = tmc2590_1->shadowRegister[TMC2590_DRVCONF     ];
-    
-    uint8_t rdsel = 0;
-    /* read select shall always be taken from DRVCONF register */
-    // set virtual read address for next reply given by RDSEL, can only change by setting RDSEL in DRVCONF
-    rdsel = TMC2590_GET_RDSEL(drvconf_register_value);
-
-    uint8_t data[5]; 
-
-    /* construct 5 bytes out of 2x20bit values */
-    data[0] = (NIBBLE(controller2_register_value, 4)<<4) | NIBBLE(controller2_register_value, 3); //BYTE(controller2_register_value, 2);        
-    data[1] = (NIBBLE(controller2_register_value, 2)<<4) | NIBBLE(controller2_register_value, 1); //BYTE(controller2_register_value, 1);        
-    data[2] = (NIBBLE(controller2_register_value, 0)<<4) | NIBBLE(controller1_register_value, 4); //BYTE(controller1_register_value, 2);
-    data[3] = (NIBBLE(controller1_register_value, 3)<<4) | NIBBLE(controller1_register_value, 2); //BYTE(controller1_register_value, 1);
-    data[4] = (NIBBLE(controller1_register_value, 1)<<4) | NIBBLE(controller1_register_value, 0); //BYTE(controller1_register_value, 0); 
-    
-    
-    /* can write to the same channel as both motors are on the same line */
-    spi_schedule_dual_tx(tmc2590_1, tmc2590_2, data, TX_BUF_SIZE_DUAL, rdsel);    
-
-}
-
-
-uint8_t tmc2590_dual_restore(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
-{
-
-	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCONF);
-	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCTRL);
-	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_CHOPCONF);
-	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_SMARTEN);
-	tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_SGCSCONF);
-    
-	return 1;
-}
-
-
-void tmc2590_dual_read_single(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t rdsel){
-    
-    //uint32_t delay_us = 50;
-    
-    uint32_t drvconf1_register_value, drvconf2_register_value;
-    
-   	drvconf1_register_value = tmc2590_1->shadowRegister[TMC2590_DRVCONF];
-   	drvconf2_register_value = tmc2590_2->shadowRegister[TMC2590_DRVCONF];
-	            
-	drvconf1_register_value &= ~TMC2590_SET_RDSEL(-1);      // clear RDSEL bits
-	drvconf1_register_value |= TMC2590_SET_RDSEL(rdsel);    // set rdsel
-	drvconf2_register_value &= ~TMC2590_SET_RDSEL(-1);      // clear RDSEL bits
-	drvconf2_register_value |= TMC2590_SET_RDSEL(rdsel);    // set rdsel
-    
-    tmc2590_1->shadowRegister[TMC2590_DRVCONF] = drvconf1_register_value;
-    tmc2590_2->shadowRegister[TMC2590_DRVCONF] = drvconf2_register_value;
-
-    tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCONF);
-    
-}
-
-void tmc2590_dual_read_all(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
-{
-    /*read all 4 report values */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 1 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 2 ) % 4 ) ); /* response 2 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 3 */
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 0 */
-}
-
-
-void tmc2590_dual_read_sg(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
-{
-    /*read stall guard and MSTEP report values */
-#ifdef MSTEP_READING_ENABLED
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 1 */
-#endif
-    tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 1 (0 when reading MSTEP) */
-}
-
+//
+//void tmc2590_dual_writeInt(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t address)
+//{
+    //int32_t controller1_register_value, controller2_register_value, drvconf_register_value;
+//
+    //controller1_register_value = tmc2590_1->shadowRegister[TMC_ADDRESS(address)];
+    //controller2_register_value = tmc2590_2->shadowRegister[TMC_ADDRESS(address)];
+    //drvconf_register_value     = tmc2590_1->shadowRegister[TMC2590_DRVCONF     ];
+    //
+    //uint8_t rdsel = 0;
+    ///* read select shall always be taken from DRVCONF register */
+    //// set virtual read address for next reply given by RDSEL, can only change by setting RDSEL in DRVCONF
+    //rdsel = TMC2590_GET_RDSEL(drvconf_register_value);
+//
+    //uint8_t data[5]; 
+//
+    ///* construct 5 bytes out of 2x20bit values */
+    //data[0] = (NIBBLE(controller2_register_value, 4)<<4) | NIBBLE(controller2_register_value, 3); //BYTE(controller2_register_value, 2);        
+    //data[1] = (NIBBLE(controller2_register_value, 2)<<4) | NIBBLE(controller2_register_value, 1); //BYTE(controller2_register_value, 1);        
+    //data[2] = (NIBBLE(controller2_register_value, 0)<<4) | NIBBLE(controller1_register_value, 4); //BYTE(controller1_register_value, 2);
+    //data[3] = (NIBBLE(controller1_register_value, 3)<<4) | NIBBLE(controller1_register_value, 2); //BYTE(controller1_register_value, 1);
+    //data[4] = (NIBBLE(controller1_register_value, 1)<<4) | NIBBLE(controller1_register_value, 0); //BYTE(controller1_register_value, 0); 
+    //
+    //
+    ///* can write to the same channel as both motors are on the same line */
+    //spi_schedule_dual_tx(tmc2590_1, tmc2590_2, data, TX_BUF_SIZE_DUAL, rdsel);    
+//
+//}
+//
+//
+//uint8_t tmc2590_dual_restore(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
+//{
+//
+	//tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCONF);
+	//tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCTRL);
+	//tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_CHOPCONF);
+	//tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_SMARTEN);
+	//tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_SGCSCONF);
+    //
+	//return 1;
+//}
+//
+//
+//void tmc2590_dual_read_single(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t rdsel){
+    //
+    ////uint32_t delay_us = 50;
+    //
+    //uint32_t drvconf1_register_value, drvconf2_register_value;
+    //
+   	//drvconf1_register_value = tmc2590_1->shadowRegister[TMC2590_DRVCONF];
+   	//drvconf2_register_value = tmc2590_2->shadowRegister[TMC2590_DRVCONF];
+	            //
+	//drvconf1_register_value &= ~TMC2590_SET_RDSEL(-1);      // clear RDSEL bits
+	//drvconf1_register_value |= TMC2590_SET_RDSEL(rdsel);    // set rdsel
+	//drvconf2_register_value &= ~TMC2590_SET_RDSEL(-1);      // clear RDSEL bits
+	//drvconf2_register_value |= TMC2590_SET_RDSEL(rdsel);    // set rdsel
+    //
+    //tmc2590_1->shadowRegister[TMC2590_DRVCONF] = drvconf1_register_value;
+    //tmc2590_2->shadowRegister[TMC2590_DRVCONF] = drvconf2_register_value;
+//
+    //tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_DRVCONF);
+    //
+//}
+//
+//void tmc2590_dual_read_all(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
+//{
+    ///*read all 4 report values */
+    //tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 1 ) % 4 ) ); /* response 1 */
+    //tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 2 ) % 4 ) ); /* response 2 */
+    //tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 3 */
+    //tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 0 */
+//}
+//
+//
+//void tmc2590_dual_read_sg(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
+//{
+    ///*read stall guard and MSTEP report values */
+//#ifdef MSTEP_READING_ENABLED
+    //tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 1 */
+//#endif
+    //tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 1 (0 when reading MSTEP) */
+//}
+//
 
 
 
@@ -581,8 +581,8 @@ void tmc_report_SG_delta(void){
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
 
     /* print average delta for X and Y axes */
-    tmc2590 = get_TMC_controller(TMC_X2);
-    printInteger( tmc2590->stallGuardDeltaAxis  );
+    tmc2590 = get_TMC_controller(TMC_X1);
+    printInteger( tmc2590->stallGuardDelta  );
     printPgmString(PSTR(","));
     tmc2590 = get_TMC_controller(TMC_Y2);
     printInteger( tmc2590->stallGuardDeltaAxis  );
@@ -823,40 +823,31 @@ debug_pin_write(1, DEBUG_1_PIN);
 
                 /* average delta SG for X and Y axes */
                 tmc2590->stallGuardDeltaCurrent = stallGuardDelta;
-                if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {
-                    TMC2590TypeDef *tmc2590_1;
-                    tmc2590_1 = get_TMC_controller(tmc2590->thisMotor - 1);
-                    int16_t stallGuardDeltaAxisCurrent = ( (tmc2590->stallGuardDeltaCurrent + tmc2590_1->stallGuardDeltaCurrent) >> 1 );
-#ifdef SG_SAMPLE_FILTERING_ENABLED
-                    if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {
-                        /* glitch filter of SG=0 error (TMC HW glitch). If read StallGuard value is 0 it might be not really the issue, need to read again and only trust it if it 0 once again. */
-                        if ( (tmc2590->stallGuardDeltaAxisPast < stallGuardDeltaAxisCurrent) && ( (tmc2590->resp.stallGuardCurrentValue == 0) || (tmc2590_1->resp.stallGuardCurrentValue == 0) )  ){
-                        /* peak found, apply glitch filtering */
-                        /* single sample filtering implementation: release the minimum of two samples, keeping track of the past sample, to release the peak only in case the same low is seen next time round  - to minimize the chance of false triggering*/
-                            tmc2590->stallGuardDeltaAxis  = tmc2590->stallGuardDeltaAxisPast;
-                        }
-                        else{
-                            tmc2590->stallGuardDeltaAxis  = stallGuardDeltaAxisCurrent; /* peak is seen second time, release it*/
-                        }
-                    } // if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {                       
-                    tmc2590->stallGuardDeltaAxisPast = stallGuardDeltaAxisCurrent; /* store current sample for next iteration */
-#else                    
-                    if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {
-                        tmc2590->stallGuardDeltaAxis  = stallGuardDeltaAxisCurrent;}
-#endif                        
-                    }  // if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {
+                //if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {
+                    //TMC2590TypeDef *tmc2590_1;
+                    //tmc2590_1 = get_TMC_controller(tmc2590->thisMotor - 1);
+                    //int16_t stallGuardDeltaAxisCurrent = ( (tmc2590->stallGuardDeltaCurrent + tmc2590_1->stallGuardDeltaCurrent) >> 1 );
+//#ifdef SG_SAMPLE_FILTERING_ENABLED
+                    //if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {
+                        ///* glitch filter of SG=0 error (TMC HW glitch). If read StallGuard value is 0 it might be not really the issue, need to read again and only trust it if it 0 once again. */
+                        //if ( (tmc2590->stallGuardDeltaAxisPast < stallGuardDeltaAxisCurrent) && ( (tmc2590->resp.stallGuardCurrentValue == 0) || (tmc2590_1->resp.stallGuardCurrentValue == 0) )  ){
+                        ///* peak found, apply glitch filtering */
+                        ///* single sample filtering implementation: release the minimum of two samples, keeping track of the past sample, to release the peak only in case the same low is seen next time round  - to minimize the chance of false triggering*/
+                            //tmc2590->stallGuardDeltaAxis  = tmc2590->stallGuardDeltaAxisPast;
+                        //}
+                        //else{
+                            //tmc2590->stallGuardDeltaAxis  = stallGuardDeltaAxisCurrent; /* peak is seen second time, release it*/
+                        //}
+                    //} // if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {                       
+                    //tmc2590->stallGuardDeltaAxisPast = stallGuardDeltaAxisCurrent; /* store current sample for next iteration */
+//#else                    
+                    //if (tmc2590->stallGuardDeltaAxis < stallGuardDeltaAxisCurrent) {
+                        //tmc2590->stallGuardDeltaAxis  = stallGuardDeltaAxisCurrent;}
+//#endif                        
+                    //}  // if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {
 
                 /* alarm trigger block */
-                if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) || (tmc2590->thisMotor == TMC_Z) ) {
-                    uint8_t raise_alarm = 0;
-                    if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) { //X or Y axis, dual motors
-                        //TMC2590TypeDef *tmc2590_1;
-                        //tmc2590_1 = get_TMC_controller(tmc2590->thisMotor - 1);
-                        //int16_t stallGuardDeltaAxisCurrent = ( (tmc2590->stallGuardDeltaCurrent + tmc2590_1->stallGuardDeltaCurrent) >> 1 );
-                        if (tmc2590->stallGuardDeltaAxis > (int16_t)tmc2590->stallGuardAlarmThreshold)   { raise_alarm = 1; } }
-                    else { //Z axis, single motor
-                        if (tmc2590->stallGuardDelta     > (int16_t)tmc2590->stallGuardAlarmThreshold)   { raise_alarm = 1; } }
-                    if ( raise_alarm == 1 ){
+                    if (tmc2590->stallGuardDelta     > (int16_t)tmc2590->stallGuardAlarmThreshold)   {/* raise_alarm */
                         /* trigger alarm */
                         tmc_trigger_stall_alarm(tmc2590->thisAxis);
                         /* store stall info to flash */
@@ -865,8 +856,6 @@ debug_pin_write(1, DEBUG_1_PIN);
                         st_tmc.step_period_idx[tmc2590->thisAxis] = 0;
                         stall_guard_statistics_reset();
                     } //if ( raise_alarm == 1 )
-
-                } //if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) || (tmc2590->thisMotor == TMC_Z) ) {
    
             } //if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )
                 
@@ -970,7 +959,7 @@ void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
             TMC2590TypeDef *tmc2590_standstill;
             uint8_t all_motors_standstill = 0;
             /* check idle state of each TMC controller and sum them up */
-            for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+            for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id+=4){
                 tmc2590_standstill = get_TMC_controller(controller_id);
                 all_motors_standstill += ( ( tmc2590_standstill->resp.StatusBits >> 7 ) & 1 ); /* Status bit_7 STST - Idle: */
             }            
@@ -983,34 +972,35 @@ void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
     } // if (st_tmc.current_scale_state != CURRENT_SCALE_STANDSTILL){
 }
 
-void process_status_of_dual_controller(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2){
-    
-    process_controller_status(tmc2590_1);
-    process_controller_status(tmc2590_2);
- 
-}
+//void process_status_of_dual_controller(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2){
+    //
+    //process_controller_status(tmc2590_1);
+    //process_controller_status(tmc2590_2);
+ //
+//}
 
 /* route single motor write to single or dual write command depend on the motor controller type */
 void tmc2590_single_write_route(uint8_t controller_id, uint8_t address){
-    TMC2590TypeDef *tmc2590_1, *tmc2590_2;
-    if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
-        /* choose second pair and execute dual write */
-        tmc2590_1 = get_TMC_controller(controller_id);
-        tmc2590_2 = get_TMC_controller(controller_id+1);
-        tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, address);
-
-    }
-    if ( (controller_id == TMC_X2) || (controller_id == TMC_Y2) ){
-        /* choose second pair and execute dual write */
-        tmc2590_1 = get_TMC_controller(controller_id-1);
-        tmc2590_2 = get_TMC_controller(controller_id);
-        tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, address);
-    }
-    if (controller_id == TMC_Z) {
+    TMC2590TypeDef *tmc2590_1;
+    //TMC2590TypeDef *tmc2590_1, *tmc2590_2;    
+    //if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
+        ///* choose second pair and execute dual write */
+        //tmc2590_1 = get_TMC_controller(controller_id);
+        //tmc2590_2 = get_TMC_controller(controller_id+1);
+        //tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, address);
+//
+    //}
+    //if ( (controller_id == TMC_X2) || (controller_id == TMC_Y2) ){
+        ///* choose second pair and execute dual write */
+        //tmc2590_1 = get_TMC_controller(controller_id-1);
+        //tmc2590_2 = get_TMC_controller(controller_id);
+        //tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, address);
+    //}
+    //if (controller_id == TMC_Z) {
         /* choose second pair and execute single write */
         tmc2590_1 = get_TMC_controller(controller_id);
         tmc2590_single_writeInt(tmc2590_1, address);
-    }
+    //}
 
 }
 

@@ -23,8 +23,9 @@ uint8_t homing_sg_read_ongoing = false;             /* global flag indicating ho
 
 /* schedule periodic read of all values */
 void tmc2590_schedule_read_all(void){
-    tmc2590_dual_read_all(&tmc[TMC_X1], &tmc[TMC_X2]);
-    tmc2590_dual_read_all(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+    //tmc2590_dual_read_all(&tmc[TMC_X1], &tmc[TMC_X2]);
+    //tmc2590_dual_read_all(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+    tmc2590_single_read_all(&tmc[TMC_X1]);
     tmc2590_single_read_all(&tmc[TMC_Z]);
     /* update st_tmc.sg_read_active_axes with all axes to be processed */
     st_tmc.sg_read_active_axes |= ( ( 1 << X_AXIS ) | ( 1 << Y_AXIS ) | ( 1 << Z_AXIS ) );
@@ -48,11 +49,12 @@ void tmc2590_schedule_read_sg(uint8_t axis){
 
     switch (axis){
         case X_AXIS:
-        tmc2590_dual_read_sg(&tmc[TMC_X1], &tmc[TMC_X2]);
+        //tmc2590_dual_read_sg(&tmc[TMC_X1], &tmc[TMC_X2]);
+        tmc2590_single_read_sg(&tmc[TMC_X1]);
         break;
 
         case Y_AXIS:
-        tmc2590_dual_read_sg(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+        //tmc2590_dual_read_sg(&tmc[TMC_Y1], &tmc[TMC_Y2]);
         break;
 
         case Z_AXIS:
@@ -148,8 +150,9 @@ void init_TMC(void){
     stall_guard_statistics_reset();
 
     /* initialise motors with wanted parameters */
-    tmc2590_dual_restore(&tmc[TMC_X1], &tmc[TMC_X2]);
-    tmc2590_dual_restore(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+    //tmc2590_dual_restore(&tmc[TMC_X1], &tmc[TMC_X2]);
+    //tmc2590_dual_restore(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+    tmc2590_single_restore(&tmc[TMC_X1]);
     tmc2590_single_restore(&tmc[TMC_Z]);
 
     tmc_hw_init();
@@ -171,11 +174,12 @@ void process_status_of_all_controllers(void){
         if (bit_istrue(st_tmc.sg_read_active_axes,bit(axis))) {
             switch (axis){
                 case X_AXIS:
-                process_status_of_dual_controller(&tmc[TMC_X1], &tmc[TMC_X2]);
+                //process_status_of_dual_controller(&tmc[TMC_X1], &tmc[TMC_X2]);
+                process_status_of_single_controller(&tmc[TMC_X1]);
                 break;
 
                 case Y_AXIS:
-                process_status_of_dual_controller(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+                //process_status_of_dual_controller(&tmc[TMC_Y1], &tmc[TMC_Y2]);
                 break;
 
                 case Z_AXIS:
@@ -347,8 +351,9 @@ void process_global_command(uint8_t command, uint32_t value){
             /* store the default settings */
             tmc_store_settings();
             /* initialise motors with wanted parameters */
-            tmc2590_dual_restore(&tmc[TMC_X1], &tmc[TMC_X2]);
-            tmc2590_dual_restore(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+            //tmc2590_dual_restore(&tmc[TMC_X1], &tmc[TMC_X2]);
+            //tmc2590_dual_restore(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+            tmc2590_single_restore(&tmc[TMC_X1]);
             tmc2590_single_restore(&tmc[TMC_Z]);
             /* start SPI transfers flushing the queue */
             tmc_kick_spi_processing();
@@ -491,7 +496,7 @@ void tmc_all_current_scale_apply( void ){
     uint32_t register_value;
 
     /* reduce current in each TMC controller */
-    for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+    for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id+=4){
 
         tmc2590 = get_TMC_controller(controller_id);
         /* TMC2590_SGCSCONF */
@@ -501,18 +506,18 @@ void tmc_all_current_scale_apply( void ){
         else                                                            register_value |= TMC2590_SET_CS(tmc2590->activeCurrentScale);            // set full operational Current scale
         tmc2590->shadowRegister[TMC2590_SGCSCONF] = register_value;
 
-        /* below if statement is to ensure both dual controllers are bing written in one transaction to speed up the execution */
-        if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
-            /* choose second pair and prepare for dual write */
-            controller_id++;
-            tmc2590 = get_TMC_controller(controller_id);
-            /* TMC2590_SGCSCONF */
-            register_value = tmc2590->shadowRegister[TMC2590_SGCSCONF];
-            register_value &= ~TMC2590_SET_CS(-1);                           // clear Current scale bits
-            if (st_tmc.current_scale_state == CURRENT_SCALE_STANDSTILL) register_value |= TMC2590_SET_CS(tmc2590->standStillCurrentScale);  // set standstill Current scale
-            else                                                            register_value |= TMC2590_SET_CS(tmc2590->activeCurrentScale);            // set full operational Current scale
-            tmc2590->shadowRegister[TMC2590_SGCSCONF] = register_value;
-        } //if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
+        ///* below if statement is to ensure both dual controllers are bing written in one transaction to speed up the execution */
+        //if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
+            ///* choose second pair and prepare for dual write */
+            //controller_id++;
+            //tmc2590 = get_TMC_controller(controller_id);
+            ///* TMC2590_SGCSCONF */
+            //register_value = tmc2590->shadowRegister[TMC2590_SGCSCONF];
+            //register_value &= ~TMC2590_SET_CS(-1);                           // clear Current scale bits
+            //if (st_tmc.current_scale_state == CURRENT_SCALE_STANDSTILL) register_value |= TMC2590_SET_CS(tmc2590->standStillCurrentScale);  // set standstill Current scale
+            //else                                                            register_value |= TMC2590_SET_CS(tmc2590->activeCurrentScale);            // set full operational Current scale
+            //tmc2590->shadowRegister[TMC2590_SGCSCONF] = register_value;
+        //} //if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
 
         tmc2590_single_write_route(controller_id, TMC2590_SGCSCONF);
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS, controller_id++){

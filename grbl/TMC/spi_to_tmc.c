@@ -197,17 +197,17 @@ void spi_schedule_single_tx(TMC2590TypeDef *tmc2590_1, uint8_t *data, uint8_t si
     m_spi_tx_insert_index &= SPI_TX_BUFFER_MASK;
 }
 
-void spi_schedule_dual_tx(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t *data, uint8_t size, uint8_t rdsel)
-{
-    m_spi_tx_buffer[m_spi_tx_insert_index].buf_size = size;
-    m_spi_tx_buffer[m_spi_tx_insert_index].tmc2590_1 = tmc2590_1;
-    m_spi_tx_buffer[m_spi_tx_insert_index].tmc2590_2 = tmc2590_2;
-    //memset(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, 0, size);
-    memcpy(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, data, size);
-    m_spi_tx_buffer[m_spi_tx_insert_index].rdsel = rdsel;
-    m_spi_tx_insert_index++;
-    m_spi_tx_insert_index &= SPI_TX_BUFFER_MASK;
-}
+//void spi_schedule_dual_tx(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t *data, uint8_t size, uint8_t rdsel)
+//{
+    //m_spi_tx_buffer[m_spi_tx_insert_index].buf_size = size;
+    //m_spi_tx_buffer[m_spi_tx_insert_index].tmc2590_1 = tmc2590_1;
+    //m_spi_tx_buffer[m_spi_tx_insert_index].tmc2590_2 = tmc2590_2;
+    ////memset(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, 0, size);
+    //memcpy(m_spi_tx_buffer[m_spi_tx_insert_index].m_spi_tx_buf, data, size);
+    //m_spi_tx_buffer[m_spi_tx_insert_index].rdsel = rdsel;
+    //m_spi_tx_insert_index++;
+    //m_spi_tx_insert_index &= SPI_TX_BUFFER_MASK;
+//}
 
 void spi_process_tx_queue(void){
     if ( spi_busy == false ){
