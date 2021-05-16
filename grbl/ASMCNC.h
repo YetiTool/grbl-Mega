@@ -55,6 +55,8 @@
 // Used to add to AXIS number for reporting the correct limit switch
 #define X_AXIS_MAX      4
 #define Y_AXIS_MAX      5
+#define X_AXIS_SG       6
+#define Z_AXIS_SG       7
 // TODO: Move all LED's to Port L to simplify the code
 //#define AC_LIM_RED_MASK_Y ((1<<AC_YLIM_MIN_RED)|(1<<AC_YLIM_MAX_RED))
 //#define AC_LIM_RED_MASK_XZ    ((1<<AC_XLIM_MIN_RED)|(1<<AC_XLIM_MAX_RED)|(1<<AC_ZLIM_MAX_RED)|(1<<AC_YLIM_MIN_RED)|(1<<AC_YLIM_MAX_RED))

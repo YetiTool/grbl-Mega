@@ -66,11 +66,16 @@
   #define X_LIMIT_BIT     1 // EMC1 PORTB 4 // MEGA2560 Digital Pin 10
   #define Y_LIMIT_BIT     3 // EMC1 PORTB 5 // MEGA2560 Digital Pin 11
   #define Z_LIMIT_BIT     0 // EMC1 PORTB 6 // MEGA2560 Digital Pin 12
+  #define X_LIM_SG_BIT    5
+  #define Z_LIM_SG_BIT    6
+
   #define LIMIT_INT       PCIE1  // Pin change interrupt enable pin
   #define LIMIT_INT_vect  PCINT1_vect
   #define LIMIT_PCMSK     PCMSK1 // Pin change interrupt register
-  #define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<X_LIM_MAX_BIT)|(1<<Y_LIM_MAX_BIT)) // All limit bits
-  #define LIMIT_ISR_MASK (LIMIT_MASK<<1) // BK: All limit bits + 1 (<<2 vs <<1) as pin number for Port J is shifted by one interrupt register PCMSK1
+  #define LIMIT_MASK_INPUT ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<X_LIM_MAX_BIT)|(1<<Y_LIM_MAX_BIT)) // All limit bits driven externally, configured as inputs
+  #define LIMIT_MASK_OUTPUT ((1<<X_LIM_SG_BIT)|(1<<Z_LIM_SG_BIT)) // All limit bits that are driven internally - configured as output
+  #define LIMIT_MASK (LIMIT_MASK_INPUT|LIMIT_MASK_OUTPUT) // All limit bits
+  #define LIMIT_ISR_MASK ( (LIMIT_MASK&~(1<<Y_LIM_MAX_BIT))<<1 ) // BK: All limit bits + 1 (<<2 vs <<1) as pin number for Port J is shifted by one interrupt register PCMSK1. Exclude Ymax as it is being read based on step size step_period_idx
 
   // Define spindle enable and spindle direction output pins.
   #define SPINDLE_ENABLE_DDR      DDRH

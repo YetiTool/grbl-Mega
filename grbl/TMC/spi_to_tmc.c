@@ -91,14 +91,25 @@ void SPI_MasterInit(void)
     /* Enable SPI, Master */
     SPCR |= ( (1<<SPE)|(1<<MSTR) );
 
-    /* SPI clocking options: */
-    /* option 1: set clock rate fck/4 = 4MHz - defautl config - nothing to be written */
+    /* option 0.25M: set clock rate fck/64 = 0.25MHz*/
+    /* filter: 470R/470p */
+    //SPCR |= (1<<SPR1);
 
-    /* option 2: set clock rate fck/16 = 1MHz*/
+    /* option 1M: set clock rate fck/16 = 1MHz*/
+    /* filter: 470R/470p */
+    SPCR |= (1<<SPR0);
+
+    /* option 2M: set clock rate fck/8 = 2MHz*/
+    /* filter: 470R/47p */
     //SPCR |= (1<<SPR0);
+    //SPSR |= (1<<SPI2X);
 
-    /* option 3: set clock rate fck/64 = 0.25MHz*/
-    SPCR |= (1<<SPR1);
+    /* SPI clocking options: */    
+    /* option 4M: set clock rate fck/4 = 4MHz - defautl config - nothing to be written */
+    /* filter: 0R/ no cap */
+
+    /* option 8M: set clock rate fck/2 = 8MHz*/
+    //SPSR |= (1<<SPI2X);
 
     /* Set phase and polarity to mode3 */
     SPCR |= ( (1<<CPOL)|(1<<CPHA) );

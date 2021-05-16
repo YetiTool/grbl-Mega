@@ -214,15 +214,15 @@ void tmc_trigger_stall_alarm(uint8_t axis){
         /* execute alarm by writing 1 to the limit pin, which will trigger the ISR routine (pin has to be configured as output) */
         switch (axis){
             case X_AXIS:
-                LIMIT_PORT |= (1<<X_LIMIT_BIT);  /* set pin */           
+                LIMIT_PORT |= (1<<X_LIM_SG_BIT);  /* set pin */           
             break;
             
             case Y_AXIS:
-                LIMIT_PORT |= (1<<Y_LIMIT_BIT);  /* set pin */
+                LIMIT_PORT |= (1<<X_LIM_SG_BIT);  /* set pin */
             break;
             
             case Z_AXIS:
-                LIMIT_PORT |= (1<<Z_LIMIT_BIT);  /* set pin */
+                LIMIT_PORT |= (1<<Z_LIM_SG_BIT);  /* set pin */
             break;
             
             default:

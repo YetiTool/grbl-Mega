@@ -74,8 +74,8 @@ void limits_init()
     #endif // DISABLE_HW_LIMITS
   #else // DEFAULTS_RAMPS_BOARD
     //    SPCR = 0;
-    //LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins    
-    LIMIT_DDR |= (LIMIT_MASK); // Set as output pins to allow software interrupts - to emulate the limit switch toggle by function from StallGuard detection.
+    LIMIT_DDR &= ~(LIMIT_MASK_INPUT); // Set pins connected to switches and SG as input pins
+    LIMIT_DDR |= (LIMIT_MASK_OUTPUT); // Set as output pins to allow software interrupts - to emulate the limit switch toggle by function from StallGuard detection.
     LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Set pin high to trigger ISR
     delay_us(50); //BK: delay to deal with 1uF charged to 5V capacitors on the limit port pins
 //    #ifdef DISABLE_LIMIT_PIN_PULL_UP
@@ -163,7 +163,9 @@ uint8_t limits_get_state()
 		  if (pin & (1<<X_LIM_MAX_BIT)){ limit_state |= (1<<X_AXIS_MAX);	}		  
 		  if (pin & (1<<Y_LIMIT_BIT))  { limit_state |= (1<<Y_AXIS);		}		  
 		  if (pin & (1<<Y_LIM_MAX_BIT)){ limit_state |= (1<<Y_AXIS_MAX);	}		  
-		  if (pin & (1<<Z_LIMIT_BIT))  { limit_state |= (1<<Z_AXIS);		}		  
+		  if (pin & (1<<Z_LIMIT_BIT))  { limit_state |= (1<<Z_AXIS);		}
+		  if (pin & (1<<X_LIM_SG_BIT)) { limit_state |= (1<<X_AXIS_SG);		}
+		  if (pin & (1<<Z_LIM_SG_BIT)) { limit_state |= (1<<Z_AXIS_SG);		}
     } 
     return(limit_state);
   #endif //DEFAULTS_RAMPS_BOARD

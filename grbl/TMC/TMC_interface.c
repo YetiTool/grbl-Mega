@@ -53,8 +53,21 @@ void tmc2590_schedule_read_sg(uint8_t axis){
         tmc2590_single_read_sg(&tmc[TMC_X1]);
         break;
 
-        case Y_AXIS:
-        //tmc2590_dual_read_sg(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+        case Y_AXIS:{
+            //tmc2590_dual_read_sg(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+            /* read SG pin and apply SG value accordingly */
+            
+            uint32_t SG_value = 1023; /* Stall guard value to report in case of no SG pin detection: pin is low, TMC chip reports all OK */
+            uint8_t lim_pin_state   = limits_get_state();
+
+            if (bit_istrue(lim_pin_state,bit(Y_AXIS_MAX)))  { /* limit pin is high, TMC chip reports stall */
+                SG_value = 11;
+            }
+            tmc[TMC_Y1].response[TMC2590_RESPONSE1] = (SG_value << 10);
+            
+            /* indicate to main loop to process all responses and update the current status of controller's parameters */
+            system_set_exec_tmc_command_flag(TMC_SPI_PROCESS_COMMAND);
+        }
         break;
 
         case Z_AXIS:
@@ -180,6 +193,7 @@ void process_status_of_all_controllers(void){
 
                 case Y_AXIS:
                 //process_status_of_dual_controller(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+                process_status_of_single_controller(&tmc[TMC_Y1]);
                 break;
 
                 case Z_AXIS:
@@ -556,7 +570,7 @@ void tmc_homing_reset_limits(void){
     st_tmc.stall_alarm_enabled = true; /* enable the alarm in case it was disabled */
 
     /* clear limit switch */
-    LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Set pin high to trigger ISR
+    LIMIT_PORT &= ~(LIMIT_MASK_OUTPUT); // Normal low operation. Set pin high to trigger ISR
 
 }
 
