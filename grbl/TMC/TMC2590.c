@@ -85,6 +85,13 @@ uint8_t tmc2590_single_restore(TMC2590TypeDef *tmc2590_1)
 	return 1;
 }
 
+/* This function is included to minimise chances of accidental wrong write to TMC. 
+ * In current Yeti implementation SmartEnable register is relatively fail-safe to write-errors as CoolStep is not used. 
+ * Write in this register is only needed here to get the read response which contains Stall guard value*/
+void tmc2590_read_single_SE(TMC2590TypeDef *tmc2590_1){
+    tmc2590_single_writeInt(tmc2590_1, TMC2590_SMARTEN);
+}
+
 void tmc2590_read_single(TMC2590TypeDef *tmc2590_1, uint8_t rdsel){
     
     uint32_t drvconf_register_value;
@@ -116,12 +123,15 @@ void tmc2590_single_read_sg(TMC2590TypeDef *tmc2590)
     /*read stall guard and MSTEP report values */
 #ifdef MSTEP_READING_ENABLED
     tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 0 */
-#endif
     tmc2590_read_single(tmc2590, (   DEFAULT_TMC_READ_SELECT           ) ); /*  response 1 (0 when reading MSTEP) */
+#else
+    tmc2590_read_single_SE(tmc2590); 
+#endif
+
 }
 
 /************************************************ dual motors ***********************************************/
-//
+
 //void tmc2590_dual_writeInt(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t address)
 //{
     //int32_t controller1_register_value, controller2_register_value, drvconf_register_value;
@@ -163,6 +173,12 @@ void tmc2590_single_read_sg(TMC2590TypeDef *tmc2590)
 	//return 1;
 //}
 //
+///* This function is included to minimise chances of accidental wrong write to TMC. 
+ //* In current Yeti implementation SmartEnable register is relatively fail-safe to write-errors as CoolStep is not used. 
+ //* Write in this register is only needed here to get the read response which contains Stall guard value*/
+//void tmc2590_dual_read_single_SE(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2){
+    //tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_SMARTEN);
+//}
 //
 //void tmc2590_dual_read_single(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t rdsel){
     //
@@ -200,10 +216,13 @@ void tmc2590_single_read_sg(TMC2590TypeDef *tmc2590)
     ///*read stall guard and MSTEP report values */
 //#ifdef MSTEP_READING_ENABLED
     //tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 1 */
-//#endif
     //tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 1 (0 when reading MSTEP) */
+//#else
+    //tmc2590_dual_read_single_SE(tmc2590_1, tmc2590_2);
+//#endif
+    //
 //}
-//
+
 
 
 
