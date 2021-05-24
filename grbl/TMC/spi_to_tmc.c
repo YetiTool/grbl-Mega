@@ -80,7 +80,7 @@ void SPI_MasterInit(void)
     /* Warning: if the SS pin ever becomes a LOW INPUT then SPI automatically switches to Slave, so the data direction of the SS pin MUST be kept as OUTPUT.
      * if the SS pin is not already configured as an output then set it high (to enable the internal pull-up resistor)
      * When the SS pin is set as OUTPUT, it can be used as a general purpose output port (it doesn't influence SPI operations). */
-    tmc_pin_write(1, SPI_SS_PIN);
+    //tmc_pin_write(1, SPI_SS_PIN);
 
     /* Set MOSI and SCK output, all others input */
     TMC_DDR         |= TMC_PORT_MASK;
@@ -91,14 +91,25 @@ void SPI_MasterInit(void)
     /* Enable SPI, Master */
     SPCR |= ( (1<<SPE)|(1<<MSTR) );
 
-    /* SPI clocking options: */
-    /* option 1: set clock rate fck/4 = 4MHz - defautl config - nothing to be written */
+    /* option 0.25M: set clock rate fck/64 = 0.25MHz*/
+    /* filter: 470R/470p */
+    //SPCR |= (1<<SPR1);
 
-    /* option 2: set clock rate fck/16 = 1MHz*/
+    /* option 1M: set clock rate fck/16 = 1MHz*/
+    /* filter: 470R/470p */
+    SPCR |= (1<<SPR0);
+
+    /* option 2M: set clock rate fck/8 = 2MHz*/
+    /* filter: 470R/47p */
     //SPCR |= (1<<SPR0);
+    //SPSR |= (1<<SPI2X);
 
-    /* option 3: set clock rate fck/64 = 0.25MHz*/
-    SPCR |= (1<<SPR1);
+    /* SPI clocking options: */    
+    /* option 4M: set clock rate fck/4 = 4MHz - defautl config - nothing to be written */
+    /* filter: 0R/ no cap */
+
+    /* option 8M: set clock rate fck/2 = 8MHz*/
+    //SPSR |= (1<<SPI2X);
 
     /* Set phase and polarity to mode3 */
     SPCR |= ( (1<<CPOL)|(1<<CPHA) );
@@ -108,7 +119,45 @@ void SPI_MasterInit(void)
 
 }
 
+
+void tmc_configure_standalone(void){
+    /* Starting from HW version 18 Z-head Trinamic drivers could be configured by FW in "standalone" or "Smart" mode */
+    if (PIND > 17) {
+        TMC_DDR     |=TMC_PORT_MASK; /* enable output direction of the port */
+        
+        /* common for both motors: */
+        tmc_pin_write(1, SPI_SCK_PIN);      /* pull SCK input of both TMCs up to enable Small motor option (low hysteresis), CFG2 = 1 */
+        tmc_pin_write(1, SPI_MOSI_PIN);     /* pull SDI input of both TMCs up to enable MRES=16 option, CFG3 = 1 */
+
+        /* motors X */
+        tmc_pin_write(1, TMC_X_ST_ALONE);   /* pull ST_ALONE input of the Z-TMC up to enable standalone mode */
+        tmc_pin_write(1, SPI_CS_X_PIN);     /* pull CS input of Z-TMCs up to enable full current mode, CFG1 = 1 */
+        
+        /* motor Z */
+        tmc_pin_write(1, TMC_Z_ST_ALONE);   /* pull ST_ALONE input of the Z-TMC up to enable standalone mode */
+        tmc_pin_write(1, SPI_CS_Z_PIN);     /* pull CS input of Z-TMCs up to enable full current mode, CFG1 = 1 */
+    }
+}
+
+void tmc_configure_smart(void){
+    /* Starting from HW version 18 Z-head Trinamic drivers could be configured by FW in "standalone" or "Smart" mode */
+    if (PIND > 17) {
+        TMC_DDR     |=TMC_PORT_MASK; /* enable output direction of the port */
+
+        /* motors X */
+        tmc_pin_write(0, TMC_X_ST_ALONE);   /* pull ST_ALONE input of the Z-TMC down to enable smart mode */
+        
+        /* motor Z */
+        tmc_pin_write(0, TMC_Z_ST_ALONE);   /* pull ST_ALONE input of the Z-TMC down to enable smart mode */
+    }
+}
+
+
+
 void spi_hw_init(void){
+
+    /* initialise TMC motor controllers */
+    tmc_configure_smart();
 
     SPI_MasterInit();
 
@@ -132,7 +181,7 @@ static uint32_t     m_spi_tx_insert_index       = 0;                    /* Curre
 static uint32_t     m_spi_tx_index              = 0;                    /* Current index in the transmit buffer containing the next message to be transmitted. */
 static uint8_t      current_transfer_type       = 0;                    /* 3 for single or 5 for dual */
 static uint8_t      periodic_TMC_poll_allowed   = 1;                    /* global variable allowing or blocking periodic polls */
-uint8_t m_spi_rx_data[TX_BUF_SIZE_DUAL];                                /* buffer storage for Rx data */
+uint8_t m_spi_data[TX_BUF_SIZE_DUAL];                                /* buffer storage for Rx data */
 
 
 // Used to avoid ISR nesting of the "TMC SPI interrupt". Should never occur though.
@@ -153,6 +202,7 @@ void spi_schedule_single_tx(TMC2590TypeDef *tmc2590_1, uint8_t *data, uint8_t si
     m_spi_tx_insert_index &= SPI_TX_BUFFER_MASK;
 }
 
+#if defined(TMC_5_CONTROLLERS)
 void spi_schedule_dual_tx(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t *data, uint8_t size, uint8_t rdsel)
 {
     m_spi_tx_buffer[m_spi_tx_insert_index].buf_size = size;
@@ -164,6 +214,7 @@ void spi_schedule_dual_tx(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, 
     m_spi_tx_insert_index++;
     m_spi_tx_insert_index &= SPI_TX_BUFFER_MASK;
 }
+#endif
 
 void spi_process_tx_queue(void){
     if ( spi_busy == false ){
@@ -174,14 +225,71 @@ void spi_process_tx_queue(void){
             /* keep log of next element - is it 3 or 5 bytes (single or dual motors) */
             current_transfer_type = m_spi_tx_buffer[m_spi_tx_index].buf_size; //TX_BUF_SIZE_DUAL) { //or TX_BUF_SIZE_SINGLE
 
-            /* start state 1 of the transfer: pull SSx low  write byte_x1 to the SPDR */
-            SPI_current_state = SPI_STATE_1;
+            memcpy(m_spi_data,m_spi_tx_buffer[m_spi_tx_index].m_spi_tx_buf, TX_BUF_SIZE_DUAL);
 
             /* pull CS pin down */
             tmc_pin_write(0, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->channel);
+            
+            /* in this implementation X and Y motors are driven through SPI interrupt based routine and Z motor is based on atomic operation*/
+            
+            /* configure SPI clocks differently depend on the TMC controller */
+            switch (m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->thisAxis){
+                case Y_AXIS:
+                    /* option 1M: set clock rate fck/16 = 1MHz*/
+                    /* filter: 470R/470p */
+                    SPSR &=~(1<<SPI2X);
+                    SPI_current_state = SPI_STATE_1;
+                    /* initiate transfer by writing first byte to the data register, the rest is handled by ISR */
+                    SPDR = m_spi_data[0];                    
+                break;
+                
+                case X_AXIS: /* fall through */
+                case Z_AXIS:
+                    /* option 2M: set clock rate fck/8 = 2MHz*/
+                    /* filter: 470R/47p */
+                    SPSR |= (1<<SPI2X);
 
-            /* initiate transfer by writing first byte to the data register */
-            SPDR = m_spi_tx_buffer[m_spi_tx_index].m_spi_tx_buf[0];
+                    /* initiate transfer by writing first byte to the data register */            
+                    SPCR &=~(1<<SPIE); /* disable SPI interrupts  */
+                    cli(); /* disable global interrupt: ensure atomic operation for the SPI transfer operation. */
+                    SPDR = m_spi_data[0];
+                    while ( (SPSR & (1<<SPIF)) == 0 ){} /* wait for the SPIF Flag (is set When a serial transfer is complete) */
+                    m_spi_data[0] = SPDR;
+            
+                    SPDR = m_spi_data[1]; /* write second byte */
+                    while ( (SPSR & (1<<SPIF)) == 0 ){} /* wait for the SPIF Flag (is set When a serial transfer is complete) */
+                    m_spi_data[1] = SPDR;
+            
+                    if ( current_transfer_type != TX_BUF_SIZE_DUAL) {  /* 3 bytes to write*/
+                        SPI_current_state = SPI_STATE_3;
+                        SPCR |= (1<<SPIE); /* enable SPI interrupts  */
+                        SPDR = m_spi_data[2]; /* write third (last) byte */
+                    } 
+                    else{ /* 5 bytes to write*/
+                        SPDR = m_spi_data[2]; /* write third byte */
+                        while ( (SPSR & (1<<SPIF)) == 0 ){} /* wait for the SPIF Flag (is set When a serial transfer is complete) */
+                        m_spi_data[2] = SPDR;
+                
+                        SPDR = m_spi_data[3]; /* write fourth byte */
+                        while ( (SPSR & (1<<SPIF)) == 0 ){} /* wait for the SPIF Flag (is set When a serial transfer is complete) */
+                        m_spi_data[3] = SPDR;
+                
+                        SPI_current_state = SPI_STATE_5;
+                
+                        SPCR |= (1<<SPIE); /* enable SPI interrupts  */
+                        SPDR = m_spi_data[4]; /* write fifth (last) byte */
+                    }
+                    sei();
+
+                break;
+                
+                default:
+                break;
+            }
+            
+
+            
+            
 
             /* next step will be handled by interrupt handler ISR_SPI_STC_vect */
 
@@ -224,36 +332,33 @@ ISR(SPI_STC_vect)
     state 6 read the RX byte_x5 from SPDR   pull SSx high
     */
 
-    sei(); // Re-enable interrupts to allow Stepper Interrupt to fire on-time.
-
 #ifdef DEBUG_SPI_ENABLED
     debug_pin_write(1, DEBUG_1_PIN);
 #endif
     switch (SPI_current_state)
     {
-
         case SPI_STATE_1:   /* SPI received byte 1 */
             SPI_current_state = SPI_STATE_2;
             //state 2: read the RX byte_z1 from SPDR, write byte_z2 to the SPDR
             /* copy first received byte to the buffer */
-            m_spi_rx_data[0] = SPDR;
+            m_spi_data[0] = SPDR;
             /* initiate transfer by writing next byte to the data register */
-            SPDR = m_spi_tx_buffer[m_spi_tx_index].m_spi_tx_buf[1];
+            SPDR = m_spi_data[1];
         break;
 
         case SPI_STATE_2:   /* SPI received byte 2 */
             SPI_current_state = SPI_STATE_3;
             // state 3: read the RX byte_z2 from SPDR, write byte_z3 to the SPDR
             /* copy next received byte to the buffer */
-            m_spi_rx_data[1] = SPDR;
+            m_spi_data[1] = SPDR;
             /* initiate transfer by writing next byte to the data register */
-            SPDR = m_spi_tx_buffer[m_spi_tx_index].m_spi_tx_buf[2];
+            SPDR = m_spi_data[2];
         break;
 
         case SPI_STATE_3:   /* SPI received byte 3 */
             SPI_current_state = SPI_STATE_4;
             /* copy next received byte to the buffer */
-            m_spi_rx_data[2] = SPDR;
+            m_spi_data[2] = SPDR;
 
             if ( current_transfer_type == TX_BUF_SIZE_DUAL) {
                 /* state 4  read the RX byte_x3 from SPDR   write byte_x4 to the SPDR */
@@ -261,6 +366,10 @@ ISR(SPI_STC_vect)
                 SPDR = m_spi_tx_buffer[m_spi_tx_index].m_spi_tx_buf[3];
             }
             else{
+                /* pull CS pin up */
+                tmc_pin_write(1, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->channel);
+                sei(); // Re-enable interrupts to allow Stepper Interrupt to fire on-time.
+                
                 /* single transfer complete, store result and advance to next queue element */
                 // state 4: read the RX byte_z3 from SPDR, pull SSz high
                 /* deconstruct response */
@@ -272,7 +381,7 @@ ISR(SPI_STC_vect)
                 /* BK profiling: 9us */
 
                 /* BK profiling: 6.3us */
-                a = TMC2590_VALUE(_8_32(m_spi_rx_data[0], m_spi_rx_data[1], m_spi_rx_data[2], 0) >> 12);
+                a = TMC2590_VALUE(_8_32(m_spi_data[0], m_spi_data[1], m_spi_data[2], 0) >> 12);
 #ifdef DEBUG_SPI_ENABLED
     debug_pin_write(1, DEBUG_2_PIN);
     debug_pin_write(0, DEBUG_2_PIN);
@@ -292,9 +401,6 @@ ISR(SPI_STC_vect)
     debug_pin_write(0, DEBUG_2_PIN);
 #endif
 
-                /* pull CS pin up */
-                tmc_pin_write(1, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->channel);
-
                 /* Write SPI returns Success. Increment buffer index and process again in case something is in a queue*/
                 m_spi_tx_index++;
                 m_spi_tx_index &= SPI_TX_BUFFER_MASK;
@@ -312,7 +418,7 @@ ISR(SPI_STC_vect)
             SPI_current_state = SPI_STATE_5;
             // state 5  read the RX byte_x4 from SPDR   write byte_x5 to the SPDR
             /* copy next received byte to the buffer */
-            m_spi_rx_data[3] = SPDR;
+            m_spi_data[3] = SPDR;
             /* initiate transfer by writing next byte to the data register */
             SPDR = m_spi_tx_buffer[m_spi_tx_index].m_spi_tx_buf[4];
         break;
@@ -321,20 +427,21 @@ ISR(SPI_STC_vect)
             SPI_current_state = SPI_STATE_6;
             // state 6  read the RX byte_x5 from SPDR   pull SSx high
             /* dual transfer complete, store result and advance to next queue element */
-            m_spi_rx_data[4] = SPDR;
+            m_spi_data[4] = SPDR;
+
+            /* pull CS pin up */
+            tmc_pin_write(1, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->channel);
+            sei(); // Re-enable interrupts to allow Stepper Interrupt to fire on-time.
 
             /* deconstruct response */
             m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->response[m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx] =
-                        _8_32(m_spi_rx_data[2], m_spi_rx_data[3], m_spi_rx_data[4], 0) >> 8 ;
+                        _8_32(m_spi_data[2], m_spi_data[3], m_spi_data[4], 0) >> 8 ;
             m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->response[m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->respIdx] =
-                        TMC2590_VALUE(_8_32(m_spi_rx_data[0], m_spi_rx_data[1], m_spi_rx_data[2], 0) >> 12) ;
+                        TMC2590_VALUE(_8_32(m_spi_data[0], m_spi_data[1], m_spi_data[2], 0) >> 12) ;
 
             // set virtual read address for next reply given by RDSEL on given motor, can only change by setting RDSEL in DRVCONF
             m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->respIdx = m_spi_tx_buffer[m_spi_tx_index].rdsel;
             m_spi_tx_buffer[m_spi_tx_index].tmc2590_2->respIdx = m_spi_tx_buffer[m_spi_tx_index].rdsel;
-
-            /* pull CS pin up */
-            tmc_pin_write(1, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->channel);
 
             /* Write SPI returns Success. Increment buffer index and process again in case something is in a queue*/
             m_spi_tx_index++;

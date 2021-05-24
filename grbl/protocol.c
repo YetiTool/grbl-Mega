@@ -1217,6 +1217,8 @@ void execute_RTL_command(){
                     if (bit_istrue(lim_pin_state,bit(Y_AXIS)))      { serial_write('y'); }
                     if (bit_istrue(lim_pin_state,bit(Y_AXIS_MAX)))  { serial_write('Y'); }
                     if (bit_istrue(lim_pin_state,bit(Z_AXIS)))      { serial_write('Z'); }
+                    if (bit_istrue(lim_pin_state,bit(X_AXIS_SG)))   { serial_write('S'); }
+                    if (bit_istrue(lim_pin_state,bit(Z_AXIS_SG)))   { serial_write('z'); }
                 }
                 else{
                     printPgmString(PSTR("None"));

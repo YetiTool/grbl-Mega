@@ -20,11 +20,19 @@ uint8_t homing_sg_read_ongoing = false;             /* global flag indicating ho
 
 /************************************************ all motors ***********************************************/
 
+  
 
 /* schedule periodic read of all values */
 void tmc2590_schedule_read_all(void){
+#if defined(TMC_5_CONTROLLERS)
     tmc2590_dual_read_all(&tmc[TMC_X1], &tmc[TMC_X2]);
     tmc2590_dual_read_all(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+#elif defined(TMC_3_CONTROLLERS)
+    tmc2590_single_read_all(&tmc[TMC_X1]);
+    tmc2590_single_read_all(&tmc[TMC_Y1]);
+#elif defined(TMC_2_CONTROLLERS)
+    tmc2590_single_read_all(&tmc[TMC_X1]);
+#endif
     tmc2590_single_read_all(&tmc[TMC_Z]);
     /* update st_tmc.sg_read_active_axes with all axes to be processed */
     st_tmc.sg_read_active_axes |= ( ( 1 << X_AXIS ) | ( 1 << Y_AXIS ) | ( 1 << Z_AXIS ) );
@@ -48,11 +56,33 @@ void tmc2590_schedule_read_sg(uint8_t axis){
 
     switch (axis){
         case X_AXIS:
+#if defined(TMC_5_CONTROLLERS)
         tmc2590_dual_read_sg(&tmc[TMC_X1], &tmc[TMC_X2]);
+#elif defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS)
+        tmc2590_single_read_sg(&tmc[TMC_X1]);
+#endif
         break;
 
-        case Y_AXIS:
-        tmc2590_dual_read_sg(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+        case Y_AXIS:{
+            
+#if defined(TMC_5_CONTROLLERS)
+            tmc2590_dual_read_sg(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+#elif defined(TMC_3_CONTROLLERS)
+            tmc2590_single_read_sg(&tmc[TMC_Y1]);
+#elif defined(TMC_2_CONTROLLERS)
+            /* read SG pin and apply SG value accordingly */
+            uint32_t SG_value = 1023; /* Stall guard value to report in case of no SG pin detection: pin is low, TMC chip reports all OK */
+            uint8_t lim_pin_state   = limits_get_state();
+
+            if (bit_istrue(lim_pin_state,bit(Y_AXIS_MAX)))  { /* limit pin is high, TMC chip reports stall */
+                SG_value = 11;
+            }
+            tmc[TMC_Y1].response[TMC2590_RESPONSE1] = (SG_value << 10);
+            
+            /* indicate to main loop to process all responses and update the current status of controller's parameters */
+            system_set_exec_tmc_command_flag(TMC_SPI_PROCESS_COMMAND);
+#endif
+        }
         break;
 
         case Z_AXIS:
@@ -89,6 +119,18 @@ TMC2590TypeDef * get_TMC_controller(uint8_t controller){
     return &tmc[TMC_X1]; /* return first controller in case of a wrong parameter supplied */
 }
 
+/* initialise motors with stored parameters */
+void tmc_restore_all(void){
+#if defined(TMC_5_CONTROLLERS)
+    tmc2590_dual_restore(&tmc[TMC_X1], &tmc[TMC_X2]);
+    tmc2590_dual_restore(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+#elif defined(TMC_3_CONTROLLERS) 
+    tmc2590_single_restore(&tmc[TMC_X1]);
+    tmc2590_single_restore(&tmc[TMC_Y1]);    
+#elif defined(TMC_2_CONTROLLERS)
+    tmc2590_single_restore(&tmc[TMC_X1]);
+#endif        
+}
 
 void init_TMC(void){
 
@@ -146,11 +188,8 @@ void init_TMC(void){
     tmc_load_stall_guard_calibration();
 
     stall_guard_statistics_reset();
-
-    /* initialise motors with wanted parameters */
-    tmc2590_dual_restore(&tmc[TMC_X1], &tmc[TMC_X2]);
-    tmc2590_dual_restore(&tmc[TMC_Y1], &tmc[TMC_Y2]);
-    tmc2590_single_restore(&tmc[TMC_Z]);
+    
+    tmc_restore_all();
 
     tmc_hw_init();
 
@@ -171,11 +210,19 @@ void process_status_of_all_controllers(void){
         if (bit_istrue(st_tmc.sg_read_active_axes,bit(axis))) {
             switch (axis){
                 case X_AXIS:
+#if defined(TMC_5_CONTROLLERS)
                 process_status_of_dual_controller(&tmc[TMC_X1], &tmc[TMC_X2]);
+#elif defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS)
+                process_status_of_single_controller(&tmc[TMC_X1]);
+#endif    
                 break;
 
                 case Y_AXIS:
+#if defined(TMC_5_CONTROLLERS)
                 process_status_of_dual_controller(&tmc[TMC_Y1], &tmc[TMC_Y2]);
+#elif defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS)
+                process_status_of_single_controller(&tmc[TMC_Y1]);
+#endif    
                 break;
 
                 case Z_AXIS:
@@ -346,10 +393,8 @@ void process_global_command(uint8_t command, uint32_t value){
             apply_TMC_settings_from_flash();
             /* store the default settings */
             tmc_store_settings();
-            /* initialise motors with wanted parameters */
-            tmc2590_dual_restore(&tmc[TMC_X1], &tmc[TMC_X2]);
-            tmc2590_dual_restore(&tmc[TMC_Y1], &tmc[TMC_Y2]);
-            tmc2590_single_restore(&tmc[TMC_Z]);
+            /* initialise motors with default parameters */
+            tmc_restore_all();
             /* start SPI transfers flushing the queue */
             tmc_kick_spi_processing();
             //tmc_standstill_off();
@@ -491,7 +536,13 @@ void tmc_all_current_scale_apply( void ){
     uint32_t register_value;
 
     /* reduce current in each TMC controller */
+#if defined(TMC_5_CONTROLLERS)
     for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+#elif defined(TMC_3_CONTROLLERS)
+    for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id+=2){
+#elif defined(TMC_2_CONTROLLERS)
+    for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id+=4){
+#endif
 
         tmc2590 = get_TMC_controller(controller_id);
         /* TMC2590_SGCSCONF */
@@ -501,7 +552,8 @@ void tmc_all_current_scale_apply( void ){
         else                                                            register_value |= TMC2590_SET_CS(tmc2590->activeCurrentScale);            // set full operational Current scale
         tmc2590->shadowRegister[TMC2590_SGCSCONF] = register_value;
 
-        /* below if statement is to ensure both dual controllers are bing written in one transaction to speed up the execution */
+#if defined(TMC_5_CONTROLLERS)
+        /* below if statement is to ensure both dual controllers are being written in one transaction to speed up the execution */
         if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
             /* choose second pair and prepare for dual write */
             controller_id++;
@@ -512,7 +564,8 @@ void tmc_all_current_scale_apply( void ){
             if (st_tmc.current_scale_state == CURRENT_SCALE_STANDSTILL) register_value |= TMC2590_SET_CS(tmc2590->standStillCurrentScale);  // set standstill Current scale
             else                                                            register_value |= TMC2590_SET_CS(tmc2590->activeCurrentScale);            // set full operational Current scale
             tmc2590->shadowRegister[TMC2590_SGCSCONF] = register_value;
-        } //if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
+            } //if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
+#endif
 
         tmc2590_single_write_route(controller_id, TMC2590_SGCSCONF);
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS, controller_id++){
@@ -551,7 +604,7 @@ void tmc_homing_reset_limits(void){
     st_tmc.stall_alarm_enabled = true; /* enable the alarm in case it was disabled */
 
     /* clear limit switch */
-    LIMIT_PORT &= ~(LIMIT_MASK); // Normal low operation. Set pin high to trigger ISR
+    LIMIT_PORT &= ~(LIMIT_MASK_OUTPUT); // Normal low operation. Set pin high to trigger ISR
 
 }
 

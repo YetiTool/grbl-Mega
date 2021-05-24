@@ -44,8 +44,9 @@ typedef enum
 
 void spi_hw_init(void);
 void spi_schedule_single_tx(TMC2590TypeDef *tmc2590_1, uint8_t *data, uint8_t size, uint8_t rdsel);
+#if defined(TMC_5_CONTROLLERS)
 void spi_schedule_dual_tx(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t *data, uint8_t size, uint8_t rdsel);
-
+#endif
 void tmc_pin_write(uint32_t level, uint32_t pin);
 
 void spi_process_tx_queue(void); /* flush the SPI queue starting from next SPI transfer */

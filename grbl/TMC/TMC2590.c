@@ -85,6 +85,13 @@ uint8_t tmc2590_single_restore(TMC2590TypeDef *tmc2590_1)
 	return 1;
 }
 
+/* This function is included to minimise chances of accidental wrong write to TMC. 
+ * In current Yeti implementation SmartEnable register is relatively fail-safe to write-errors as CoolStep is not used. 
+ * Write in this register is only needed here to get the read response which contains Stall guard value*/
+void tmc2590_read_single_SE(TMC2590TypeDef *tmc2590_1){
+    tmc2590_single_writeInt(tmc2590_1, TMC2590_SMARTEN);
+}
+
 void tmc2590_read_single(TMC2590TypeDef *tmc2590_1, uint8_t rdsel){
     
     uint32_t drvconf_register_value;
@@ -116,11 +123,16 @@ void tmc2590_single_read_sg(TMC2590TypeDef *tmc2590)
     /*read stall guard and MSTEP report values */
 #ifdef MSTEP_READING_ENABLED
     tmc2590_read_single(tmc2590, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 0 */
-#endif
     tmc2590_read_single(tmc2590, (   DEFAULT_TMC_READ_SELECT           ) ); /*  response 1 (0 when reading MSTEP) */
+#else
+    tmc2590_read_single_SE(tmc2590); 
+#endif
+
 }
 
 /************************************************ dual motors ***********************************************/
+
+#if defined(TMC_5_CONTROLLERS)
 
 void tmc2590_dual_writeInt(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t address)
 {
@@ -163,6 +175,12 @@ uint8_t tmc2590_dual_restore(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_
 	return 1;
 }
 
+/* This function is included to minimise chances of accidental wrong write to TMC. 
+ * In current Yeti implementation SmartEnable register is relatively fail-safe to write-errors as CoolStep is not used. 
+ * Write in this register is only needed here to get the read response which contains Stall guard value*/
+void tmc2590_dual_read_single_SE(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2){
+    tmc2590_dual_writeInt(tmc2590_1, tmc2590_2, TMC2590_SMARTEN);
+}
 
 void tmc2590_dual_read_single(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2, uint8_t rdsel){
     
@@ -200,11 +218,14 @@ void tmc2590_dual_read_sg(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2)
     /*read stall guard and MSTEP report values */
 #ifdef MSTEP_READING_ENABLED
     tmc2590_dual_read_single(tmc2590_1, tmc2590_2, ( ( DEFAULT_TMC_READ_SELECT + 3 ) % 4 ) ); /* response 1 */
-#endif
     tmc2590_dual_read_single(tmc2590_1, tmc2590_2, (   DEFAULT_TMC_READ_SELECT     )       ); /* response 1 (0 when reading MSTEP) */
+#else
+    tmc2590_dual_read_single_SE(tmc2590_1, tmc2590_2);
+#endif
+    
 }
 
-
+#endif
 
 
 void tmc_trigger_stall_alarm(uint8_t axis){
@@ -214,15 +235,19 @@ void tmc_trigger_stall_alarm(uint8_t axis){
         /* execute alarm by writing 1 to the limit pin, which will trigger the ISR routine (pin has to be configured as output) */
         switch (axis){
             case X_AXIS:
-                LIMIT_PORT |= (1<<X_LIMIT_BIT);  /* set pin */           
+                LIMIT_PORT |= (1<<X_LIM_SG_BIT);  /* set pin */           
             break;
             
             case Y_AXIS:
-                LIMIT_PORT |= (1<<Y_LIMIT_BIT);  /* set pin */
+#if defined(TMC_5_CONTROLLERS) || defined(TMC_3_CONTROLLERS)
+                LIMIT_PORT |= (1<<Y_LIM_MAX_BIT);  /* set pin - in case of smart controllers Y_LIM_MAX should be not connected*/
+#elif defined(TMC_2_CONTROLLERS)
+                LIMIT_PORT |= (1<<X_LIM_SG_BIT);  /* set pin reuse X pin for Y axis as in case of standalone controller Y_LIM_MAX pin in connected to StallGuard output of Y TMC*/
+#endif
             break;
             
             case Z_AXIS:
-                LIMIT_PORT |= (1<<Z_LIMIT_BIT);  /* set pin */
+                LIMIT_PORT |= (1<<Z_LIM_SG_BIT);  /* set pin */
             break;
             
             default:
@@ -581,8 +606,15 @@ void tmc_report_SG_delta(void){
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
 
     /* print average delta for X and Y axes */
+    
+#if defined(TMC_5_CONTROLLERS) 
     tmc2590 = get_TMC_controller(TMC_X2);
     printInteger( tmc2590->stallGuardDeltaAxis  );
+#elif defined(TMC_2_CONTROLLERS) || defined(TMC_3_CONTROLLERS)
+    tmc2590 = get_TMC_controller(TMC_X1);
+    printInteger( tmc2590->stallGuardDelta  );
+#endif
+    
     printPgmString(PSTR(","));
     tmc2590 = get_TMC_controller(TMC_Y2);
     printInteger( tmc2590->stallGuardDeltaAxis  );
@@ -821,8 +853,11 @@ debug_pin_write(1, DEBUG_1_PIN);
                 tmc2590->stallGuardDeltaCount++;
 #endif
 
-                /* average delta SG for X and Y axes */
+
                 tmc2590->stallGuardDeltaCurrent = stallGuardDelta;
+
+#if defined(TMC_5_CONTROLLERS) 
+                /* average delta SG for X and Y axes */
                 if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) ) {
                     TMC2590TypeDef *tmc2590_1;
                     tmc2590_1 = get_TMC_controller(tmc2590->thisMotor - 1);
@@ -867,6 +902,21 @@ debug_pin_write(1, DEBUG_1_PIN);
                     } //if ( raise_alarm == 1 )
 
                 } //if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) || (tmc2590->thisMotor == TMC_Z) ) {
+
+#elif defined(TMC_2_CONTROLLERS) || defined(TMC_3_CONTROLLERS)
+
+                /* alarm trigger block */
+                if (tmc2590->stallGuardDelta     > (int16_t)tmc2590->stallGuardAlarmThreshold)   {/* raise_alarm */
+                    /* trigger alarm */
+                    tmc_trigger_stall_alarm(tmc2590->thisAxis);
+                    /* store stall info to flash */
+                    tmc_store_stall_info(tmc2590->thisMotor, tmc2590->resp.stallGuardCurrentValue, stallGuardAlarmValue, st_tmc.step_period[tmc2590->thisAxis]);
+                    /* reset SG period to max as alarm will immediately stop the stepper and period will remain as it was at the point of trigger */
+                    st_tmc.step_period_idx[tmc2590->thisAxis] = 0;
+                    stall_guard_statistics_reset();
+                } //if ( raise_alarm == 1 )
+   
+#endif //#elif defined(TMC_2_CONTROLLERS) || defined(TMC_3_CONTROLLERS)   
    
             } //if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )
                 
@@ -970,7 +1020,11 @@ void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
             TMC2590TypeDef *tmc2590_standstill;
             uint8_t all_motors_standstill = 0;
             /* check idle state of each TMC controller and sum them up */
+#if defined(TMC_5_CONTROLLERS) || defined(TMC_3_CONTROLLERS)
             for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+#else
+            for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id+=4){ /* in case of only 2 X and Z controllers skip Y  */
+#endif
                 tmc2590_standstill = get_TMC_controller(controller_id);
                 all_motors_standstill += ( ( tmc2590_standstill->resp.StatusBits >> 7 ) & 1 ); /* Status bit_7 STST - Idle: */
             }            
@@ -983,15 +1037,20 @@ void process_status_of_single_controller(TMC2590TypeDef *tmc2590){
     } // if (st_tmc.current_scale_state != CURRENT_SCALE_STANDSTILL){
 }
 
+
+#if defined(TMC_5_CONTROLLERS)
 void process_status_of_dual_controller(TMC2590TypeDef *tmc2590_1, TMC2590TypeDef *tmc2590_2){
     
     process_controller_status(tmc2590_1);
     process_controller_status(tmc2590_2);
  
 }
+#endif
 
 /* route single motor write to single or dual write command depend on the motor controller type */
 void tmc2590_single_write_route(uint8_t controller_id, uint8_t address){
+    
+#if defined(TMC_5_CONTROLLERS)
     TMC2590TypeDef *tmc2590_1, *tmc2590_2;
     if ( (controller_id == TMC_X1) || (controller_id == TMC_Y1) ){
         /* choose second pair and execute dual write */
@@ -1011,6 +1070,12 @@ void tmc2590_single_write_route(uint8_t controller_id, uint8_t address){
         tmc2590_1 = get_TMC_controller(controller_id);
         tmc2590_single_writeInt(tmc2590_1, address);
     }
+#else /* if no dual controller exists execute single 3 byte write */
+    TMC2590TypeDef *tmc2590_1;
+    /* execute single write */
+    tmc2590_1 = get_TMC_controller(controller_id);
+    tmc2590_single_writeInt(tmc2590_1, address);
+#endif    
 
 }
 
