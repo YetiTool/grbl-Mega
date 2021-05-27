@@ -227,9 +227,6 @@ void spi_process_tx_queue(void){
 
             memcpy(m_spi_data,m_spi_tx_buffer[m_spi_tx_index].m_spi_tx_buf, TX_BUF_SIZE_DUAL);
 
-            /* pull CS pin down */
-            tmc_pin_write(0, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->channel);
-            
             /* in this implementation X and Y motors are driven through SPI interrupt based routine and Z motor is based on atomic operation*/
             
             /* configure SPI clocks differently depend on the TMC controller */
@@ -239,19 +236,24 @@ void spi_process_tx_queue(void){
                     /* filter: 470R/470p */
                     SPSR &=~(1<<SPI2X);
                     SPI_current_state = SPI_STATE_1;
+                    /* pull CS pin down */
+                    tmc_pin_write(0, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->channel);
                     /* initiate transfer by writing first byte to the data register, the rest is handled by ISR */
-                    SPDR = m_spi_data[0];                    
+                    SPDR = m_spi_data[0];
                 break;
                 
                 case X_AXIS: /* fall through */
                 case Z_AXIS:
+                    /* !! below code is optimised for speed, dont try to add for loops as it will slow execution down */
                     /* option 2M: set clock rate fck/8 = 2MHz*/
                     /* filter: 470R/47p */
                     SPSR |= (1<<SPI2X);
 
-                    /* initiate transfer by writing first byte to the data register */            
                     SPCR &=~(1<<SPIE); /* disable SPI interrupts  */
                     cli(); /* disable global interrupt: ensure atomic operation for the SPI transfer operation. */
+                    /* pull CS pin down */
+                    tmc_pin_write(0, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->channel);
+                    /* initiate transfer by writing first byte to the data register */
                     SPDR = m_spi_data[0];
                     while ( (SPSR & (1<<SPIF)) == 0 ){} /* wait for the SPIF Flag (is set When a serial transfer is complete) */
                     m_spi_data[0] = SPDR;

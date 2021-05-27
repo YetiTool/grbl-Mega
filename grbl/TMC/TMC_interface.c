@@ -130,6 +130,7 @@ void tmc_restore_all(void){
 #elif defined(TMC_2_CONTROLLERS)
     tmc2590_single_restore(&tmc[TMC_X1]);
 #endif        
+    tmc2590_single_restore(&tmc[TMC_Z]);
 }
 
 void init_TMC(void){
