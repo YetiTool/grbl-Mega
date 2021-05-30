@@ -74,7 +74,7 @@ void tmc2590_schedule_read_sg(uint8_t axis){
             uint32_t SG_value = 1023; /* Stall guard value to report in case of no SG pin detection: pin is low, TMC chip reports all OK */
             uint8_t lim_pin_state   = limits_get_state();
 
-            if (bit_istrue(lim_pin_state,bit(Y_AXIS_MAX)))  { /* limit pin is high, TMC chip reports stall */
+            if (bit_istrue(lim_pin_state,bit(Y_AXIS_SG )))  { /* limit pin is high, TMC chip reports stall */
                 SG_value = 11;
             }
             tmc[TMC_Y1].response[TMC2590_RESPONSE1] = (SG_value << 10);
@@ -601,12 +601,12 @@ void tmc_standstill_off(void){
 
 /* clear limit switch after homing cycle found the end stop*/
 void tmc_homing_reset_limits(void){
-
+#ifdef TMC_SG_BASED_HOMING
     st_tmc.stall_alarm_enabled = true; /* enable the alarm in case it was disabled */
 
     /* clear limit switch */
     LIMIT_PORT &= ~(LIMIT_MASK_OUTPUT); // Normal low operation. Set pin high to trigger ISR
-
+#endif //#ifdef TMC_SG_BASED_HOMING
 }
 
 
@@ -631,11 +631,13 @@ void tmc_homing_mode_set(uint8_t mode){
 }
 
 void tmc_spi_queue_drain_complete(void){
+#ifdef TMC_SG_BASED_HOMING
     /* in homing mode homing_sg_read_ongoing flag shall lead to processing the SG values and releasing the homing while loop in the end of tmc_read_sg_and_trigger_limits()*/
     if ( homing_sg_read_ongoing ) {
         process_status_of_all_controllers();
         homing_sg_read_ongoing = false;
     }
+#endif //#ifdef TMC_SG_BASED_HOMING
 }
 
 /* BK: function to replace limits read with SPI actions for homing
@@ -652,7 +654,7 @@ void tmc_spi_queue_drain_complete(void){
 
 */
 void tmc_read_sg_and_trigger_limits(void){
-
+#ifdef TMC_SG_BASED_HOMING
   uint8_t rt_exec; // Temp variable to avoid calling volatile multiple times.
 
   rt_exec = sys_rt_exec_tmc_command;
@@ -682,6 +684,7 @@ void tmc_read_sg_and_trigger_limits(void){
 
     /* wait for current stall guard read complete. Delay in a loop is required to let other (ISR) threads to continue */
     while (homing_sg_read_ongoing) delay_us(1);
+#endif //#ifdef TMC_SG_BASED_HOMING
 }
 
 

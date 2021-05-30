@@ -69,7 +69,7 @@
   #define LIMIT_PORT      PORTJ // EMC1 PORTB
   #define LIMIT_PIN       PINJ // EMC1 PINB
   #define X_LIM_MAX_BIT   2 // EMC1 PORTB 7 // POC1 use 3 ASMCNC MEGA2560 Digital Pin 50
-  #define Y_LIM_MAX_BIT   4 // EMC1 PORTB 0 // POC1 use 2 ASMCNC MEGA2560 Digital Pin 51
+  #define Y_LIM_SG_BIT    4 // EMC1 PORTB 0 // POC1 use 2 ASMCNC MEGA2560 Digital Pin 51
   #define X_LIMIT_BIT     1 // EMC1 PORTB 4 // MEGA2560 Digital Pin 10
   #define Y_LIMIT_BIT     3 // EMC1 PORTB 5 // MEGA2560 Digital Pin 11
   #define Z_LIMIT_BIT     0 // EMC1 PORTB 6 // MEGA2560 Digital Pin 12
@@ -82,15 +82,15 @@
   
   #if defined(TMC_5_CONTROLLERS) || defined(TMC_3_CONTROLLERS)  
   #define LIMIT_MASK_INPUT  ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<X_LIM_MAX_BIT)) // All limit bits driven externally, configured as inputs
-  #define LIMIT_MASK_OUTPUT ((1<<X_LIM_SG_BIT)|(1<<Y_LIM_MAX_BIT)|(1<<Z_LIM_SG_BIT)) // All limit bits that are driven internally - configured as output
+  #define LIMIT_MASK_OUTPUT ((1<<X_LIM_SG_BIT)|(1<<Y_LIM_SG_BIT)|(1<<Z_LIM_SG_BIT)) // All limit bits that are driven internally - configured as output
   #define LIMIT_MASK        (LIMIT_MASK_INPUT|LIMIT_MASK_OUTPUT) // All limit bits
   #define LIMIT_ISR_MASK    ( LIMIT_MASK<<1 ) // BK: All limit bits + 1 (<<2 vs <<1) as pin number for Port J is shifted by one interrupt register PCMSK1.
   
   #elif defined(TMC_2_CONTROLLERS) 
-  #define LIMIT_MASK_INPUT  ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<X_LIM_MAX_BIT)|(1<<Y_LIM_MAX_BIT)) // All limit bits driven externally, configured as inputs
+  #define LIMIT_MASK_INPUT  ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<X_LIM_MAX_BIT)|(1<<Y_LIM_SG_BIT)) // All limit bits driven externally, configured as inputs
   #define LIMIT_MASK_OUTPUT ((1<<X_LIM_SG_BIT)|(1<<Z_LIM_SG_BIT)) // All limit bits that are driven internally - configured as output
   #define LIMIT_MASK        (LIMIT_MASK_INPUT|LIMIT_MASK_OUTPUT) // All limit bits
-  #define LIMIT_ISR_MASK    ((LIMIT_MASK&~(1<<Y_LIM_MAX_BIT))<<1 ) // BK: All limit bits + 1 (<<2 vs <<1) as pin number for Port J is shifted by one interrupt register PCMSK1. Exclude Ymax as it is being read based on step size step_period_idx
+  #define LIMIT_ISR_MASK    ((LIMIT_MASK&~(1<<Y_LIM_SG_BIT))<<1 ) // BK: All limit bits + 1 (<<2 vs <<1) as pin number for Port J is shifted by one interrupt register PCMSK1. Exclude Ymax as it is being read based on step size step_period_idx
   #endif
 
   // Define spindle enable and spindle direction output pins.

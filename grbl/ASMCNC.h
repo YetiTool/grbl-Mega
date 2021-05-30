@@ -54,7 +54,7 @@
 //#define AC_DOOR_RED           6
 // Used to add to AXIS number for reporting the correct limit switch
 #define X_AXIS_MAX      4
-#define Y_AXIS_MAX      5
+#define Y_AXIS_SG       5
 #define X_AXIS_SG       6
 #define Z_AXIS_SG       7
 // TODO: Move all LED's to Port L to simplify the code

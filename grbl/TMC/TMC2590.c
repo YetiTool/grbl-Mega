@@ -240,7 +240,7 @@ void tmc_trigger_stall_alarm(uint8_t axis){
             
             case Y_AXIS:
 #if defined(TMC_5_CONTROLLERS) || defined(TMC_3_CONTROLLERS)
-                LIMIT_PORT |= (1<<Y_LIM_MAX_BIT);  /* set pin - in case of smart controllers Y_LIM_MAX should be not connected*/
+                LIMIT_PORT |= (1<<Y_LIM_SG_BIT);  /* set pin - in case of smart controllers Y_LIM_MAX should be not connected*/
 #elif defined(TMC_2_CONTROLLERS)
                 LIMIT_PORT |= (1<<X_LIM_SG_BIT);  /* set pin reuse X pin for Y axis as in case of standalone controller Y_LIM_MAX pin in connected to StallGuard output of Y TMC*/
 #endif

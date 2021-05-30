@@ -162,7 +162,7 @@ uint8_t limits_get_state()
 		  if (pin & (1<<X_LIMIT_BIT))  { limit_state |= (1<<X_AXIS);		}		  
 		  if (pin & (1<<X_LIM_MAX_BIT)){ limit_state |= (1<<X_AXIS_MAX);	}		  
 		  if (pin & (1<<Y_LIMIT_BIT))  { limit_state |= (1<<Y_AXIS);		}		  
-		  if (pin & (1<<Y_LIM_MAX_BIT)){ limit_state |= (1<<Y_AXIS_MAX);	}		  
+		  if (pin & (1<<Y_LIM_SG_BIT)) { limit_state |= (1<<Y_AXIS_SG );	}		  
 		  if (pin & (1<<Z_LIMIT_BIT))  { limit_state |= (1<<Z_AXIS);		}
 		  if (pin & (1<<X_LIM_SG_BIT)) { limit_state |= (1<<X_AXIS_SG);		}
 		  if (pin & (1<<Z_LIM_SG_BIT)) { limit_state |= (1<<Z_AXIS_SG);		}
