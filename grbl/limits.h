@@ -40,5 +40,7 @@ void limits_soft_check(float *target);
 
 // report limits state caused last alarm
 uint8_t limits_get_last_alarm_state(void);
+void limits_reset_last_alarm_state(void);
+void limits_trigger_alarm_state(uint8_t limit_pin);
 
 #endif

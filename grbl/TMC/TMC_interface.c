@@ -42,6 +42,21 @@ void tmc2590_schedule_read_all(void){
 #endif
 }
 
+
+void read_SG_standalone(uint8_t motor, uint8_t limit_bit){
+    /* read SG pin and apply SG value accordingly */
+    uint32_t SG_value = 1023; /* Stall guard value to report in case of no SG pin detection: pin is low, TMC chip reports all OK */
+    uint8_t lim_pin_state   = limits_get_state();
+
+    if (bit_istrue(lim_pin_state,bit(limit_bit)))  { /* limit pin is high, TMC chip reports stall */
+        SG_value = 11;
+    }
+    tmc[motor].response[TMC2590_RESPONSE1] = (SG_value << 10);
+            
+    /* indicate to main loop to process all responses and update the current status of controller's parameters */
+    system_set_exec_tmc_command_flag(TMC_SPI_PROCESS_COMMAND);
+}
+
 /* schedule read of SG value on axis passed as parameter */
 void tmc2590_schedule_read_sg(uint8_t axis){
     if ( st_tmc.SG_skips_counter[axis] < SG_READING_SKIPS_AFTER_SLOW_FEED )
@@ -63,17 +78,7 @@ void tmc2590_schedule_read_sg(uint8_t axis){
 #elif defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS)
             tmc2590_single_read_sg(&tmc[TMC_X1]);
 #elif defined(TMC_ALL_STANDALONE)
-            /* read SG pin and apply SG value accordingly */
-            uint32_t SG_value = 1023; /* Stall guard value to report in case of no SG pin detection: pin is low, TMC chip reports all OK */
-            uint8_t lim_pin_state   = limits_get_state();
-
-            if (bit_istrue(lim_pin_state,bit(X_AXIS_SG )))  { /* limit pin is high, TMC chip reports stall */
-                SG_value = 11;
-            }
-            tmc[TMC_X1].response[TMC2590_RESPONSE1] = (SG_value << 10);
-            
-            /* indicate to main loop to process all responses and update the current status of controller's parameters */
-            system_set_exec_tmc_command_flag(TMC_SPI_PROCESS_COMMAND);
+            read_SG_standalone(TMC_X1, X_AXIS_SG);
 #endif
         }
         break;
@@ -85,17 +90,7 @@ void tmc2590_schedule_read_sg(uint8_t axis){
 #elif defined(TMC_3_CONTROLLERS)
             tmc2590_single_read_sg(&tmc[TMC_Y1]);
 #elif defined(TMC_2_CONTROLLERS) || defined(TMC_ALL_STANDALONE)
-            /* read SG pin and apply SG value accordingly */
-            uint32_t SG_value = 1023; /* Stall guard value to report in case of no SG pin detection: pin is low, TMC chip reports all OK */
-            uint8_t lim_pin_state   = limits_get_state();
-
-            if (bit_istrue(lim_pin_state,bit(Y_AXIS_SG )))  { /* limit pin is high, TMC chip reports stall */
-                SG_value = 11;
-            }
-            tmc[TMC_Y1].response[TMC2590_RESPONSE1] = (SG_value << 10);
-            
-            /* indicate to main loop to process all responses and update the current status of controller's parameters */
-            system_set_exec_tmc_command_flag(TMC_SPI_PROCESS_COMMAND);
+            read_SG_standalone(TMC_Y1, Y_AXIS_SG);
 #endif
         }
         break;
@@ -104,17 +99,7 @@ void tmc2590_schedule_read_sg(uint8_t axis){
 #if defined(TMC_5_CONTROLLERS) || defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS)
             tmc2590_single_read_sg(&tmc[TMC_Z]);
 #elif defined(TMC_ALL_STANDALONE)
-            /* read SG pin and apply SG value accordingly */
-            uint32_t SG_value = 1023; /* Stall guard value to report in case of no SG pin detection: pin is low, TMC chip reports all OK */
-            uint8_t lim_pin_state   = limits_get_state();
-
-            if (bit_istrue(lim_pin_state,bit(Z_AXIS_SG )))  { /* limit pin is high, TMC chip reports stall */
-                SG_value = 11;
-            }
-            tmc[TMC_Z].response[TMC2590_RESPONSE1] = (SG_value << 10);
-            
-            /* indicate to main loop to process all responses and update the current status of controller's parameters */
-            system_set_exec_tmc_command_flag(TMC_SPI_PROCESS_COMMAND);
+            read_SG_standalone(TMC_Z, Z_AXIS_SG);
 #endif
         }
         break;

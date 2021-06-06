@@ -593,3 +593,15 @@ void limits_soft_check(float *target)
 uint8_t limits_get_last_alarm_state(){
     return limits_last_alarm_state;
 }
+
+void limits_reset_last_alarm_state(){
+    limits_last_alarm_state = 0;
+}
+
+
+void limits_trigger_alarm_state(uint8_t limit_pin){
+    limits_last_alarm_state |= (1<<limit_pin);
+    mc_reset(); // Initiate system kill.
+    system_set_exec_alarm(EXEC_ALARM_HARD_LIMIT); // Indicate hard limit critical event
+}
+

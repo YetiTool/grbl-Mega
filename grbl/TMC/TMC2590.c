@@ -238,8 +238,7 @@ void tmc_trigger_stall_alarm(uint8_t axis){
 #if defined(TMC_5_CONTROLLERS) || defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS)
                 LIMIT_PORT |= (1<<X_LIM_SG_BIT);  /* set pin */
 #elif defined(TMC_ALL_STANDALONE)
-                mc_reset(); // Initiate system kill.
-                system_set_exec_alarm(EXEC_ALARM_HARD_LIMIT); // Indicate hard limit critical event
+                limits_trigger_alarm_state(X_AXIS_SG);
 #endif
             break;
             
@@ -249,8 +248,7 @@ void tmc_trigger_stall_alarm(uint8_t axis){
 #elif defined(TMC_2_CONTROLLERS)
                 LIMIT_PORT |= (1<<X_LIM_SG_BIT);  /* set pin reuse X pin for Y axis as in case of standalone controller Y_LIM_MAX pin in connected to StallGuard output of Y TMC*/
 #elif defined(TMC_ALL_STANDALONE)
-                mc_reset(); // Initiate system kill.
-                system_set_exec_alarm(EXEC_ALARM_HARD_LIMIT); // Indicate hard limit critical event
+                limits_trigger_alarm_state(Y_AXIS_SG);
 #endif
             break;
             
@@ -258,8 +256,7 @@ void tmc_trigger_stall_alarm(uint8_t axis){
 #if defined(TMC_5_CONTROLLERS) || defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS)
                 LIMIT_PORT |= (1<<Z_LIM_SG_BIT);  /* set pin */
 #elif defined(TMC_ALL_STANDALONE)
-                mc_reset(); // Initiate system kill.
-                system_set_exec_alarm(EXEC_ALARM_HARD_LIMIT); // Indicate hard limit critical event
+                limits_trigger_alarm_state(Z_AXIS_SG);
 #endif
             break;
             
