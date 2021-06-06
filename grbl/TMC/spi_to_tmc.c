@@ -162,16 +162,18 @@ void tmc_configure_smart(void){
 void spi_hw_init(void){
 
     /* initialise TMC motor controllers */
+#if defined(TMC_5_CONTROLLERS) || defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS)
     tmc_configure_smart();
-
     SPI_MasterInit();
-
-    asmcnc_TMC_Timer2_setup(); /* initialise timer to periodically poll TMC motor controllers */
-
     /* configure CS pins and pull them high */
     tmc_pin_write(1, SPI_CS_X_PIN);
     tmc_pin_write(1, SPI_CS_Y_PIN);
     tmc_pin_write(1, SPI_CS_Z_PIN);
+#elif defined(TMC_ALL_STANDALONE)
+    tmc_configure_standalone();
+#endif    
+
+    asmcnc_TMC_Timer2_setup(); /* initialise heartbit timer */
 
 }
 

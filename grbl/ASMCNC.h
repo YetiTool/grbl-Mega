@@ -107,7 +107,6 @@
 #define ENABLE_TEMPERATURE_MONITOR  // enable temperature monitoring, apply to ZH2 and newer
 
 #define ENABLE_LASER_POINTER_CONTROL // Laser cross unit control
-#define ENABLE_TMC_FEEDBACK_MONITOR  // print feedback from TMC motor controllers
 
 /* RGB HEX Rx state machine state */
 enum rgbHexStates{

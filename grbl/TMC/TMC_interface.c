@@ -33,11 +33,13 @@ void tmc2590_schedule_read_all(void){
 #elif defined(TMC_2_CONTROLLERS)
     tmc2590_single_read_all(&tmc[TMC_X1]);
 #endif
+#if !defined (TMC_ALL_STANDALONE)
     tmc2590_single_read_all(&tmc[TMC_Z]);
     /* update st_tmc.sg_read_active_axes with all axes to be processed */
     st_tmc.sg_read_active_axes |= ( ( 1 << X_AXIS ) | ( 1 << Y_AXIS ) | ( 1 << Z_AXIS ) );
     /* start SPI transfers flushing the queue */
     tmc_kick_spi_processing();
+#endif
 }
 
 /* schedule read of SG value on axis passed as parameter */
@@ -55,12 +57,25 @@ void tmc2590_schedule_read_sg(uint8_t axis){
     st_tmc.sg_read_active_axes |= ( 1 << axis );
 
     switch (axis){
-        case X_AXIS:
+        case X_AXIS:{
 #if defined(TMC_5_CONTROLLERS)
-        tmc2590_dual_read_sg(&tmc[TMC_X1], &tmc[TMC_X2]);
+            tmc2590_dual_read_sg(&tmc[TMC_X1], &tmc[TMC_X2]);
 #elif defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS)
-        tmc2590_single_read_sg(&tmc[TMC_X1]);
+            tmc2590_single_read_sg(&tmc[TMC_X1]);
+#elif defined(TMC_ALL_STANDALONE)
+            /* read SG pin and apply SG value accordingly */
+            uint32_t SG_value = 1023; /* Stall guard value to report in case of no SG pin detection: pin is low, TMC chip reports all OK */
+            uint8_t lim_pin_state   = limits_get_state();
+
+            if (bit_istrue(lim_pin_state,bit(X_AXIS_SG )))  { /* limit pin is high, TMC chip reports stall */
+                SG_value = 11;
+            }
+            tmc[TMC_X1].response[TMC2590_RESPONSE1] = (SG_value << 10);
+            
+            /* indicate to main loop to process all responses and update the current status of controller's parameters */
+            system_set_exec_tmc_command_flag(TMC_SPI_PROCESS_COMMAND);
 #endif
+        }
         break;
 
         case Y_AXIS:{
@@ -69,7 +84,7 @@ void tmc2590_schedule_read_sg(uint8_t axis){
             tmc2590_dual_read_sg(&tmc[TMC_Y1], &tmc[TMC_Y2]);
 #elif defined(TMC_3_CONTROLLERS)
             tmc2590_single_read_sg(&tmc[TMC_Y1]);
-#elif defined(TMC_2_CONTROLLERS)
+#elif defined(TMC_2_CONTROLLERS) || defined(TMC_ALL_STANDALONE)
             /* read SG pin and apply SG value accordingly */
             uint32_t SG_value = 1023; /* Stall guard value to report in case of no SG pin detection: pin is low, TMC chip reports all OK */
             uint8_t lim_pin_state   = limits_get_state();
@@ -85,8 +100,23 @@ void tmc2590_schedule_read_sg(uint8_t axis){
         }
         break;
 
-        case Z_AXIS:
-        tmc2590_single_read_sg(&tmc[TMC_Z]);
+        case Z_AXIS:{        
+#if defined(TMC_5_CONTROLLERS) || defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS)
+            tmc2590_single_read_sg(&tmc[TMC_Z]);
+#elif defined(TMC_ALL_STANDALONE)
+            /* read SG pin and apply SG value accordingly */
+            uint32_t SG_value = 1023; /* Stall guard value to report in case of no SG pin detection: pin is low, TMC chip reports all OK */
+            uint8_t lim_pin_state   = limits_get_state();
+
+            if (bit_istrue(lim_pin_state,bit(Z_AXIS_SG )))  { /* limit pin is high, TMC chip reports stall */
+                SG_value = 11;
+            }
+            tmc[TMC_Z].response[TMC2590_RESPONSE1] = (SG_value << 10);
+            
+            /* indicate to main loop to process all responses and update the current status of controller's parameters */
+            system_set_exec_tmc_command_flag(TMC_SPI_PROCESS_COMMAND);
+#endif
+        }
         break;
 
         default:
@@ -129,8 +159,10 @@ void tmc_restore_all(void){
     tmc2590_single_restore(&tmc[TMC_Y1]);    
 #elif defined(TMC_2_CONTROLLERS)
     tmc2590_single_restore(&tmc[TMC_X1]);
-#endif        
+#endif
+#if !defined (TMC_ALL_STANDALONE)
     tmc2590_single_restore(&tmc[TMC_Z]);
+#endif
 }
 
 void init_TMC(void){
@@ -213,7 +245,7 @@ void process_status_of_all_controllers(void){
                 case X_AXIS:
 #if defined(TMC_5_CONTROLLERS)
                 process_status_of_dual_controller(&tmc[TMC_X1], &tmc[TMC_X2]);
-#elif defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS)
+#elif defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS) || defined(TMC_ALL_STANDALONE)
                 process_status_of_single_controller(&tmc[TMC_X1]);
 #endif    
                 break;
@@ -221,7 +253,7 @@ void process_status_of_all_controllers(void){
                 case Y_AXIS:
 #if defined(TMC_5_CONTROLLERS)
                 process_status_of_dual_controller(&tmc[TMC_Y1], &tmc[TMC_Y2]);
-#elif defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS)
+#elif defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS) || defined(TMC_ALL_STANDALONE)
                 process_status_of_single_controller(&tmc[TMC_Y1]);
 #endif    
                 break;
@@ -543,6 +575,9 @@ void tmc_all_current_scale_apply( void ){
     for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id+=2){
 #elif defined(TMC_2_CONTROLLERS)
     for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id+=4){
+#elif defined(TMC_ALL_STANDALONE)
+    return;
+    {
 #endif
 
         tmc2590 = get_TMC_controller(controller_id);

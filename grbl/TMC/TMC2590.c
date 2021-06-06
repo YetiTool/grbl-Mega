@@ -235,7 +235,12 @@ void tmc_trigger_stall_alarm(uint8_t axis){
         /* execute alarm by writing 1 to the limit pin, which will trigger the ISR routine (pin has to be configured as output) */
         switch (axis){
             case X_AXIS:
-                LIMIT_PORT |= (1<<X_LIM_SG_BIT);  /* set pin */           
+#if defined(TMC_5_CONTROLLERS) || defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS)
+                LIMIT_PORT |= (1<<X_LIM_SG_BIT);  /* set pin */
+#elif defined(TMC_ALL_STANDALONE)
+                mc_reset(); // Initiate system kill.
+                system_set_exec_alarm(EXEC_ALARM_HARD_LIMIT); // Indicate hard limit critical event
+#endif
             break;
             
             case Y_AXIS:
@@ -243,11 +248,19 @@ void tmc_trigger_stall_alarm(uint8_t axis){
                 LIMIT_PORT |= (1<<Y_LIM_SG_BIT);  /* set pin - in case of smart controllers Y_LIM_MAX should be not connected*/
 #elif defined(TMC_2_CONTROLLERS)
                 LIMIT_PORT |= (1<<X_LIM_SG_BIT);  /* set pin reuse X pin for Y axis as in case of standalone controller Y_LIM_MAX pin in connected to StallGuard output of Y TMC*/
+#elif defined(TMC_ALL_STANDALONE)
+                mc_reset(); // Initiate system kill.
+                system_set_exec_alarm(EXEC_ALARM_HARD_LIMIT); // Indicate hard limit critical event
 #endif
             break;
             
             case Z_AXIS:
+#if defined(TMC_5_CONTROLLERS) || defined(TMC_3_CONTROLLERS) || defined(TMC_2_CONTROLLERS)
                 LIMIT_PORT |= (1<<Z_LIM_SG_BIT);  /* set pin */
+#elif defined(TMC_ALL_STANDALONE)
+                mc_reset(); // Initiate system kill.
+                system_set_exec_alarm(EXEC_ALARM_HARD_LIMIT); // Indicate hard limit critical event
+#endif
             break;
             
             default:
@@ -614,12 +627,18 @@ void tmc_report_SG_delta(void){
     tmc2590 = get_TMC_controller(TMC_X1);
     printInteger( tmc2590->stallGuardDelta  );
 #endif
-    
+
+#if defined(TMC_5_CONTROLLERS)
     printPgmString(PSTR(","));
     tmc2590 = get_TMC_controller(TMC_Y2);
     printInteger( tmc2590->stallGuardDeltaAxis  );
+#elif defined(TMC_2_CONTROLLERS) || defined(TMC_3_CONTROLLERS)
+    printPgmString(PSTR(","));
+    tmc2590 = get_TMC_controller(TMC_Y1);
+    printInteger( tmc2590->stallGuardDelta  );
+#endif    
 
-    stall_guard_statistics_reset();          
+    stall_guard_statistics_reset();
 }
 
 /* print full TMC statistics hex string out to UART */
@@ -903,7 +922,7 @@ debug_pin_write(1, DEBUG_1_PIN);
 
                 } //if ( (tmc2590->thisMotor == TMC_X2) || (tmc2590->thisMotor == TMC_Y2) || (tmc2590->thisMotor == TMC_Z) ) {
 
-#elif defined(TMC_2_CONTROLLERS) || defined(TMC_3_CONTROLLERS)
+#elif defined(TMC_2_CONTROLLERS) || defined(TMC_3_CONTROLLERS) || defined (TMC_ALL_STANDALONE)
 
                 /* alarm trigger block */
                 if (tmc2590->stallGuardDelta     > (int16_t)tmc2590->stallGuardAlarmThreshold)   {/* raise_alarm */

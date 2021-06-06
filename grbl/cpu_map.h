@@ -56,13 +56,6 @@
 //  #define STEPPERS_DISABLE_BIT   0 // MEGA2560 Digital Pin B0 - unused in current design
 //  #define STEPPERS_DISABLE_MASK (1<<STEPPERS_DISABLE_BIT)
 
-/* motors configuration */
-#define TMC_5_CONTROLLERS /* individual TMC per motor: 5 controllers, all controllers are smart, X and Y are dual motor controllers */
-//#define TMC_3_CONTROLLERS /* X and Y controllers drives pair of motors, 3 controllers */
-//#define TMC_2_CONTROLLERS /* single smart controller for X and Z, single standalone for Y */
-//#define TMC_SG_BASED_HOMING /* enable homing based on Stall guard detection */
-
-
   // Define homing/hard limit switch input pins and limit interrupt vectors. 
   // NOTE: All limit bit pins must be on the same port
   #define LIMIT_DDR       DDRJ // EMC1 DDRB
@@ -91,7 +84,16 @@
   #define LIMIT_MASK_OUTPUT ((1<<X_LIM_SG_BIT)|(1<<Z_LIM_SG_BIT)) // All limit bits that are driven internally - configured as output
   #define LIMIT_MASK        (LIMIT_MASK_INPUT|LIMIT_MASK_OUTPUT) // All limit bits
   #define LIMIT_ISR_MASK    ((LIMIT_MASK&~(1<<Y_LIM_SG_BIT))<<1 ) // BK: All limit bits + 1 (<<2 vs <<1) as pin number for Port J is shifted by one interrupt register PCMSK1. Exclude Ymax as it is being read based on step size step_period_idx
+  
+  #elif defined(TMC_ALL_STANDALONE)
+  #define LIMIT_MASK_INPUT  ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<X_LIM_MAX_BIT)|(1<<Y_LIM_SG_BIT)|(1<<X_LIM_SG_BIT)|(1<<Z_LIM_SG_BIT)) // All limit bits driven externally, configured as inputs
+  #define LIMIT_MASK_OUTPUT 0
+  #define LIMIT_MASK        (LIMIT_MASK_INPUT|LIMIT_MASK_OUTPUT) // All limit bits
+  #define LIMIT_ISR_MASK    (( (1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<X_LIM_MAX_BIT) )<<1 ) // BK: All limit bits + 1 (<<2 vs <<1) as pin number for Port J is shifted by one interrupt register PCMSK1. Exclude X, Y, Z SG as it is being read based on step size step_period_idx
   #endif
+
+
+
 
   // Define spindle enable and spindle direction output pins.
   #define SPINDLE_ENABLE_DDR      DDRH
