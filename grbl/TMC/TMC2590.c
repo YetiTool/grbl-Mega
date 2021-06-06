@@ -12,6 +12,7 @@
 //uint16_t max_step_period_us_to_read_SG[] = { SG_MAX_VALID_PERIOD_X_US, SG_MAX_VALID_PERIOD_Y_US, SG_MAX_VALID_PERIOD_Z_US }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
 uint8_t min_step_period_idx_to_read_SG[] = { 0, 0, 0 }; /* for SB2: X motor 23HS22-2804S - 18rpm, Y motor 23HS33-4008S - 18rpm, Z motor 17HS19-2004S1 - 60rpm,   */
 int16_t SG_calibration_temperature[TOTAL_TMCS];
+uint16_t step_period_us_to_read_SG[N_AXIS];
 
 #define HEX_BYTES_LEN 6
 char ByteArrayToHexViaLookup[] = "0123456789ABCDEF";
@@ -20,18 +21,21 @@ char ByteArrayToHexViaLookup[] = "0123456789ABCDEF";
 /* calculate index into the LUT based on predefined maximum microstep periods */
 void min_step_period_idx_compute(void){
     
-    uint16_t step_period_us_to_read_SG[3];
-    
     if ( st_tmc.calibration_enabled ) {
-        step_period_us_to_read_SG[0] = SG_MAX_CALIBR_PERIOD_X_US;
-        step_period_us_to_read_SG[1] = SG_MAX_CALIBR_PERIOD_Y_US;
-        step_period_us_to_read_SG[2] = SG_MAX_CALIBR_PERIOD_Z_US;
+        step_period_us_to_read_SG[X_AXIS] = SG_MAX_CALIBR_PERIOD_X_US;
+        step_period_us_to_read_SG[Y_AXIS] = SG_MAX_CALIBR_PERIOD_Y_US;
+        step_period_us_to_read_SG[Z_AXIS] = SG_MAX_CALIBR_PERIOD_Z_US;
     }   
     else{
-        step_period_us_to_read_SG[0] = SG_MAX_VALID_PERIOD_X_US;
-        step_period_us_to_read_SG[1] = SG_MAX_VALID_PERIOD_Y_US;
-        step_period_us_to_read_SG[2] = SG_MAX_VALID_PERIOD_Z_US;
-    }
+        /* cycle through all motors */
+        uint8_t controller_id;
+        TMC2590TypeDef *tmc2590;
+        for (uint8_t thisAxis=0; thisAxis<N_AXIS; thisAxis++) { 
+            controller_id = thisAxis*2; /* only apply settings from motors X1, Y1 and Z */
+            tmc2590 = get_TMC_controller(controller_id);
+            step_period_us_to_read_SG[thisAxis] = tmc2590->max_step_period_us_to_read_SG;
+        } //for (uint8_t thisAxis
+    } // else if ( st_tmc.calibration_enabled ) {
                  
     uint16_t step_period_us = 0;
     for (uint8_t thisAxis=0; thisAxis<N_AXIS; thisAxis++) { 
@@ -1104,5 +1108,28 @@ void tmc_hw_init(void){
 /* start SPI transfers flushing the queue */
 void tmc_kick_spi_processing(void){
     spi_process_tx_queue(); /* flush the SPI queue starting from next SPI transfer */
+}
+
+uint16_t get_step_period_us_to_read_SG(uint8_t controller_id){
+    uint16_t step_period_us = 0;
+    switch (controller_id){
+        case TMC_X1:
+        case TMC_X2:
+            step_period_us = step_period_us_to_read_SG[X_AXIS];
+        break;
+        
+        case TMC_Y1:
+        case TMC_Y2:
+            step_period_us = step_period_us_to_read_SG[Y_AXIS];
+        break;
+        
+        case TMC_Z:
+            step_period_us = step_period_us_to_read_SG[Z_AXIS];
+        break;
+        
+        default:
+        break;
+        } //switch (controller_id){
+    return step_period_us;
 }
 

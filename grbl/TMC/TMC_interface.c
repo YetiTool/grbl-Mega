@@ -346,6 +346,12 @@ void process_individual_command(uint8_t controller_id, uint8_t command, uint32_t
             tmc2590->gradient_per_Celsius = value;
             break;
 
+        /* set the correction for temperatures other than calibration */
+        case SET_MAX_SG_STEP_US:
+            tmc2590->max_step_period_us_to_read_SG = value;
+            min_step_period_idx_compute();
+            break;
+
         default:
             report_status_message(ASMCNC_COMMAND_ERROR);
         break;
@@ -768,10 +774,12 @@ void restore_TMC_defaults(void){
         {
             flashTMCconfig.registerState[controller_id][reg_idx] = tmc2590_defaultRegisterResetState[controller_id][reg_idx];
         }
-        flashTMCconfig.stallGuardAlarmThreshold[controller_id] = tmc2590_defaultStallGuardAlarmThreshold[controller_id];
-        flashTMCconfig.gradient_per_Celsius    [controller_id] = tmc2590_defaultTemperatureCoefficient  [controller_id];
-        flashTMCconfig.standStillCurrentScale  [controller_id] = tmc2590_defaultStandStillCurrentScale  [controller_id];
-        flashTMCconfig.activeCurrentScale      [controller_id] = tmc2590_defaultActiveCurrentScale      [controller_id];
+        flashTMCconfig.stallGuardAlarmThreshold     [controller_id] = tmc2590_defaultStallGuardAlarmThreshold   [controller_id];
+        flashTMCconfig.gradient_per_Celsius         [controller_id] = tmc2590_defaultTemperatureCoefficient     [controller_id];
+        flashTMCconfig.max_step_period_us_to_read_SG[controller_id] = default_max_step_period_us_to_read_SG     [controller_id];
+        flashTMCconfig.standStillCurrentScale       [controller_id] = tmc2590_defaultStandStillCurrentScale     [controller_id];
+        flashTMCconfig.activeCurrentScale           [controller_id] = tmc2590_defaultActiveCurrentScale         [controller_id];
+        
 
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
 }
@@ -788,10 +796,11 @@ void apply_TMC_settings_from_flash(void){
         {
             tmc[controller_id].shadowRegister[reg_idx] = flashTMCconfig.registerState[controller_id][reg_idx];
         }
-        tmc[controller_id].stallGuardAlarmThreshold = flashTMCconfig.stallGuardAlarmThreshold[controller_id];
-        tmc[controller_id].gradient_per_Celsius     = flashTMCconfig.gradient_per_Celsius  [controller_id];
-        tmc[controller_id].standStillCurrentScale   = flashTMCconfig.standStillCurrentScale  [controller_id];
-        tmc[controller_id].activeCurrentScale       = flashTMCconfig.activeCurrentScale      [controller_id];
+        tmc[controller_id].stallGuardAlarmThreshold         = flashTMCconfig.stallGuardAlarmThreshold       [controller_id];
+        tmc[controller_id].gradient_per_Celsius             = flashTMCconfig.gradient_per_Celsius           [controller_id];
+        tmc[controller_id].max_step_period_us_to_read_SG    = flashTMCconfig.max_step_period_us_to_read_SG  [controller_id];
+        tmc[controller_id].standStillCurrentScale           = flashTMCconfig.standStillCurrentScale         [controller_id];
+        tmc[controller_id].activeCurrentScale               = flashTMCconfig.activeCurrentScale             [controller_id];
 
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
 
@@ -828,10 +837,11 @@ void tmc_store_settings(void){
             {
                 flashTMCconfig.registerState[controller_id][reg_idx] = tmc[controller_id].shadowRegister[reg_idx];
             }
-            flashTMCconfig.stallGuardAlarmThreshold[controller_id] = tmc[controller_id].stallGuardAlarmThreshold;
-            flashTMCconfig.gradient_per_Celsius    [controller_id] = tmc[controller_id].gradient_per_Celsius;
-            flashTMCconfig.standStillCurrentScale  [controller_id] = tmc[controller_id].standStillCurrentScale;
-            flashTMCconfig.activeCurrentScale      [controller_id] = tmc[controller_id].activeCurrentScale;
+            flashTMCconfig.stallGuardAlarmThreshold     [controller_id] = tmc[controller_id].stallGuardAlarmThreshold;
+            flashTMCconfig.gradient_per_Celsius         [controller_id] = tmc[controller_id].gradient_per_Celsius;
+            flashTMCconfig.max_step_period_us_to_read_SG[controller_id] = tmc[controller_id].max_step_period_us_to_read_SG;
+            flashTMCconfig.standStillCurrentScale       [controller_id] = tmc[controller_id].standStillCurrentScale;
+            flashTMCconfig.activeCurrentScale           [controller_id] = tmc[controller_id].activeCurrentScale;
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
 
     /* save flashTMCconfig  to eeprom */
@@ -858,7 +868,12 @@ void tmc_report_registers(void)
         printInteger( tmc[controller_id].standStillCurrentScale );
         printPgmString(PSTR(","));
         printInteger( tmc[controller_id].stallGuardAlarmThreshold );
+        printPgmString(PSTR(","));
+        printInteger( get_step_period_us_to_read_SG(controller_id) );
+        printPgmString(PSTR(","));
+        printInteger( tmc[controller_id].gradient_per_Celsius );
         printPgmString(PSTR(BK_TERMINATOR));
+        
     }
 }
 

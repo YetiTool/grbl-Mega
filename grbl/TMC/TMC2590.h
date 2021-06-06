@@ -90,6 +90,18 @@ static const int32_t tmc2590_defaultRegisterResetState[TOTAL_TMCS][TMC2590_REGIS
     }
 };
 
+
+static const uint16_t default_max_step_period_us_to_read_SG[TOTAL_TMCS] =
+{
+    SG_MAX_VALID_PERIOD_X_US,   /* X1 motor */
+    SG_MAX_VALID_PERIOD_X_US,   /* X2 motor */
+    SG_MAX_VALID_PERIOD_Y_US,   /* Y1 motor */
+    SG_MAX_VALID_PERIOD_Y_US,   /* Y2 motor */
+    SG_MAX_VALID_PERIOD_Z_US    /* Z motor  */
+};
+
+
+
 /*
       
 static const int32_t tmc2590_defaultRegisterResetState[TMC2590_REGISTER_COUNT] =
@@ -137,5 +149,7 @@ void tmc_kick_spi_processing(void); /* flush the SPI queue starting from next SP
 void tmc_load_stall_guard_calibration(void);
 void allow_periodic_TMC_poll(uint8_t allowed); /* set global variable allowing or blocking periodic polls */
 void tmc_store_calibration_point_from_host(	uint8_t thisMotor, uint8_t idx, uint16_t stallGuardLoadedValue);
+uint16_t get_step_period_us_to_read_SG(uint8_t controller_id);
+void min_step_period_idx_compute(void);
 
 #endif /* TMC_IC_TMC2590_H_ */

@@ -117,6 +117,7 @@ typedef struct {
     int32_t shadowRegister[TMC2590_REGISTER_COUNT]; /* latest state of each config register */
     uint16_t stallGuardAlarmThreshold;              /* when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
     uint16_t gradient_per_Celsius;                  /* correction for temperatures other than calibration */
+    uint16_t max_step_period_us_to_read_SG;         /* maximum motor step size to read Stall guard. Higher step would lead to too low RPM and SG redings above that step size will be ignored */
     uint8_t standStillCurrentScale;                 /* standstill current - to reduce energy consumption while job is idle */
     uint8_t activeCurrentScale;                     /* active current 0 - 31 where 31 is max */
 
@@ -160,6 +161,7 @@ typedef struct {
     uint8_t standStillCurrentScale[TOTAL_TMCS];                     /* standstill current - to reduce energy consumption while job is idle */
     uint8_t activeCurrentScale[TOTAL_TMCS];                         /* active current */
     int16_t squarenessMSTEPS[2];                                    /* lag of the first motor vs second */
+    uint16_t max_step_period_us_to_read_SG[TOTAL_TMCS];             /* maximum motor step size to read Stall guard. Higher step would lead to too low RPM and SG redings above that step size will be ignored */
 } FlashTMCconfig;
 
 
@@ -179,6 +181,7 @@ typedef struct {
 #define SET_MOTOR_ENERGIZED    7  // energize or shut off the motor completely, for example to let user move turret easier
 #define SET_SG_ALARM_TRSHLD    8  // SG alarm threshold: when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered
 #define SET_THERMAL_COEFF      9  // coefficient defining thermal offset applied to calibration curve
+#define SET_MAX_SG_STEP_US     10 // maximum motor step size to read Stall guard. Higher step would lead to too low RPM and SG redings above that step size will be ignored
 
 
 // common commands to be applied to whole system
