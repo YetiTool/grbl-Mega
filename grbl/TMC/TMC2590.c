@@ -599,11 +599,44 @@ void tmc_report_calibration(void){
 
 /* print TMC stall guard deltas to UART */
 void tmc_report_SG_delta(void){
-    /* cycle through all motors */        
-    uint8_t controller_id;
+    
     TMC2590TypeDef *tmc2590;
     printPgmString(PSTR("|TSG:"));
-    for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+
+/****************************************************************************************************************************************************************************/
+/* Print only relevant stall guard values for given configuration, as:                                                                                                      */
+/* SGZ, SGX, SGY, SGX1, SGX2, SGY1, SGY2 for TMC_5_CONTROLLERS      individual TMC per motor: 5 controllers, all controllers are smart, X and Y are dual motor controllers  */
+/* SGZ, SGX, SGY for TMC_3_CONTROLLERS                              X and Y controllers drives pair of motors, 3 controllers                                                */
+/* SGZ, SGX for TMC_2_CONTROLLERS                                   single smart controller for X and Z, single standalone for Y                                            */
+/* none for TMC_ALL_STANDALONE                                      single standalone for Y, X and Z                                                                        */
+/****************************************************************************************************************************************************************************/
+
+/* Z is common for every configuration */
+    tmc2590 = get_TMC_controller(TMC_Z);
+    printInteger( tmc2590->stallGuardDelta );
+    printPgmString(PSTR(","));
+
+
+/* X is applicable to TMC_2_CONTROLLERS, TMC_3_CONTROLLERS and TMC_5_CONTROLLERS */
+#if defined(TMC_2_CONTROLLERS) || defined(TMC_3_CONTROLLERS) || defined(TMC_5_CONTROLLERS)
+    tmc2590 = get_TMC_controller(TMC_X1);
+    printInteger( tmc2590->stallGuardDelta  );
+    printPgmString(PSTR(","));
+#endif
+
+/* Y is applicable to TMC_3_CONTROLLERS and TMC_5_CONTROLLERS*/
+#if  defined(TMC_3_CONTROLLERS) || defined(TMC_5_CONTROLLERS)
+    tmc2590 = get_TMC_controller(TMC_Y1);
+    printInteger( tmc2590->stallGuardDelta  );
+    printPgmString(PSTR(","));
+#endif
+
+/* if all 5 controllers are present - print out individual motors resuls as well */
+#if defined(TMC_5_CONTROLLERS)
+    /* cycle through all motors */
+    uint8_t controller_id;
+
+    for (controller_id = TMC_X1; controller_id < TMC_Z; controller_id++){
 	    tmc2590 = get_TMC_controller(controller_id);
 
 #ifdef SG_AVG_OVER_REPORT_ENABLED
@@ -620,24 +653,15 @@ void tmc_report_SG_delta(void){
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
 
     /* print average delta for X and Y axes */
-    
-#if defined(TMC_5_CONTROLLERS) 
     tmc2590 = get_TMC_controller(TMC_X2);
     printInteger( tmc2590->stallGuardDeltaAxis  );
-#elif defined(TMC_2_CONTROLLERS) || defined(TMC_3_CONTROLLERS)
-    tmc2590 = get_TMC_controller(TMC_X1);
-    printInteger( tmc2590->stallGuardDelta  );
-#endif
 
-#if defined(TMC_5_CONTROLLERS)
     printPgmString(PSTR(","));
     tmc2590 = get_TMC_controller(TMC_Y2);
     printInteger( tmc2590->stallGuardDeltaAxis  );
-#elif defined(TMC_2_CONTROLLERS) || defined(TMC_3_CONTROLLERS)
-    printPgmString(PSTR(","));
-    tmc2590 = get_TMC_controller(TMC_Y1);
-    printInteger( tmc2590->stallGuardDelta  );
-#endif    
+    
+#endif //#if defined(TMC_5_CONTROLLERS)
+
 
     stall_guard_statistics_reset();
 }
