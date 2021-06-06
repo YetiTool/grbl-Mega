@@ -93,11 +93,16 @@ void SPI_MasterInit(void)
 
     /* option 0.25M: set clock rate fck/64 = 0.25MHz*/
     /* filter: 470R/470p */
+    SPCR |= (1<<SPR1);
+    
+    /* option 0.25M: set clock rate fck/32 = 0.5MHz*/
+    /* filter: 470R/470p */
     //SPCR |= (1<<SPR1);
+    //SPSR |= (1<<SPI2X);
 
     /* option 1M: set clock rate fck/16 = 1MHz*/
     /* filter: 470R/470p */
-    SPCR |= (1<<SPR0);
+    //SPCR |= (1<<SPR0);
 
     /* option 2M: set clock rate fck/8 = 2MHz*/
     /* filter: 470R/47p */
@@ -232,8 +237,10 @@ void spi_process_tx_queue(void){
             /* configure SPI clocks differently depend on the TMC controller */
             switch (m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->thisAxis){
                 case Y_AXIS:
-                    /* option 1M: set clock rate fck/16 = 1MHz*/
-                    /* filter: 470R/470p */
+                    /* option 0.25M: set clock rate fck/64 = 0.25MHz*/
+                    /* filter: 2200R/470p */
+                    SPCR |= (1<<SPR1);
+                    SPCR &=~(1<<SPR0);
                     SPSR &=~(1<<SPI2X);
                     SPI_current_state = SPI_STATE_1;
                     /* pull CS pin down */
@@ -244,9 +251,24 @@ void spi_process_tx_queue(void){
                 
                 case X_AXIS: /* fall through */
                 case Z_AXIS:
+                    /* option 2M: set clock rate fck/8 = 2MHz*/
+                    /* filter: 470R/0p */
+                    SPCR |= (1<<SPR0);
+                    SPCR &=~(1<<SPR1);
+                    SPSR |= (1<<SPI2X);
+                    SPI_current_state = SPI_STATE_1;
+                    /* pull CS pin down */
+                    tmc_pin_write(0, m_spi_tx_buffer[m_spi_tx_index].tmc2590_1->channel);
+                    /* initiate transfer by writing first byte to the data register, the rest is handled by ISR */
+                    SPDR = m_spi_data[0];                
+                break;                
+                
+                default:
                     /* !! below code is optimised for speed, dont try to add for loops as it will slow execution down */
                     /* option 2M: set clock rate fck/8 = 2MHz*/
-                    /* filter: 470R/47p */
+                    /* filter: 470R/0p */
+                    SPCR |= (1<<SPR0);
+                    SPCR &=~(1<<SPR1);
                     SPSR |= (1<<SPI2X);
 
                     SPCR &=~(1<<SPIE); /* disable SPI interrupts  */
@@ -284,9 +306,7 @@ void spi_process_tx_queue(void){
                     sei();
 
                 break;
-                
-                default:
-                break;
+
             }
             
 

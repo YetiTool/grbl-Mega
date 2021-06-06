@@ -15,7 +15,7 @@
 #include "TMC2590_Register.h"
 
 #define CALIBRATION_BASED_ON_AVERAGED_SG /* uncomment to change calibration strategy to averaged over each measured sample point as opposed to minimum */
-#define SG_SAMPLE_FILTERING_ENABLED      /* uncomment to enable filtering out peaks in SG readings */
+//#define SG_SAMPLE_FILTERING_ENABLED      /* uncomment to enable filtering out peaks in SG readings */
 #define SG_AVG_OVER_REPORT_ENABLED      /* uncomment to enable averaging individual motor SG readings over reporting period */
 
 /* Controller types. */

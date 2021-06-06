@@ -57,9 +57,9 @@
 //  #define STEPPERS_DISABLE_MASK (1<<STEPPERS_DISABLE_BIT)
 
 /* motors configuration */
-//#define TMC_5_CONTROLLERS /* individual TMC per motor: 5 controllers, all controllers are smart, X and Y are dual motor controllers */
+#define TMC_5_CONTROLLERS /* individual TMC per motor: 5 controllers, all controllers are smart, X and Y are dual motor controllers */
 //#define TMC_3_CONTROLLERS /* X and Y controllers drives pair of motors, 3 controllers */
-#define TMC_2_CONTROLLERS /* single smart controller for X and Z, single standalone for Y */
+//#define TMC_2_CONTROLLERS /* single smart controller for X and Z, single standalone for Y */
 //#define TMC_SG_BASED_HOMING /* enable homing based on Stall guard detection */
 
 

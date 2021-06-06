@@ -561,12 +561,6 @@ void protocol_exec_rt_system()
           tmc_standstill_off();
       }
       
-      /* schedule next SPI read all */
-      if (rt_exec & TMC_READ_ALL_COMMAND) {
-          /* BK profiling: SPI prepare: 900us  + actual SPI reads: 1.2-2.0 ms */
-          tmc2590_schedule_read_all();          
-      }
-      
       /* schedule next SPI read Stall Guard from X motor controllers */
       if (rt_exec & TMC_SPI_READ_SG_X_COMMAND) {
           tmc2590_schedule_read_sg(X_AXIS);          
