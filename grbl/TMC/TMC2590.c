@@ -614,21 +614,20 @@ void tmc_report_SG_delta(void){
 /* Z is common for every configuration */
     tmc2590 = get_TMC_controller(TMC_Z);
     printInteger( tmc2590->stallGuardDelta );
-    printPgmString(PSTR(","));
 
 
 /* X is applicable to TMC_2_CONTROLLERS, TMC_3_CONTROLLERS and TMC_5_CONTROLLERS */
 #if defined(TMC_2_CONTROLLERS) || defined(TMC_3_CONTROLLERS) || defined(TMC_5_CONTROLLERS)
+    printPgmString(PSTR(","));
     tmc2590 = get_TMC_controller(TMC_X1);
     printInteger( tmc2590->stallGuardDelta  );
-    printPgmString(PSTR(","));
 #endif
 
 /* Y is applicable to TMC_3_CONTROLLERS and TMC_5_CONTROLLERS*/
 #if  defined(TMC_3_CONTROLLERS) || defined(TMC_5_CONTROLLERS)
+    printPgmString(PSTR(","));
     tmc2590 = get_TMC_controller(TMC_Y1);
     printInteger( tmc2590->stallGuardDelta  );
-    printPgmString(PSTR(","));
 #endif
 
 /* if all 5 controllers are present - print out individual motors resuls as well */
@@ -638,7 +637,7 @@ void tmc_report_SG_delta(void){
 
     for (controller_id = TMC_X1; controller_id < TMC_Z; controller_id++){
 	    tmc2590 = get_TMC_controller(controller_id);
-
+        printPgmString(PSTR(","));
 #ifdef SG_AVG_OVER_REPORT_ENABLED
         if (tmc2590->stallGuardDeltaCount > 0){
             printInteger( tmc2590->stallGuardDeltaSum / tmc2590->stallGuardDeltaCount);
@@ -649,10 +648,10 @@ void tmc_report_SG_delta(void){
 #else
         printInteger( tmc2590->stallGuardDelta );
 #endif        
-        printPgmString(PSTR(","));
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
 
     /* print average delta for X and Y axes */
+    printPgmString(PSTR(","));
     tmc2590 = get_TMC_controller(TMC_X2);
     printInteger( tmc2590->stallGuardDeltaAxis  );
 
@@ -960,7 +959,7 @@ debug_pin_write(1, DEBUG_1_PIN);
                     stall_guard_statistics_reset();
                 } //if ( raise_alarm == 1 )
    
-#endif //#elif defined(TMC_2_CONTROLLERS) || defined(TMC_3_CONTROLLERS)   
+#endif //#elif defined(TMC_2_CONTROLLERS) || defined(TMC_3_CONTROLLERS) || defined (TMC_ALL_STANDALONE)
    
             } //if ( st_tmc.SG_skips_counter[tmc2590->thisAxis] >= SG_READING_SKIPS_AFTER_SLOW_FEED )
                 

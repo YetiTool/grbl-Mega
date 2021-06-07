@@ -338,12 +338,74 @@ void process_individual_command(uint8_t controller_id, uint8_t command, uint32_t
 
         /* set the stallGuardAlarmThreshold: when current SG reading is lower than calibrated by this value corresponded axis alarm will be triggered */
         case SET_SG_ALARM_TRSHLD:
-            tmc2590->stallGuardAlarmThreshold = value;
+            switch (tmc2590->thisMotor){ /* ST threshold is the same between X1 and X2 motors on axis, apply to both motors */
+                case TMC_X1:
+                tmc2590->stallGuardAlarmThreshold = value;
+                tmc2590 = get_TMC_controller(controller_id+1);
+                tmc2590->stallGuardAlarmThreshold = value;
+                break;
+                
+                case TMC_X2:
+                tmc2590->stallGuardAlarmThreshold = value;
+                tmc2590 = get_TMC_controller(controller_id-1);
+                tmc2590->stallGuardAlarmThreshold = value;
+                break;
+                
+                case TMC_Y1:
+                tmc2590->stallGuardAlarmThreshold = value;
+                tmc2590 = get_TMC_controller(controller_id+1);
+                tmc2590->stallGuardAlarmThreshold = value;
+                break;
+                
+                case TMC_Y2:
+                tmc2590->stallGuardAlarmThreshold = value;
+                tmc2590 = get_TMC_controller(controller_id-1);
+                tmc2590->stallGuardAlarmThreshold = value;
+                break;
+                
+                case TMC_Z:
+                tmc2590->stallGuardAlarmThreshold = value;
+                break;
+                
+                default:
+                break;
+            }
             break;
 
         /* set the correction for temperatures other than calibration */
         case SET_THERMAL_COEFF:
-            tmc2590->gradient_per_Celsius = value;
+            switch (tmc2590->thisMotor){ /* compensation is the same between X1 and X2 motors on axis, apply to both motors */
+                case TMC_X1:
+                tmc2590->gradient_per_Celsius = value;
+                tmc2590 = get_TMC_controller(controller_id+1);
+                tmc2590->gradient_per_Celsius = value;
+                break;
+                
+                case TMC_X2:
+                tmc2590->gradient_per_Celsius = value;
+                tmc2590 = get_TMC_controller(controller_id-1);
+                tmc2590->gradient_per_Celsius = value;
+                break;
+                
+                case TMC_Y1:
+                tmc2590->gradient_per_Celsius = value;
+                tmc2590 = get_TMC_controller(controller_id+1);
+                tmc2590->gradient_per_Celsius = value;
+                break;
+                
+                case TMC_Y2:
+                tmc2590->gradient_per_Celsius = value;
+                tmc2590 = get_TMC_controller(controller_id-1);
+                tmc2590->gradient_per_Celsius = value;
+                break;
+                
+                case TMC_Z:
+                tmc2590->gradient_per_Celsius = value;
+                break;
+                
+                default:
+                break;
+            }        
             break;
 
         /* set the correction for temperatures other than calibration */
