@@ -110,6 +110,7 @@ typedef struct {
   uint16_t homing_debounce_delay;
   float homing_pulloff;
   float product_code; /* BK mod for EL-92 add parameter "product code" in the Atmega flash */
+  uint8_t digital_spindle_enabled; /* Mafell digital spindle enable flag in persistent store */
 } settings_t;
 extern settings_t settings;
 

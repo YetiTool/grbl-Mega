@@ -62,4 +62,27 @@ uint8_t serial_get_rx_buffer_count();
 // NOTE: Not used except for debugging and ensuring no TX bottlenecks.
 uint8_t serial_get_tx_buffer_count();
 
+
+/*************************************************** Mafell Rx only serial ****************************************************/
+
+#define BAUD_RATE2 19200 //Mafell spindle baudrate
+
+#ifndef RX2_BUFFER_SIZE
+  #define RX2_BUFFER_SIZE 63
+#endif
+
+void serial2_init();
+
+// Fetches the first byte in the serial read buffer. Called by main program.
+uint8_t serial2_read();
+
+// Returns the number of bytes available in the RX serial buffer.
+uint8_t serial2_get_rx_buffer_available();
+
+// Returns the number of bytes received in the RX serial buffer.
+uint8_t serial2_get_rx_buffer_count();
+
+// push back tail in the serial buffer to defined number of positions
+void serial2_rewind( uint8_t positions_to_rewind);
+
 #endif

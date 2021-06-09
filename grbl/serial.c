@@ -336,3 +336,97 @@ void serial_reset_read_buffer()
 {
   serial_rx_buffer_tail = serial_rx_buffer_head;
 }
+
+
+
+/*************************************************** Mafell Rx only serial ****************************************************/
+#define RX2_RING_BUFFER (RX2_BUFFER_SIZE+1)
+uint8_t serial2_rx_buffer[RX2_RING_BUFFER];
+uint8_t serial2_rx_buffer_head = 0;
+volatile uint8_t serial2_rx_buffer_tail = 0;
+
+void serial2_init()
+{
+  // Set baud rate
+  #if BAUD_RATE2 < 57600
+    uint16_t UBRR2_value = ((F_CPU / (8L * BAUD_RATE2)) - 1)/2 ;
+    UCSR2A &= ~(1 << U2X2); // baud doubler off  - Only needed on Uno XXX
+  #else
+    uint16_t UBRR2_value = ((F_CPU / (4L * BAUD_RATE2)) - 1)/2;
+    UCSR2A |= (1 << U2X2);  // baud doubler on for high baud rates, i.e. 115200
+  #endif
+  UBRR2H = UBRR2_value >> 8;
+  UBRR2L = UBRR2_value;
+
+  // enable rx, and interrupt on complete reception of a byte
+  UCSR2B |= (1<<RXEN2 | 1<<RXCIE2);
+
+  // defaults to 8-bit, no parity, 1 stop bit
+}
+
+
+
+// Returns the number of bytes available in the RX serial buffer.
+uint8_t serial2_get_rx_buffer_available()
+{
+  uint8_t rtail = serial2_rx_buffer_tail; // Copy to limit multiple calls to volatile
+  if (serial2_rx_buffer_head >= rtail) { return(RX2_BUFFER_SIZE - (serial2_rx_buffer_head-rtail)); }
+  return((rtail-serial2_rx_buffer_head-1));
+}
+
+// Returns the number of bytes used in the RX serial buffer.
+// NOTE: Deprecated. Not used unless classic status reports are enabled in config.h.
+uint8_t serial2_get_rx_buffer_count()
+{
+  uint8_t rtail = serial2_rx_buffer_tail; // Copy to limit multiple calls to volatile
+  if (serial2_rx_buffer_head >= rtail) { return(serial2_rx_buffer_head-rtail); }
+  return (RX2_BUFFER_SIZE - (rtail-serial2_rx_buffer_head));
+}
+
+
+
+// Fetches the first byte in the serial read buffer. Called by main program.
+uint8_t serial2_read()
+{
+  uint8_t tail = serial2_rx_buffer_tail; // Temporary serial_rx_buffer_tail (to optimize for volatile)
+  if (serial2_rx_buffer_head == tail) {
+    return SERIAL_NO_DATA;
+  } else {
+    uint8_t data = serial2_rx_buffer[tail];
+
+    tail++;
+    if (tail == RX2_RING_BUFFER) { tail = 0; }
+    serial2_rx_buffer_tail = tail;
+
+    return data;
+  }
+}
+
+// push back tail in the serial buffer to defined number of positions
+void serial2_rewind( uint8_t positions_to_rewind){
+    if (serial2_rx_buffer_tail >= positions_to_rewind){
+        serial2_rx_buffer_tail -= positions_to_rewind;
+    }
+    else{ /* unwrap */
+        serial2_rx_buffer_tail = RX2_RING_BUFFER - ( serial2_rx_buffer_tail - positions_to_rewind );
+    }
+}
+
+
+ISR(SERIAL_RX2)
+{
+  uint8_t data = UDR2;
+  uint8_t next_head;
+
+// Write character to buffer
+	next_head = serial2_rx_buffer_head + 1;
+	if (next_head == RX2_RING_BUFFER) { next_head = 0; }
+
+	// Write data to buffer unless it is full.
+	if (next_head != serial2_rx_buffer_tail) {
+	  serial2_rx_buffer[serial2_rx_buffer_head] = data;
+	  serial2_rx_buffer_head = next_head;
+	}
+}
+
+

@@ -211,6 +211,8 @@ void report_grbl_settings() {
   report_util_float_setting(31,settings.rpm_min,N_DECIMAL_RPMVALUE);
   report_util_uint8_setting(32,bit_istrue(settings.flags,BITFLAG_LASER_MODE));
   report_util_float_setting(50,settings.product_code,2); /* BK mod for EL-92 add parameter "product code" in the Atmega flash */
+  report_util_uint8_setting(51,settings.digital_spindle_enabled); /* Mafell digital spindle enable flag in persistent store */
+  
   // Print axis settings
   uint8_t idx, set_idx;
   uint8_t val = AXIS_SETTINGS_START_VAL;
@@ -547,7 +549,12 @@ void report_realtime_status()
     printPgmString(PSTR("|FS:"));
     printFloat_RateValue(st_get_realtime_rate());
     serial_write(',');
-    printFloat(sys.spindle_speed,N_DECIMAL_RPMVALUE);
+    if (settings.digital_spindle_enabled == 1){ /* for digital feedback spindle print actual RPM */
+      spindle_digital_print_rpm();
+    }
+    else{ /* for analogue spindle print set RPM */
+      printFloat(sys.spindle_speed,N_DECIMAL_RPMVALUE);
+    }
   #endif
 
   #ifdef REPORT_FIELD_PIN_STATE
@@ -588,9 +595,15 @@ void report_realtime_status()
   #endif //#ifdef REPORT_FIELD_PIN_STATE
 
   #ifdef ENABLE_SPINDLE_LOAD_MONITOR
+      int spindle_load_mV = 0;
       printPgmString(PSTR("|Ld:"));
-      int spindle_load_mV = get_spindle_load_mV();
-      printInteger( spindle_load_mV );
+      if (settings.digital_spindle_enabled == 1){ /* for digital spindle report load, temperature and kill time */
+          spindle_digital_print_real_time();
+      }
+      else{ /* analogue spindle */
+          spindle_load_mV = get_spindle_load_mV();
+          printInteger( spindle_load_mV );          
+      }
   #endif //#ifdef ENABLE_SPINDLE_LOAD_MONITOR
 
 

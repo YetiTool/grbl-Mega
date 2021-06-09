@@ -207,5 +207,6 @@ uint8_t  uint16_encode(uint16_t value, uint8_t * p_encoded_data);
 uint16_t uint16_decode(const uint8_t * p_encoded_data);
 uint8_t  uint32_encode(uint32_t value, uint8_t * p_encoded_data);
 uint32_t uint32_decode(const uint8_t * p_encoded_data);
+uint32_t uint24_decode(const uint8_t * p_encoded_data);
 
 #endif /* ASMCNC_h */

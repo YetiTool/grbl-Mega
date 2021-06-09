@@ -517,6 +517,9 @@ debug_pin_write(1, DEBUG_0_PIN); /* whole ISR routine 18-22us */
 
     /* notify main loop that ADC state machine tick need to be incremented */
     system_set_exec_heartbeat_command_flag(ADC_SET_AND_FIRE_COMMAND);
+    
+    /* notify main loop that digital Spindle read shall be executed */
+    system_set_exec_heartbeat_command_flag(SPINDLE_READ_COMMAND);
 
     if (++uptime_count % ((UPTIME_TICK_PERIOD_MS *1000UL)/SPI_READ_OCR_PERIOD_US) == 0)  { /* set uptime interval to 1s */
         system_set_exec_heartbeat_command_flag(UPTIME_INCREMENT_COMMAND);

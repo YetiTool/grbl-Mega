@@ -671,6 +671,14 @@ void protocol_exec_rt_system()
         adc_process_all_channels();
     }
 
+    /* read digital Spindle */
+    if (rt_exec & SPINDLE_READ_COMMAND) {
+        if (settings.digital_spindle_enabled == 1){ /* for digital spindle only */
+            spindle_read_digital();
+        }
+    }
+
+
 
   } //if rt_exec = sys_rt_exec_heartbeat_command;
 
@@ -1228,7 +1236,7 @@ void execute_RTL_command(){
         case GET_DIGITAL_SPINDLE_INFO:
             /* data must be exactly 0 bytes*/
             if (data_len == 0){
-                printPgmString(PSTR("GET_DIGITAL_SPINDLE_INFO Not implemented\n"));
+                spindle_digital_print_info();
             }
             else{ //if (data_len == 1){
                 report_status_message(ASMCNC_RTL_LEN_ERROR);

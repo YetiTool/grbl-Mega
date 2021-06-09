@@ -24,6 +24,7 @@
 
 static float pwm_gradient; // Precalulated value to speed up rpm to PWM conversions.
 
+static spindle_digital_params spindle_parameters;
 
 void spindle_init()
 {    
@@ -37,6 +38,9 @@ void spindle_init()
 
   pwm_gradient = SPINDLE_PWM_RANGE/(settings.rpm_max-settings.rpm_min);
   spindle_stop();
+  
+  memset(&spindle_parameters, 0, sizeof(spindle_digital_params));
+  
 }
 
 
@@ -230,5 +234,134 @@ void spindle_sync(uint8_t state, float rpm)
 /* spindle signal feedback loop update */
 void spindle_nudge_pwm(float correctedSpindleSpeedRPM){
     spindle_set_speed(spindle_compute_pwm_value(correctedSpindleSpeedRPM));
+}
+
+
+uint16_t calcul_crc16(uint8_t *array,uint8_t size)
+{
+    uint8_t n,nb_octet,t=1;
+    uint16_t carry,octet,CRC16,poly;
+
+    octet=(array[t]&0x00FF);  // initialisation with the first byte
+    poly=0xA001;    // Polynome 0x8005 (Polynom is mirrored)
+    CRC16=0xFFFF;  // handover of initial value
+
+    for(nb_octet=0;nb_octet<size;nb_octet++) // calculation with all bytes
+    {
+        CRC16=CRC16^octet;  // XOR with the new byte
+        for(n=0;n<8;n++)    // 8 times per byte
+        {
+            carry=(CRC16&0x0001); // carry is value of bit0 before right shift
+            CRC16=((CRC16>>1)&(0x7FFF)); // 1 right shift and MSB (bit 15)=0
+
+            if(carry&0x0001)
+            CRC16=CRC16^poly; // XOR with the polynome
+        }
+        octet=(array[++t]&0x00FF); // next byte
+    }
+    return (CRC16);
+}
+
+
+void spindle_read_digital(void){
+    /* check is enough bytes are received in the buffer */
+    uint8_t bytes_received;
+    bytes_received = serial2_get_rx_buffer_count();
+    if ( bytes_received >= DIGITAL_SPINDLE_MESSAGE_SIZE){
+        /* find pair of header bytes in the buffer and try to decode CRC */
+        uint8_t header_byte1, header_byte2;
+        header_byte1 = serial2_read();
+        header_byte2 = serial2_read();
+        
+        if ( (header_byte1 == DIGITAL_SPINDLE_MSG_HEADER_BYTE) && (header_byte2 == DIGITAL_SPINDLE_MSG_HEADER_BYTE) ){
+            /* try to decode CRC */
+            uint8_t idx;
+            uint8_t buffer[DIGITAL_SPINDLE_MESSAGE_SIZE];
+            buffer[0] = DIGITAL_SPINDLE_MSG_HEADER_BYTE;
+            buffer[1] = DIGITAL_SPINDLE_MSG_HEADER_BYTE;
+            
+            /* read the rest of the message from UART buffer into local buffer */
+            for (idx=2; idx<DIGITAL_SPINDLE_MESSAGE_SIZE; idx++){
+                buffer[idx] = serial2_read();
+            }
+            /* compute CRC16 and compare with received CRC */
+            uint16_t CRC16_received, CRC16_calculated;
+            CRC16_received = uint16_decode(&buffer[DIGITAL_SPINDLE_CRC_POS]);
+            CRC16_calculated = calcul_crc16(buffer, DIGITAL_SPINDLE_CRC_POS);
+            
+            if ( CRC16_received == CRC16_calculated ){
+                /* if header pattern found and CRC matches unpack all parameters from the packet:*/
+                spindle_parameters.serial_number            = uint16_decode(&buffer[DIGITAL_SPINDLE_SERIAL_POS]);
+                spindle_parameters.production_year          =                buffer[DIGITAL_SPINDLE_YEAR_POS  ] ;
+                spindle_parameters.production_week          =                buffer[DIGITAL_SPINDLE_WEEK_POS  ] ;
+                spindle_parameters.firmware_version         =                buffer[DIGITAL_SPINDLE_FWVER_POS ] ;
+                spindle_parameters.load                     = uint16_decode(&buffer[DIGITAL_SPINDLE_LOAD_POS  ]);
+                spindle_parameters.temperature              =       (int8_t) buffer[DIGITAL_SPINDLE_TEMP_POS  ] ;
+                spindle_parameters.rpm                      = uint16_decode(&buffer[DIGITAL_SPINDLE_RPM_POS   ]);
+                spindle_parameters.remaining_kill_time_s    =                buffer[DIGITAL_SPINDLE_KILL_POS  ] ;
+                spindle_parameters.total_run_time_s         = uint32_decode(&buffer[DIGITAL_SPINDLE_RUN_POS   ]);
+                spindle_parameters.brush_run_time_s         = uint24_decode(&buffer[DIGITAL_SPINDLE_BRUSH_POS ]);
+                                   
+                /* call itself again in case more bytes are available from buffer */
+                bytes_received = serial2_get_rx_buffer_count();
+                if ( bytes_received >= DIGITAL_SPINDLE_MESSAGE_SIZE){                
+                    system_set_exec_heartbeat_command_flag(SPINDLE_READ_COMMAND);/* notify main loop that digital Spindle read shall be executed */
+                }                    
+            } //if ( CRC16_received == CRC16_calculated ){
+            else{
+                /*if header pattern found but CRC does not match:
+                    1) search for another header in the buffer 
+                    2) if found - rewind serial buffer tail to that position 
+                    3) start over 
+                    4) if not found - return*/
+                uint8_t another_header_pattern_found = 0;
+                
+                for (idx=2; idx < (DIGITAL_SPINDLE_MESSAGE_SIZE - 1) ; idx++){
+                    if ( (buffer[idx] == DIGITAL_SPINDLE_MSG_HEADER_BYTE) && (buffer[idx+1] == DIGITAL_SPINDLE_MSG_HEADER_BYTE) ){
+                        another_header_pattern_found = 1;
+                        break; /* for idx loop */
+                    } //if ( (buffer[idx] == DIGITAL_SPINDLE_MSG_HEADER_BYTE) && (buffer[idx+1] == DIGITAL_SPINDLE_MSG_HEADER_BYTE) ){
+                } //for (idx=2; idx < (DIGITAL_SPINDLE_MESSAGE_SIZE - 1) ; idx++){
+                
+                if ( another_header_pattern_found == 1){
+                    /* rewind serial buffer tail to that position and start over */
+                    serial2_rewind( DIGITAL_SPINDLE_MESSAGE_SIZE - idx );
+                    system_set_exec_heartbeat_command_flag(SPINDLE_READ_COMMAND);/* notify main loop that digital Spindle read shall be executed */
+                } //if ( another_header_pattern_found == 1){
+                else{
+                    /* header pattern found, but CRC does not match and no other header pattern is found in the buffer. return */
+                    return;
+                } // else if ( another_header_pattern_found == 1){
+                
+            } //else if ( CRC16_received == CRC16_calculated ){
+            
+        } //if ( (header_byte1 == DIGITAL_SPINDLE_MSG_HEADER_BYTE) && (header_byte2 == DIGITAL_SPINDLE_MSG_HEADER_BYTE) ){
+        else{ 
+            /* call itself recursively until header pattern is found of bytes available is exhausted */                
+            system_set_exec_heartbeat_command_flag(SPINDLE_READ_COMMAND);/* notify main loop that digital Spindle read shall be executed */
+            //spindle_read_digital();
+        } //else{ //if ( (header_byte1 == DIGITAL_SPINDLE_MSG_HEADER_BYTE) && (header_byte2 == DIGITAL_SPINDLE_MSG_HEADER_BYTE) ){
+            
+    } //if ( bytes_available >= DIGITAL_SPINDLE_MESSAGE_SIZE){
+        
+}
+
+void spindle_digital_print_info(void){
+    printPgmString(PSTR("Spindle serial number: "));printInteger( spindle_parameters.serial_number      ); printPgmString(PSTR("\n"));
+    printPgmString(PSTR("Production year: "));      printInteger( spindle_parameters.production_year    ); printPgmString(PSTR("\n"));
+    printPgmString(PSTR("Production week: "));      printInteger( spindle_parameters.production_week    ); printPgmString(PSTR("\n"));
+    printPgmString(PSTR("Firmware version: "));     printInteger( spindle_parameters.firmware_version   ); printPgmString(PSTR("\n"));
+    printPgmString(PSTR("Total run time: "));       printInteger( spindle_parameters.total_run_time_s   ); printPgmString(PSTR("\n"));
+    printPgmString(PSTR("Brush run time: "));       printInteger( spindle_parameters.brush_run_time_s   ); printPgmString(PSTR("\n"));
+}
+
+void spindle_digital_print_real_time(void){
+    printInteger( spindle_parameters.load                   ); printPgmString(PSTR(","));
+    printInteger( spindle_parameters.temperature            ); printPgmString(PSTR(","));
+    printInteger( spindle_parameters.remaining_kill_time_s  );
+}
+
+void spindle_digital_print_rpm(void){
+    printInteger( spindle_parameters.rpm                    ); 
 }
 

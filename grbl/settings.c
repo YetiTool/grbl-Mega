@@ -107,7 +107,8 @@ void settings_restore(uint8_t restore_flag) {
     settings.max_travel[Y_AXIS] = (-DEFAULT_Y_MAX_TRAVEL);
     settings.max_travel[Z_AXIS] = (-DEFAULT_Z_MAX_TRAVEL);
 
-    settings.product_code = 0.03F; /* BK mod requested by Ed to be efficient in production (override this setting on reset is not a good idea. This will work untill we have the new product code. But if customer with newer product code would ever issue reset settings it will revert the code to 3.. It is flawed, but acceptable.) */
+    settings.product_code = 0.03F; /* BK mod requested by Ed to be efficient in production (override this setting on reset is not a good idea. This will work until we have the new product code. But if customer with newer product code would ever issue reset settings it will revert the code to 3.. It is flawed, but acceptable.) */
+    settings.digital_spindle_enabled = 0; /* digital spindle is disabled by default */
 
     write_global_settings();
   }
@@ -296,6 +297,7 @@ uint8_t settings_store_global_setting(uint8_t parameter, float value) {
         else { settings.flags &= ~BITFLAG_LASER_MODE; }
         break;
       case 50: settings.product_code = value; break; /* BK mod for EL-92 add parameter "product code" in the Atmega flash */
+      case 51: settings.digital_spindle_enabled = value; break; /* Mafell digital spindle enable flag */
       default:
         return(STATUS_INVALID_STATEMENT);
     }

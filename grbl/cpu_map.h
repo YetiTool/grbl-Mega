@@ -32,6 +32,9 @@
   #define SERIAL_RX USART0_RX_vect
   #define SERIAL_UDRE USART0_UDRE_vect
 
+  // Second Serial port interrupt vectors (Mafel spindle)
+  #define SERIAL_RX2 USART2_RX_vect
+
   // Define step pulse output pins. NOTE: All step bit pins must be on the same port.
   #define STEP_DDR      DDRA
   #define STEP_PORT     PORTA

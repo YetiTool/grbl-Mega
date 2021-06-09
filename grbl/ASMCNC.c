@@ -221,6 +221,12 @@ uint32_t uint32_decode(const uint8_t * p_encoded_data)
              (((uint32_t)((uint8_t *)p_encoded_data)[3]) << 24 ));
 }
 
+uint32_t uint24_decode(const uint8_t * p_encoded_data)
+{
+    return ((((uint32_t)((uint8_t *)p_encoded_data)[0]) << 0)  |
+            (((uint32_t)((uint8_t *)p_encoded_data)[1]) << 8)  |
+            (((uint32_t)((uint8_t *)p_encoded_data)[2]) << 16 ));
+}
 
 
 void asmcnc_init(void)
