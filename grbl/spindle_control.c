@@ -236,10 +236,13 @@ void spindle_nudge_pwm(float correctedSpindleSpeedRPM){
     spindle_set_speed(spindle_compute_pwm_value(correctedSpindleSpeedRPM));
 }
 
-
+/* CRC16 calculation based on CRC-16/MODBUS algorithm 
+ * example:
+ * 0xaaaa1529150f080000209600ffe9000000720000 -> CRC 0x7994
+ * */
 uint16_t calcul_crc16(uint8_t *array,uint8_t size)
 {
-    uint8_t n,nb_octet,t=1;
+    uint8_t n,nb_octet,t=0;
     uint16_t carry,octet,CRC16,poly;
 
     octet=(array[t]&0x00FF);  // initialisation with the first byte
@@ -337,9 +340,9 @@ void spindle_read_digital(void){
             
         } //if ( (header_byte1 == DIGITAL_SPINDLE_MSG_HEADER_BYTE) && (header_byte2 == DIGITAL_SPINDLE_MSG_HEADER_BYTE) ){
         else{ 
-            /* call itself recursively until header pattern is found of bytes available is exhausted */                
-            system_set_exec_heartbeat_command_flag(SPINDLE_READ_COMMAND);/* notify main loop that digital Spindle read shall be executed */
-            //spindle_read_digital();
+            /* call itself recursively until header pattern is found of bytes available is exhausted */
+            serial2_rewind(1); /*rewind one position to attempt decoding from next byte as two bytes are consumed in the header pattern detection */
+            system_set_exec_heartbeat_command_flag(SPINDLE_READ_COMMAND);/* notify main loop that digital Spindle read shall be executed */            
         } //else{ //if ( (header_byte1 == DIGITAL_SPINDLE_MSG_HEADER_BYTE) && (header_byte2 == DIGITAL_SPINDLE_MSG_HEADER_BYTE) ){
             
     } //if ( bytes_available >= DIGITAL_SPINDLE_MESSAGE_SIZE){
