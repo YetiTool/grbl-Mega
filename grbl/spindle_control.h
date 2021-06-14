@@ -61,6 +61,8 @@
 
 #define FIR_COEFF_SPINDLE 20
 
+#define SPINDLE_PWM_BRUSH_RESET_VALUE 55
+
 //#define DIGITAL_SPINDLE_PRINT_RAW //uncomment to print real-time digital spindle data
 
 
