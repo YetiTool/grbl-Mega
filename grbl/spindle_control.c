@@ -64,6 +64,8 @@ uint8_t spindle_get_state()
 // Called by spindle_init(), spindle_set_speed(), spindle_set_state(), and mc_reset().
 void spindle_stop()
 {
+    spindle_parameters.rpm = 0; /* reset digital spindle rpm to seed filtering with 0 value next time it is started */
+    
     SPINDLE_TCCRA_REGISTER &= ~(1<<SPINDLE_COMB_BIT); // Disable PWM. Output voltage is zero.
 
   #ifdef INVERT_SPINDLE_ENABLE_PIN
@@ -265,7 +267,6 @@ uint16_t calcul_crc16(uint8_t *array,uint8_t size)
     return (CRC16);
 }
 
-
 void spindle_read_digital(void){
     /* check is enough bytes are received in the buffer */
     uint8_t bytes_received;
@@ -293,17 +294,44 @@ void spindle_read_digital(void){
             CRC16_calculated = calcul_crc16(buffer, DIGITAL_SPINDLE_CRC_POS);
             
             if ( CRC16_received == CRC16_calculated ){
+                uint8_t tmp;
+                int8_t tmp_int8, tmp_temperature;
+                uint16_t tmp_rpm, tmp_load; /* temporal variables for filtering */
+                tmp_temperature = spindle_parameters.temperature; /* store in temporal value in case validation failed */
+                
                 /* if header pattern found and CRC matches unpack all parameters from the packet:*/
-                spindle_parameters.serial_number            = uint16_decode(&buffer[DIGITAL_SPINDLE_SERIAL_POS]);
-                spindle_parameters.production_year          =                buffer[DIGITAL_SPINDLE_YEAR_POS  ] ;
-                spindle_parameters.production_week          =                buffer[DIGITAL_SPINDLE_WEEK_POS  ] ;
-                spindle_parameters.firmware_version         =                buffer[DIGITAL_SPINDLE_FWVER_POS ] ;
-                spindle_parameters.load                     = uint16_decode(&buffer[DIGITAL_SPINDLE_LOAD_POS  ]);
-                spindle_parameters.temperature              =       (int8_t) buffer[DIGITAL_SPINDLE_TEMP_POS  ] ;
-                spindle_parameters.rpm                      = uint16_decode(&buffer[DIGITAL_SPINDLE_RPM_POS   ]);
+                /* apply parameter validation to the following items: Year, week, temperature, FWVer */
+                tmp                                         =                buffer[DIGITAL_SPINDLE_YEAR_POS  ] ;
+                if ( (tmp >= 0) && (tmp <= 99) )                { spindle_parameters.production_year    = tmp;}
+                tmp                                         =                buffer[DIGITAL_SPINDLE_WEEK_POS  ] ;
+                if ( (tmp >= 0) && (tmp <= 53) )                { spindle_parameters.production_week    = tmp;}
+                tmp                                         =                buffer[DIGITAL_SPINDLE_FWVER_POS ] ;
+                if ( (tmp >= 0) && (tmp <= 99) )                { spindle_parameters.firmware_version   = tmp;}
+                tmp_int8                                    =       (int8_t) buffer[DIGITAL_SPINDLE_TEMP_POS  ];
+                if ( (tmp_int8 >= -40) && (tmp_int8 <= 124) )   { tmp_temperature                       = tmp_int8;}
+                /* no parameter validation for the following items */
+                spindle_parameters.serial_number            = uint16_decode(&buffer[DIGITAL_SPINDLE_SERIAL_POS]); //no parameter validation
+                tmp_load                                    = uint16_decode(&buffer[DIGITAL_SPINDLE_LOAD_POS  ]); //no parameter validation
+                tmp_rpm                                     = uint16_decode(&buffer[DIGITAL_SPINDLE_RPM_POS   ]); //no parameter validation
                 spindle_parameters.remaining_kill_time_s    =                buffer[DIGITAL_SPINDLE_KILL_POS  ] ;
                 spindle_parameters.total_run_time_s         = uint32_decode(&buffer[DIGITAL_SPINDLE_RUN_POS   ]);
                 spindle_parameters.brush_run_time_s         = uint24_decode(&buffer[DIGITAL_SPINDLE_BRUSH_POS ]);
+
+#ifdef DIGITAL_SPINDLE_PRINT_RAW
+                /* print unfiltered parameters */
+                printPgmString(PSTR("~"));
+                printInteger( tmp_rpm           ); printPgmString(PSTR(","));
+                printInteger( tmp_load          ); printPgmString(PSTR(","));
+                printInteger( tmp_temperature   ); printPgmString(PSTR(","));
+                printInteger( spindle_parameters.remaining_kill_time_s      );
+                printPgmString(PSTR("#\n"));
+#else
+/* filter raw data for RPM, Temperature and Load to smooth out the response */
+                spindle_parameters.rpm          = ( (FIR_COEFF_SPINDLE * (long)tmp_rpm)         + ( ( (1<<8) - FIR_COEFF_SPINDLE) * (long)spindle_parameters.rpm            ) ) >>8;
+                spindle_parameters.load         = ( (FIR_COEFF_SPINDLE * (long)tmp_load)        + ( ( (1<<8) - FIR_COEFF_SPINDLE) * (long)spindle_parameters.load           ) ) >>8;
+                spindle_parameters.temperature  = ( (FIR_COEFF_SPINDLE * (long)tmp_temperature) + ( ( (1<<8) - FIR_COEFF_SPINDLE) * (long)spindle_parameters.temperature    ) ) >>8;
+#endif
+
                                    
                 /* call itself again in case more bytes are available from buffer */
                 bytes_received = serial2_get_rx_buffer_count();
@@ -366,5 +394,15 @@ void spindle_digital_print_real_time(void){
 
 void spindle_digital_print_rpm(void){
     printInteger( spindle_parameters.rpm                    ); 
+}
+
+uint8_t get_spindle_AC_state(void)
+{
+#ifdef INVERT_SPINDLE_ENABLE_PIN
+    if !(SPINDLE_ENABLE_PIN & (1<<SPINDLE_ENABLE_BIT)){ return 1; }    
+#else
+    if  (SPINDLE_ENABLE_PIN & (1<<SPINDLE_ENABLE_BIT)){ return 1; }
+#endif
+    return 0;
 }
 

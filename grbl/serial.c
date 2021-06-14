@@ -408,7 +408,7 @@ void serial2_rewind( uint8_t positions_to_rewind){
         serial2_rx_buffer_tail -= positions_to_rewind;
     }
     else{ /* unwrap */
-        serial2_rx_buffer_tail = RX2_RING_BUFFER - ( serial2_rx_buffer_tail - positions_to_rewind );
+        serial2_rx_buffer_tail = RX2_RING_BUFFER + serial2_rx_buffer_tail - positions_to_rewind;
     }
 }
 

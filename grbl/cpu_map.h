@@ -102,6 +102,7 @@
   #define SPINDLE_ENABLE_DDR      DDRH
   #define SPINDLE_ENABLE_PORT     PORTH
   #define SPINDLE_ENABLE_BIT      3 // MEGA2560 Digital Pin 6
+  #define SPINDLE_ENABLE_PIN      PINH
   //#define SPINDLE_DIRECTION_DDR   DDRE
   //#define SPINDLE_DIRECTION_PORT  PORTE
   //#define SPINDLE_DIRECTION_BIT   3 // MEGA2560 Digital Pin 5

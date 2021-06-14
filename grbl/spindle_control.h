@@ -59,6 +59,9 @@
 #define DIGITAL_SPINDLE_BRUSH_POS   ( DIGITAL_SPINDLE_RUN_POS    + DIGITAL_SPINDLE_MSG_RUN_SIZE    )    /* Brush run time	"resettable throw  an  bit pattern to analog input e.g.  0,5V(100ms)-0V(100ms) - 0,5V(500ms)-0V(500ms)- 0,5V(100ms)-0V(100ms). As a aknowlege the motorcontrol send  immediately  the message B with the updated value" */
 #define DIGITAL_SPINDLE_CRC_POS     ( DIGITAL_SPINDLE_BRUSH_POS  + DIGITAL_SPINDLE_MSG_BRUSH_SIZE  )    /* CRC 16 */
 
+#define FIR_COEFF_SPINDLE 20
+
+//#define DIGITAL_SPINDLE_PRINT_RAW //uncomment to print real-time digital spindle data
 
 
 typedef struct {
@@ -108,5 +111,6 @@ void spindle_read_digital(void); /* attemt to decode serial buffer received from
 void spindle_digital_print_info(void);
 void spindle_digital_print_real_time(void);
 void spindle_digital_print_rpm(void);
+uint8_t get_spindle_AC_state(void);
 
 #endif

@@ -550,7 +550,12 @@ void report_realtime_status()
     printFloat_RateValue(st_get_realtime_rate());
     serial_write(',');
     if (settings.digital_spindle_enabled == 1){ /* for digital feedback spindle print actual RPM */
-      spindle_digital_print_rpm();
+      if (get_spindle_AC_state()){
+        spindle_digital_print_rpm();
+      }
+      else{
+        serial_write('0');
+      }      
     }
     else{ /* for analogue spindle print set RPM */
       printFloat(sys.spindle_speed,N_DECIMAL_RPMVALUE);
@@ -595,13 +600,16 @@ void report_realtime_status()
   #endif //#ifdef REPORT_FIELD_PIN_STATE
 
   #ifdef ENABLE_SPINDLE_LOAD_MONITOR
-      int spindle_load_mV = 0;
-      printPgmString(PSTR("|Ld:"));
       if (settings.digital_spindle_enabled == 1){ /* for digital spindle report load, temperature and kill time */
-          spindle_digital_print_real_time();
+          if (get_spindle_AC_state()){
+              printPgmString(PSTR("|Ld:"));
+              spindle_digital_print_real_time();
+          }          
       }
       else{ /* analogue spindle */
+          int spindle_load_mV = 0;
           spindle_load_mV = get_spindle_load_mV();
+          printPgmString(PSTR("|Ld:"));
           printInteger( spindle_load_mV );          
       }
   #endif //#ifdef ENABLE_SPINDLE_LOAD_MONITOR
