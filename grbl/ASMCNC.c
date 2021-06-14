@@ -282,7 +282,7 @@ void asmcnc_init(void)
     enable_watchdog();    
     
     /* report TMC registers */
-    system_set_exec_tmc_cal_command_flag(TMC_REGISTERS_REPORT);
+    //system_set_exec_tmc_cal_command_flag(TMC_REGISTERS_REPORT);
 	flashStatisticsInit();
 
     /* AC live enable pin interrupt. Using sleep module to utilise TIMER5 */
