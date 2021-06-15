@@ -114,5 +114,6 @@ void spindle_digital_print_info(void);
 void spindle_digital_print_real_time(void);
 void spindle_digital_print_rpm(void);
 uint8_t get_spindle_AC_state(void);
+void spindle_digital_brush_timer_reset(uint8_t AC_is_60Hz);
 
 #endif

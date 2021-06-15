@@ -271,6 +271,11 @@ void spindle_read_digital(void){
     /* check is enough bytes are received in the buffer */
     uint8_t bytes_received;
     bytes_received = serial2_get_rx_buffer_count();
+#ifdef DEBUG_SPINDLE_ENABLED
+debug_pin_write(0, DEBUG_0_PIN);
+debug_pin_write(1, DEBUG_0_PIN);
+#endif
+    
     if ( bytes_received >= DIGITAL_SPINDLE_MESSAGE_SIZE){
         /* find pair of header bytes in the buffer and try to decode CRC */
         uint8_t header_byte1, header_byte2;
@@ -337,7 +342,11 @@ void spindle_read_digital(void){
                 bytes_received = serial2_get_rx_buffer_count();
                 if ( bytes_received >= DIGITAL_SPINDLE_MESSAGE_SIZE){                
                     system_set_exec_heartbeat_command_flag(SPINDLE_READ_COMMAND);/* notify main loop that digital Spindle read shall be executed */
-                }                    
+                }
+#ifdef DEBUG_SPINDLE_ENABLED
+debug_pin_write(0, DEBUG_1_PIN);
+debug_pin_write(1, DEBUG_1_PIN);
+#endif                
             } //if ( CRC16_received == CRC16_calculated ){
             else{
                 /*if header pattern found but CRC does not match:
@@ -357,6 +366,7 @@ void spindle_read_digital(void){
                 if ( another_header_pattern_found == 1){
                     /* rewind serial buffer tail to that position and start over */
                     serial2_rewind( DIGITAL_SPINDLE_MESSAGE_SIZE - idx );
+                    printPgmString(PSTR(":"));
                     system_set_exec_heartbeat_command_flag(SPINDLE_READ_COMMAND);/* notify main loop that digital Spindle read shall be executed */
                 } //if ( another_header_pattern_found == 1){
                 else{
@@ -371,6 +381,7 @@ void spindle_read_digital(void){
             /* call itself recursively until header pattern is found of bytes available is exhausted */
             serial2_rewind(1); /*rewind one position to attempt decoding from next byte as two bytes are consumed in the header pattern detection */
             system_set_exec_heartbeat_command_flag(SPINDLE_READ_COMMAND);/* notify main loop that digital Spindle read shall be executed */            
+            printPgmString(PSTR("."));
         } //else{ //if ( (header_byte1 == DIGITAL_SPINDLE_MSG_HEADER_BYTE) && (header_byte2 == DIGITAL_SPINDLE_MSG_HEADER_BYTE) ){
             
     } //if ( bytes_available >= DIGITAL_SPINDLE_MESSAGE_SIZE){
@@ -406,3 +417,42 @@ uint8_t get_spindle_AC_state(void)
     return 0;
 }
 
+#define SPINDLE_BRUSH_RESET_OFFSET_MS   10  /* ms due to heavy filtering high to low level decay is ~20ms, this offset is to normailse chances to receive 0 and 1 bits by Mafell spindle */
+#define SPINDLE_BRUSH_RESET_PERIOD_50HZ 160 /* ms */
+#define SPINDLE_BRUSH_RESET_PERIOD_60HZ 133 /* ms */
+
+/* Mafell digital spindle brush timer reset 
+The command structure consists of 9 * 8Byte = 72Bits. At the moment a square wave frequence with approx. 3...3,3Hz (at 50Hz mains frequency) is defined as "Reset Pattern" .
+
+With each mains period (20ms or 16.6ms) one bit is received and shifted into a shift register of the µC. The complete shift register is compared with the definded pattern by exclusive OR.  The matching bits are counted. If more than 65  of received bits are match with the pattern, the command is recognized and the brush run time is been reset.
+
+Precondition for a reset:
+1. Portal interface must be supplied according to specification (8...25V)
+2. The command is only read and evaluated during the motor stop.
+3.  As threshold for a "High" 0.6V +/-0.08 V is required. The threshold for a "Low" is 0V+0.2V.
+Note: The motor starts from 0.8V and stops when it falls below 0.6V.
+*/
+void spindle_digital_brush_timer_reset(uint8_t AC_is_60Hz){
+
+    uint8_t brush_reset_byte_duration = SPINDLE_BRUSH_RESET_PERIOD_50HZ;
+    if ( AC_is_60Hz == 1) {
+        brush_reset_byte_duration = SPINDLE_BRUSH_RESET_PERIOD_60HZ;
+    }
+    
+    uint8_t idx = 0;
+    for(idx = 0; idx < 4; idx ++){
+        spindle_set_speed(SPINDLE_PWM_MAX_VALUE);
+        delay_us(1500);
+        spindle_set_speed(SPINDLE_PWM_BRUSH_RESET_VALUE);
+        delay_us(500);
+        delay_ms(brush_reset_byte_duration - SPINDLE_BRUSH_RESET_OFFSET_MS - 2);
+        spindle_set_speed(SPINDLE_PWM_OFF_VALUE);
+        delay_ms(brush_reset_byte_duration + SPINDLE_BRUSH_RESET_OFFSET_MS);
+    }
+    spindle_set_speed(SPINDLE_PWM_MAX_VALUE);
+    delay_us(1500);
+    spindle_set_speed(SPINDLE_PWM_BRUSH_RESET_VALUE);
+    delay_ms(brush_reset_byte_duration*2);
+    /* finally turn off PWM */
+    spindle_set_speed(SPINDLE_PWM_OFF_VALUE);    
+}

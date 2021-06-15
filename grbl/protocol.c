@@ -1246,24 +1246,7 @@ void execute_RTL_command(){
         case RESET_DIGITAL_SPINDLE_BRUSH_TIME:
             /* data must be exactly 0 bytes*/
             if (data_len == 0){
-                printPgmString(PSTR("RESET_DIGITAL_SPINDLE_BRUSH_TIME Not implemented\n"));
-                //cli();
-                uint8_t idx = 0;
-                for(idx = 0; idx < 4; idx ++){
-                    spindle_set_speed(SPINDLE_PWM_MAX_VALUE);
-                    delay_us(1500);
-                    spindle_set_speed(SPINDLE_PWM_BRUSH_RESET_VALUE);
-                    delay_ms(20*8-11);
-                    spindle_set_speed(SPINDLE_PWM_OFF_VALUE);
-                    delay_ms(20*8+10);
-                }
-                spindle_set_speed(SPINDLE_PWM_MAX_VALUE);
-                delay_us(1500);
-                spindle_set_speed(SPINDLE_PWM_BRUSH_RESET_VALUE);
-                delay_ms(20*8*2);
-                /* finally turn off PWM */
-                spindle_set_speed(SPINDLE_PWM_OFF_VALUE);
-                
+                spindle_digital_brush_timer_reset(0); /* 0: 50Hz, 1: 60Hz */
             }
             else{ //if (data_len == 1){
                 report_status_message(ASMCNC_RTL_LEN_ERROR);

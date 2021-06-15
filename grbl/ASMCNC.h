@@ -164,8 +164,9 @@ enum rgbHexStates{
 //#define FLASH_DEBUG_ENABLED // enable to debug EEPROM storage
 //#define DEBUG_LED_ENABLED // enable to drive indication (second) RGB LED light
 //#define DEBUG_CPU_LOAD_ENABLED // enable to drive indication (second) RGB LED light
+#define DEBUG_SPINDLE_ENABLED // comment out to remove ADC debug pins functionality - remove for production version
 
-#if defined(DEBUG_SPI_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED) || defined(SG_CAL_DEBUG_ENABLED) || defined(FLASH_DEBUG_ENABLED) || defined(DEBUG_LED_ENABLED)  || defined(DEBUG_CPU_LOAD_ENABLED)
+#if defined(DEBUG_SPI_ENABLED) || defined(DEBUG_ADC_ENABLED) || defined(DEBUG_STEPPER_ENABLED) || defined(SG_SKIP_DEBUG_ENABLED) || defined(SG_CAL_DEBUG_ENABLED) || defined(FLASH_DEBUG_ENABLED) || defined(DEBUG_LED_ENABLED) || defined(DEBUG_CPU_LOAD_ENABLED) || defined(DEBUG_SPINDLE_ENABLED)
 #define ANY_DEBUG_ENABLED //
 #endif
 
