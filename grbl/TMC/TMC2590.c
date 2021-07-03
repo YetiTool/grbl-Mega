@@ -615,39 +615,48 @@ void tmc_report_SG_delta(void){
     tmc2590 = get_TMC_controller(TMC_Z);
     printInteger( tmc2590->stallGuardDelta );
 
-
-/* X is applicable to TMC_2_CONTROLLERS, TMC_3_CONTROLLERS and TMC_5_CONTROLLERS */
-#if defined(TMC_2_CONTROLLERS) || defined(TMC_3_CONTROLLERS) || defined(TMC_5_CONTROLLERS)
+/* only Z and X are applicable to TMC_2_CONTROLLERS */
+#ifdef TMC_2_CONTROLLERS
     printPgmString(PSTR(","));
     tmc2590 = get_TMC_controller(TMC_X1);
     printInteger( tmc2590->stallGuardDelta  );
-#endif
+#endif //#if defined(TMC_2_CONTROLLERS) 
 
-/* Y is applicable to TMC_3_CONTROLLERS and TMC_5_CONTROLLERS*/
-#if  defined(TMC_3_CONTROLLERS) || defined(TMC_5_CONTROLLERS)
+/* X and Y results from single motor (motor 1) is applicable to TMC_3_CONTROLLERS */
+#ifdef TMC_3_CONTROLLERS
+    printPgmString(PSTR(","));
+    tmc2590 = get_TMC_controller(TMC_X1);
+    printInteger( tmc2590->stallGuardDelta  );
     printPgmString(PSTR(","));
     tmc2590 = get_TMC_controller(TMC_Y1);
     printInteger( tmc2590->stallGuardDelta  );
-#endif
+#endif // defined(TMC_3_CONTROLLERS) 
 
-/* if all 5 controllers are present - print out individual motors resuls as well */
-#if defined(TMC_5_CONTROLLERS)
+/* X and Y average from each axis is applicable to TMC_5_CONTROLLERS */
+#ifdef TMC_5_CONTROLLERS
+    printPgmString(PSTR(","));
+    tmc2590 = get_TMC_controller(TMC_X2); 
+    printInteger( tmc2590->stallGuardDeltaAxis  ); /* report average value over axis */
+    printPgmString(PSTR(","));
+    tmc2590 = get_TMC_controller(TMC_Y2);
+    printInteger( tmc2590->stallGuardDeltaAxis  ); /* report average value over axis */
+
+    /* for 5 motors case print individual SG values for each motor (averaged over reporting period if SG_AVG_OVER_REPORT_ENABLED) */
     /* cycle through all motors */
     uint8_t controller_id;
-
     for (controller_id = TMC_X1; controller_id < TMC_Z; controller_id++){
 	    tmc2590 = get_TMC_controller(controller_id);
         printPgmString(PSTR(","));
-#ifdef SG_AVG_OVER_REPORT_ENABLED
+  #ifdef SG_AVG_OVER_REPORT_ENABLED
         if (tmc2590->stallGuardDeltaCount > 0){
             printInteger( tmc2590->stallGuardDeltaSum / tmc2590->stallGuardDeltaCount);
         }
         else{
             printInteger( tmc2590->stallGuardDelta );
         } 
-#else
+  #else
         printInteger( tmc2590->stallGuardDelta );
-#endif        
+  #endif  //#ifdef SG_AVG_OVER_REPORT_ENABLED
     } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
 
     /* print average delta for X and Y axes */
@@ -660,7 +669,6 @@ void tmc_report_SG_delta(void){
     printInteger( tmc2590->stallGuardDeltaAxis  );
     
 #endif //#if defined(TMC_5_CONTROLLERS)
-
 
     stall_guard_statistics_reset();
 }
