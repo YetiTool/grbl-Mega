@@ -169,11 +169,14 @@ typedef struct {
   uint8_t report_adc_counter;  // Tracks when to add ADC data to status reports.
   #ifdef ENABLE_TMC_FEEDBACK_MONITOR  
   uint8_t report_tmc_counter;  // Tracks when to add TMC data to status reports.
+  uint8_t report_TMC_registers;  // Flag to enable TMC registers reporting in status string.
   #endif
   #ifdef ENABLE_PARKING_OVERRIDE_CONTROL
     uint8_t override_ctrl;     // Tracks override control states.
   #endif
   float spindle_speed;
+  uint8_t report_digital_spindle_info;  // Flag to enable digital spindle info reporting in status string.
+  uint8_t report_statistics;            // Flag to enable full statistics reporting in status string.
 } system_t;
 extern system_t sys;
 

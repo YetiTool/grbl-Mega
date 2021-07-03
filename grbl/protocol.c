@@ -1236,7 +1236,7 @@ void execute_RTL_command(){
         case GET_DIGITAL_SPINDLE_INFO:
             /* data must be exactly 0 bytes*/
             if (data_len == 0){
-                spindle_digital_print_info();
+                sys.report_digital_spindle_info = 1;
             }
             else{ //if (data_len == 1){
                 report_status_message(ASMCNC_RTL_LEN_ERROR);

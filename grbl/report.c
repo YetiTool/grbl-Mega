@@ -604,13 +604,18 @@ void report_realtime_status()
           if (get_spindle_AC_state()){
               printPgmString(PSTR("|Ld:"));
               spindle_digital_print_real_time();
-          }          
+              if ( sys.report_digital_spindle_info == 1 ){
+                  printPgmString(PSTR("|Sp:"));
+                  spindle_digital_print_info();
+                  sys.report_digital_spindle_info = 0;
+              }
+          }
       }
       else{ /* analogue spindle */
           int spindle_load_mV = 0;
           spindle_load_mV = get_spindle_load_mV();
           printPgmString(PSTR("|Ld:"));
-          printInteger( spindle_load_mV );          
+          printInteger( spindle_load_mV );    
       }
   #endif //#ifdef ENABLE_SPINDLE_LOAD_MONITOR
 
@@ -645,8 +650,10 @@ void report_realtime_status()
     if (sys.report_tmc_counter > 0) { 
 		sys.report_tmc_counter--; 
         /* just report SG deltas */
-        tmc_report_SG_delta();		
-		}
+        if ((sys.state == STATE_CYCLE) || (sys.state == STATE_JOG)){ /* print TMC data only in moving state */
+            tmc_report_SG_delta();		
+        }            
+	}
     else { /* full TMC statistics report */
 	    if (sys.state & (STATE_HOMING | STATE_CYCLE | STATE_HOLD | STATE_JOG | STATE_SAFETY_DOOR)) {
 		    sys.report_tmc_counter = (REPORT_TMC_REFRESH_BUSY_COUNT-1); // Reset counter for slow refresh

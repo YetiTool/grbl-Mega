@@ -389,12 +389,12 @@ debug_pin_write(1, DEBUG_1_PIN);
 }
 
 void spindle_digital_print_info(void){
-    printPgmString(PSTR("Spindle serial number: "));printInteger( spindle_parameters.serial_number      ); printPgmString(PSTR("\n"));
-    printPgmString(PSTR("Production year: "));      printInteger( spindle_parameters.production_year    ); printPgmString(PSTR("\n"));
-    printPgmString(PSTR("Production week: "));      printInteger( spindle_parameters.production_week    ); printPgmString(PSTR("\n"));
-    printPgmString(PSTR("Firmware version: "));     printInteger( spindle_parameters.firmware_version   ); printPgmString(PSTR("\n"));
-    printPgmString(PSTR("Total run time: "));       printInteger( spindle_parameters.total_run_time_s   ); printPgmString(PSTR("\n"));
-    printPgmString(PSTR("Brush run time: "));       printInteger( spindle_parameters.brush_run_time_s   ); printPgmString(PSTR("\n"));
+    printInteger( spindle_parameters.serial_number      ); printPgmString(PSTR(","));   //Spindle serial number
+    printInteger( spindle_parameters.production_year    ); printPgmString(PSTR(","));   //Production year:
+    printInteger( spindle_parameters.production_week    ); printPgmString(PSTR(","));   //Production week:
+    printInteger( spindle_parameters.firmware_version   ); printPgmString(PSTR(","));   //Firmware version
+    printInteger( spindle_parameters.total_run_time_s   ); printPgmString(PSTR(","));   //Total run time: 
+    printInteger( spindle_parameters.brush_run_time_s   );                              //Brush run time: 
 }
 
 void spindle_digital_print_real_time(void){
