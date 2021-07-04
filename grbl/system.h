@@ -119,7 +119,6 @@
 #define RTL_RGB_COMMAND                 bit(1)
 #define RTL_VAC_COMMAND                 bit(2)
 #define RTL_LASER_DATUM_COMMAND         bit(3)
-#define RTL_STAT_REPORT_COMMAND			bit(4)
 
 // Define TMC SPI control states.
 #define TMC_STANDSTILL_COMMAND          bit(0)
@@ -142,7 +141,7 @@
 #define TMC_CALIBRATION_COMPUTE         bit(1)       /* 2: complete calibration, compute cal tables and apply correction,*/
 #define TMC_CALIBRATION_REPORT          bit(2)       /* 4: print calibration coefficients                                */
 #define TMC_REGISTERS_REPORT            bit(3)       /* 8 print TMC registers to UART */
-#define TMC_STATISTICS_REPORT           bit(4)       /* 16 print GRBL statisticss to UART */
+//#define TMC_STATISTICS_REPORT           bit(4)       /* 16 print GRBL statisticss to UART */
 #define TMC_CALIBRATION_INIT_X          bit(5)       /* 32 initialise calibration for X axis only */
 #define TMC_CALIBRATION_INIT_Y          bit(6)       /* 64 initialise calibration for Y axis only */
 #define TMC_CALIBRATION_INIT_Z          bit(7)       /* 128 initialise calibration for Z axis only */
@@ -176,7 +175,10 @@ typedef struct {
   #endif
   float spindle_speed;
   uint8_t report_digital_spindle_info;  // Flag to enable digital spindle info reporting in status string.
-  uint8_t report_statistics;            // Flag to enable full statistics reporting in status string.
+  uint8_t report_statistics;            // Flag to enable full 2560 statistics reporting in status string.
+  uint8_t report_last_stall;            // Flag to enable last stall info reporting in status string.
+  uint8_t report_all_stalls;            // Flag to enable all stalls data reporting in status string.
+  uint8_t report_alarm_reason;          // Flag to enable last alarm reason reporting in status string.
 } system_t;
 extern system_t sys;
 

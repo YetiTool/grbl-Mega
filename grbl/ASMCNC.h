@@ -210,4 +210,21 @@ uint8_t  uint32_encode(uint32_t value, uint8_t * p_encoded_data);
 uint32_t uint32_decode(const uint8_t * p_encoded_data);
 uint32_t uint24_decode(const uint8_t * p_encoded_data);
 
+/* status string headers definitions for interfacing between GRBL and Console */
+#define STATUS_FS_IDENTIFIER    "|FS:"        // feed and speed block
+#define STATUS_PN_IDENTIFIER    "|Pn:"        // end switches and other switches state
+#define STATUS_BF_IDENTIFIER    "|Bf:"        // UART buffer bytes and blocks status
+#define STATUS_LD_IDENTIFIER    "|Ld:"        // spindle load block
+#define STATUS_SP_IDENTIFIER    "|Sp:"        // Mafell digital spindle statistics
+#define STATUS_TC_IDENTIFIER    "|TC:"        // Temperatures block
+#define STATUS_TM_IDENTIFIER    "|TM:"        // full TMC statistics report
+#define STATUS_SG_IDENTIFIER    "|SG:"        // Stall guard block
+#define STATUS_VOL_IDENTIFIER   "|V:"         // Voltages block
+#define STATUS_TCAL_IDENTIFIER  "|TCAL:"      // Calibration coefficients block
+#define STATUS_TREG_IDENTIFIER  "|TREG:"      // TMC registers and parameters state: DRVCTRL, CHOPCONF, SMARTEN, SGCSCONF, DRVCONF, activeCurrentScale, standStillCurrentScale, stallGuardAlarmThreshold, step_period_us_to_read_SG, gradient_per_Celsius
+#define STATUS_STAT_IDENTIFIER  "|STAT:"      // GRBL runtime statistics
+#define STATUS_SGAL_IDENTIFIER  "|SGALARM:"   // Stall guard stop statistics
+#define STATUS_ALRM_IDENTIFIER  "|Pa:"        // last Alarm reason
+
 #endif /* ASMCNC_h */
+

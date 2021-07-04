@@ -442,18 +442,15 @@ debug_pin_write(0, DEBUG_0_PIN);
 }
 void report_statistics(void)
 {
-    printPgmString(PSTR(BK_INITIATOR));
-    printPgmString(PSTR("STAT:"));
-    printInteger(flashStatistics.TOT_cnt                ); printPgmString(PSTR(", "));
-    printInteger(flashStatistics.JTRF_cnt               ); printPgmString(PSTR(", "));
-    printInteger(flashStatistics.WDRF_cnt               ); printPgmString(PSTR(", "));
-    printInteger(flashStatistics.BORF_cnt               ); printPgmString(PSTR(", "));
-    printInteger(flashStatistics.EXTRF_cnt              ); printPgmString(PSTR(", "));
-    printInteger(flashStatistics.PORF_cnt               ); printPgmString(PSTR(", "));
-    printInteger(localRunTimeSeconds                    ); printPgmString(PSTR(", "));
-    printInteger(flashStatistics.totalTravelMillimeters ); printPgmString(PSTR(", "));
+    printInteger(flashStatistics.TOT_cnt                ); printPgmString(PSTR(","));
+    printInteger(flashStatistics.JTRF_cnt               ); printPgmString(PSTR(","));
+    printInteger(flashStatistics.WDRF_cnt               ); printPgmString(PSTR(","));
+    printInteger(flashStatistics.BORF_cnt               ); printPgmString(PSTR(","));
+    printInteger(flashStatistics.EXTRF_cnt              ); printPgmString(PSTR(","));
+    printInteger(flashStatistics.PORF_cnt               ); printPgmString(PSTR(","));
+    printInteger(localRunTimeSeconds                    ); printPgmString(PSTR(","));
+    printInteger(flashStatistics.totalTravelMillimeters ); printPgmString(PSTR(","));
     printInteger(flashStatistics.totalStallsDetected    );
-    printPgmString(PSTR(BK_TERMINATOR));
 }
 
 
@@ -467,12 +464,19 @@ void store_stall_info(uint8_t  lastStallsMotor, uint16_t lastStallsSG, uint16_t 
         flashStatistics.lastStallsStepUs[i+1]       = flashStatistics.lastStallsStepUs[i];
         flashStatistics.lastStallsTravel[i+1]       = flashStatistics.lastStallsTravel[i];
     }
-    flashStatistics.lastStallsMotor[0]          =lastStallsMotor;
-    flashStatistics.lastStallsSG[0]             =lastStallsSG;
-    flashStatistics.lastStallsSGcalibrated[0]   =lastStallsSGcalibrated;
-    flashStatistics.lastStallsStepUs[0]         =lastStallsStepUs;
+    flashStatistics.lastStallsMotor[0]          = lastStallsMotor;
+    flashStatistics.lastStallsSG[0]             = lastStallsSG;
+    flashStatistics.lastStallsSGcalibrated[0]   = lastStallsSGcalibrated;
+    flashStatistics.lastStallsStepUs[0]         = lastStallsStepUs;
     flashStatistics.lastStallsTravel[0]         = flashStatistics.totalTravelMillimeters + totalTravelMillimeters;
     flashStatistics.totalStallsDetected++; /* increment total reset count */
+}
+
+void report_last_stall_info(void){
+    printInteger( flashStatistics.lastStallsMotor[0]        ); printPgmString(PSTR(","));
+    printInteger( flashStatistics.lastStallsStepUs[0]       ); printPgmString(PSTR(","));/* actual step in us */
+    printInteger( flashStatistics.lastStallsSG[0]           ); printPgmString(PSTR(","));
+    printInteger( flashStatistics.lastStallsSGcalibrated[0] );
 }
 
 void report_stall_info(void){

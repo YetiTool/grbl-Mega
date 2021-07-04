@@ -538,11 +538,6 @@ void protocol_exec_rt_system()
         process_RTL_buffer();
     }
 
-    /* print out statistics data */
-    if (rt_exec & RTL_STAT_REPORT_COMMAND) {
-        report_statistics();
-    }
-
   } //if rt_exec = sys_rt_exec_rtl_command;
 
 
@@ -622,15 +617,12 @@ void protocol_exec_rt_system()
           tmc_report_calibration(); 
       }
 
-      /* print out calibration data */
+#ifdef ENABLE_TMC_FEEDBACK_MONITOR
+      /* print out TMC registers data */
       if (rt_exec & TMC_REGISTERS_REPORT) {
-          tmc_report_registers();
+          sys.report_TMC_registers = TOTAL_TMCS;
       }
-
-      /* print out calibration data */
-      if (rt_exec & TMC_STATISTICS_REPORT) {
-          report_statistics();          
-      }
+#endif
       
   } //if rt_exec = sys_rt_exec_tmc_cal_command;
 
@@ -1209,26 +1201,9 @@ void execute_RTL_command(){
         case GET_ALARM_REASON:
             /* data must be exactly 0 bytes*/
             if (data_len == 0){
-                uint8_t lim_pin_state = limits_get_last_alarm_state();
-                printPgmString(PSTR("Limits state: "));
-                printInteger( lim_pin_state );
-                printPgmString(PSTR(", end switch triggered alarm: "));
-                if (lim_pin_state) {
-                    if (bit_istrue(lim_pin_state,bit(X_AXIS)))      { serial_write('x'); }
-                    if (bit_istrue(lim_pin_state,bit(X_AXIS_MAX)))  { serial_write('X'); }
-                    if (bit_istrue(lim_pin_state,bit(Y_AXIS)))      { serial_write('y'); }
-                    if (bit_istrue(lim_pin_state,bit(Y_AXIS_SG )))  { serial_write('Y'); }
-                    if (bit_istrue(lim_pin_state,bit(Z_AXIS)))      { serial_write('Z'); }
-                    if (bit_istrue(lim_pin_state,bit(X_AXIS_SG)))   { serial_write('S'); }
-                    if (bit_istrue(lim_pin_state,bit(Z_AXIS_SG)))   { serial_write('z'); }
-                    limits_reset_last_alarm_state();
-                }
-                else{
-                    printPgmString(PSTR("None"));
-                }
-                printPgmString(PSTR("\n"));
-            }
-            else{ //if (data_len == 1){
+                sys.report_alarm_reason = 1; //indicate to report module that last alarm reason shall be reported
+            }                
+            else{ //if (data_len == 0){
                 report_status_message(ASMCNC_RTL_LEN_ERROR);
             }
         break;

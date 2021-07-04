@@ -640,14 +640,29 @@
 /************************************************************************/
 
 /* motors configuration for stall guard detection */
-//#define TMC_5_CONTROLLERS /* individual TMC per motor: 5 controllers, all controllers are smart, X and Y are dual motor controllers */
-//#define TMC_3_CONTROLLERS /* X and Y controllers drives pair of motors, 3 controllers */
-#define TMC_2_CONTROLLERS /* single smart controller for X and Z, single standalone for Y */
-//#define TMC_ALL_STANDALONE /* single standalone for Y, X and Z */
-//#define TMC_SG_BASED_HOMING /* enable homing based on Stall guard detection */
+#define TMC_5_CONTROLLERS     /* individual TMC per motor: 5 controllers, all controllers are smart, X and Y are dual motor controllers */
+//#define TMC_3_CONTROLLERS     /* X and Y controllers drives pair of motors, 3 controllers */
+//#define TMC_2_CONTROLLERS     /* single smart controller for X and Z, single standalone for Y */
+//#define TMC_ALL_STANDALONE    /* single standalone for Y, X and Z */
+//#define TMC_SG_BASED_HOMING   /* enable homing based on Stall guard detection */
 #if !defined (TMC_ALL_STANDALONE)
 #define ENABLE_TMC_FEEDBACK_MONITOR  // print feedback from TMC motor controllers
 #endif
+
+#ifdef TMC_ALL_STANDALONE 
+    #define SW_SUB_VERSION "0"  /* individual TMC per motor: 5 controllers, all controllers are smart, X and Y are dual motor controllers */
+#endif
+#ifdef TMC_2_CONTROLLERS
+    #define SW_SUB_VERSION "2"  /* X and Y controllers drives pair of motors, 3 controllers */
+#endif
+#ifdef TMC_3_CONTROLLERS
+    #define SW_SUB_VERSION "3"  /* single smart controller for X and Z, single standalone for Y */
+#endif
+#ifdef TMC_5_CONTROLLERS
+    #define SW_SUB_VERSION "5"  /* single standalone for Y, X and Z */
+#endif
+
+
 
 /* ---------------------------------------------------------------------------------------
    OEM Single File Configuration Option

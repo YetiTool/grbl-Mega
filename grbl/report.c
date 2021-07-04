@@ -172,7 +172,7 @@ void report_init_message()
 //ASM Mod to add ASM mesage to start
   DDRD  = 0x00; /* All pins in PORTD are inputs */
   PORTD = 0x00; /* tristate for all pins at PORTD is fine as all pins are tied to GND or VDD */
-  printPgmString(PSTR("\r\nSmartBench [SW Ver:" ASMCNC_VERSION "] [HW Ver:" ));
+  printPgmString(PSTR("\r\nSmartBench [SW Ver:" ASMCNC_VERSION "." SW_SUB_VERSION "] [HW Ver:" ));
   printInteger(PIND); /* read all 8 pins of port D and translate as bits <0-7> to integer value as HW version */
   printPgmString(PSTR("]" ));
   printPgmString(PSTR("\r\nGrbl " GRBL_VERSION " ['$' for help]\r\n"));
@@ -370,7 +370,7 @@ void report_build_info(char *line)
   printPgmString(PSTR("[VER:" GRBL_VERSION "." GRBL_VERSION_BUILD ":"));
   printString(line);
   report_util_feedback_line_feed();
-  printPgmString(PSTR("[ASM CNC; SW Ver:" ASMCNC_VERSION "." ASMCNC_VERSION_BUILD "; HW Ver:"));
+  printPgmString(PSTR("[ASM CNC; SW Ver:" ASMCNC_VERSION "." SW_SUB_VERSION "." ASMCNC_VERSION_BUILD "; HW Ver:"));
   printInteger(PIND); /* read all 8 pins of port D and translate as bits <0-7> to integer value as HW version */
   report_util_feedback_line_feed();
   printPgmString(PSTR("[OPT:")); // Generate compile-time build option list
@@ -525,7 +525,7 @@ void report_realtime_status()
   // Returns planner and serial read buffer states.
   #ifdef REPORT_FIELD_BUFFER_STATE
     if (bit_istrue(settings.status_report_mask,BITFLAG_RT_STATUS_BUFFER_STATE)) {
-      printPgmString(PSTR("|Bf:"));
+      printPgmString(PSTR(STATUS_BF_IDENTIFIER));
       print_uint8_base10(plan_get_block_buffer_available());
       serial_write(',');
       print_uint8_base10(serial_get_rx_buffer_available());
@@ -546,7 +546,7 @@ void report_realtime_status()
 
   // Report realtime feed speed
   #ifdef REPORT_FIELD_CURRENT_FEED_SPEED
-    printPgmString(PSTR("|FS:"));
+    printPgmString(PSTR(STATUS_FS_IDENTIFIER));
     printFloat_RateValue(st_get_realtime_rate());
     serial_write(',');
     if (settings.digital_spindle_enabled == 1){ /* for digital feedback spindle print actual RPM */
@@ -575,7 +575,7 @@ void report_realtime_status()
 	}	
 	
     if (lim_pin_state | ctrl_pin_state | prb_pin_state | enclosure_state | ac_sense_state ) {
-      printPgmString(PSTR("|Pn:"));
+      printPgmString(PSTR(STATUS_PN_IDENTIFIER));
       if (prb_pin_state)    { serial_write('P'); }
       if (enclosure_state)  { serial_write('G'); }
       if (ac_sense_state)   { serial_write('r'); }
@@ -602,10 +602,10 @@ void report_realtime_status()
   #ifdef ENABLE_SPINDLE_LOAD_MONITOR
       if (settings.digital_spindle_enabled == 1){ /* for digital spindle report load, temperature and kill time */
           if (get_spindle_AC_state()){
-              printPgmString(PSTR("|Ld:"));
+              printPgmString(PSTR(STATUS_LD_IDENTIFIER));
               spindle_digital_print_real_time();
               if ( sys.report_digital_spindle_info == 1 ){
-                  printPgmString(PSTR("|Sp:"));
+                  printPgmString(PSTR(STATUS_SP_IDENTIFIER));
                   spindle_digital_print_info();
                   sys.report_digital_spindle_info = 0;
               }
@@ -614,7 +614,7 @@ void report_realtime_status()
       else{ /* analogue spindle */
           int spindle_load_mV = 0;
           spindle_load_mV = get_spindle_load_mV();
-          printPgmString(PSTR("|Ld:"));
+          printPgmString(PSTR(STATUS_LD_IDENTIFIER));
           printInteger( spindle_load_mV );    
       }
   #endif //#ifdef ENABLE_SPINDLE_LOAD_MONITOR
@@ -632,12 +632,12 @@ void report_realtime_status()
       //if (sys.report_tmc_counter == 0) { sys.report_tmc_counter = 1; } // Set override on next report.
 	  
 	  
-      printPgmString(PSTR("|TC:"));
+      printPgmString(PSTR(STATUS_TC_IDENTIFIER));
       
       printInteger( get_TMC_temperature()           ); printPgmString(PSTR(","));
       printInteger( get_PCB_temperature()           ); printPgmString(PSTR(","));
       printInteger( get_MOT_temperature_cent()      );
-      printPgmString(PSTR("|V:"));      
+      printPgmString(PSTR(STATUS_VOL_IDENTIFIER));      
       printInteger( get_VDD_5V_Atmega_mV()          ); printPgmString(PSTR(","));
       printInteger( get_VDD_5V_dustshoe_mV()        ); printPgmString(PSTR(","));
       printInteger( get_VDD_24V_mV()                ); printPgmString(PSTR(","));
@@ -651,6 +651,7 @@ void report_realtime_status()
 		sys.report_tmc_counter--; 
         /* just report SG deltas */
         if ((sys.state == STATE_CYCLE) || (sys.state == STATE_JOG)){ /* print TMC data only in moving state */
+            printPgmString(PSTR(STATUS_SG_IDENTIFIER));
             tmc_report_SG_delta();		
         }            
 	}
@@ -660,10 +661,44 @@ void report_realtime_status()
 		} else { sys.report_tmc_counter = (REPORT_TMC_REFRESH_IDLE_COUNT-1); }
 		if (sys.report_wco_counter == 0) { sys.report_wco_counter = 1; } // Set override on next report.
 		if (sys.report_ovr_counter == 0) { sys.report_ovr_counter = 1; } // Set override on next report.
-        printPgmString(PSTR("|T:"));
+        printPgmString(PSTR(STATUS_TM_IDENTIFIER));
         tmc_report_status();
     }        
+    
+    if ( sys.report_TMC_registers > 0 ){
+        printPgmString(PSTR(STATUS_TREG_IDENTIFIER));
+        tmc_report_registers(sys.report_TMC_registers - 1);
+        sys.report_TMC_registers-- ;
+    }
   #endif //#ifdef ENABLE_TMC_FEEDBACK_MONITOR
+
+    if ( sys.report_statistics == 1 ){
+        printPgmString(PSTR(STATUS_STAT_IDENTIFIER));
+        report_statistics();
+        sys.report_statistics = 0;
+    }
+    
+    if ( sys.report_last_stall == 1 ){
+        printPgmString(PSTR(STATUS_SGAL_IDENTIFIER));
+        report_last_stall_info();
+        sys.report_last_stall = 0;
+    }
+
+    if ( sys.report_alarm_reason == 1 ){
+        lim_pin_state = limits_get_last_alarm_state();
+        if (lim_pin_state) {
+            printPgmString(PSTR(STATUS_ALRM_IDENTIFIER));
+            if (bit_istrue(lim_pin_state,bit(X_AXIS)))      { serial_write('x'); }
+            if (bit_istrue(lim_pin_state,bit(X_AXIS_MAX)))  { serial_write('X'); }
+            if (bit_istrue(lim_pin_state,bit(Y_AXIS)))      { serial_write('y'); }
+            if (bit_istrue(lim_pin_state,bit(Y_AXIS_SG )))  { serial_write('Y'); }
+            if (bit_istrue(lim_pin_state,bit(Z_AXIS)))      { serial_write('Z'); }
+            if (bit_istrue(lim_pin_state,bit(X_AXIS_SG)))   { serial_write('S'); }
+            if (bit_istrue(lim_pin_state,bit(Z_AXIS_SG)))   { serial_write('z'); }
+            limits_reset_last_alarm_state();
+        }
+        sys.report_alarm_reason = 0;
+    }
 
   #ifdef REPORT_FIELD_WORK_COORD_OFFSET
     if (sys.report_wco_counter > 0) { sys.report_wco_counter--; }

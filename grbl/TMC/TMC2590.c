@@ -584,7 +584,10 @@ void tmc_report_calibration(void){
     uint8_t controller_id;
     uint8_t idx;
     for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
-        printPgmString(PSTR("<Idle|TCAL:M"));
+        printPgmString(PSTR("<Idle"));
+        printPgmString(PSTR(STATUS_TCAL_IDENTIFIER));
+        printPgmString(PSTR("M"));
+        
         printInteger( controller_id );        
         printPgmString(PSTR(":"));
         for (idx=0; idx<TMC_SG_PROFILE_POINTS+1; idx++){
@@ -601,7 +604,6 @@ void tmc_report_calibration(void){
 void tmc_report_SG_delta(void){
     
     TMC2590TypeDef *tmc2590;
-    printPgmString(PSTR("|TSG:"));
 
 /****************************************************************************************************************************************************************************/
 /* Print only relevant stall guard values for given configuration, as:                                                                                                      */

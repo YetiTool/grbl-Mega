@@ -90,7 +90,11 @@ int main(void)
     sys_rt_exec_motion_override = 0;
     sys_rt_exec_accessory_override = 0;
     sys_rt_exec_rtl_command = 0;
-    sys_rt_exec_tmc_command = 0;    
+    sys_rt_exec_tmc_command = 0;
+#ifdef ENABLE_TMC_FEEDBACK_MONITOR
+    sys.report_tmc_counter = (REPORT_TMC_REFRESH_IDLE_COUNT-1);  // Tracks when to add TMC data to status reports.
+#endif
+
     //sys_rt_exec_tmc_cal_command = 0;
 //sys_rt_exec_heartbeat_command; // Global realtime executor bitflag variable for Yeti commands: internal SPI - TMC flags to pass execution of periodic heartbeat commands.
 

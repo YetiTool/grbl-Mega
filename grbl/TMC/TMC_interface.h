@@ -267,7 +267,7 @@ void tmc_store_settings(void);
 void restore_TMC_defaults(void);
 void apply_TMC_settings_from_flash(void);
 
-void tmc_report_registers(void);
+void tmc_report_registers(uint8_t controller_id);
 
 void tmc_store_stall_info(uint8_t  lastStallsMotor, uint16_t lastStallsSG, uint16_t lastStallsSGcalibrated, uint16_t lastStallsStepUs);
 

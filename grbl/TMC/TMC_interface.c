@@ -461,8 +461,8 @@ void process_global_command(uint8_t command, uint32_t value){
         break;
             
         /* print out 2560 statistics */
-        case GET_STATISTICS:
-            system_set_exec_tmc_cal_command_flag(TMC_STATISTICS_REPORT);
+        case GET_STATISTICS:            
+            sys.report_statistics = 1; /* indicate to report module that GRBL statistics print is required */
         break;
 
         /* print out register state for all motors */
@@ -911,14 +911,11 @@ void tmc_store_settings(void){
 
 }
 
-void tmc_report_registers(void)
+void tmc_report_registers(uint8_t controller_id)
 {
-    uint8_t controller_id;
     uint8_t reg_idx;
-    for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+    if ( ( controller_id >= TMC_X1 ) && ( controller_id < TOTAL_TMCS ) ){
         /* print out register state for this motor */
-        printPgmString(PSTR(BK_INITIATOR));
-        printPgmString(PSTR("TREG:"));
         printInteger( tmc[controller_id].thisMotor );
         for (reg_idx=TMC2590_DRVCTRL; reg_idx <= TMC2590_DRVCONF; reg_idx++){
             printPgmString(PSTR(","));
@@ -933,9 +930,7 @@ void tmc_report_registers(void)
         printPgmString(PSTR(","));
         printInteger( get_step_period_us_to_read_SG(controller_id) );
         printPgmString(PSTR(","));
-        printInteger( tmc[controller_id].gradient_per_Celsius );
-        printPgmString(PSTR(BK_TERMINATOR));
-        
+        printInteger( tmc[controller_id].gradient_per_Celsius );        
     }
 }
 
@@ -944,18 +939,7 @@ void tmc_store_stall_info(uint8_t  lastStallsMotor, uint16_t lastStallsSG, uint1
     if ( !homing_sg_read_ongoing ) {
         /* store stall only if it is not due to homing, where stall is used to detect the end stop */
         store_stall_info(lastStallsMotor, lastStallsSG, lastStallsSGcalibrated,  lastStallsStepUs);
-
-        printPgmString(PSTR(BK_INITIATOR));
-        printPgmString(PSTR("SGALARM:"));
-        printInteger( lastStallsMotor);
-        printPgmString(PSTR(","));
-        printInteger( lastStallsStepUs ); /* actual step in us */
-        printPgmString(PSTR(","));
-        printInteger( lastStallsSG);
-        printPgmString(PSTR(","));
-        printInteger( lastStallsSGcalibrated );
-        printPgmString(PSTR(BK_TERMINATOR));
-        
+        sys.report_last_stall = 1; //indicate to report engine that stall happened and its statistics need to be printed out
+        report_realtime_status(); /* force status printout to let console know about the Stall Guard alarm before ALARM lock is executed */
     }//if ( !homing_sg_read_ongoing ) {
 }
-

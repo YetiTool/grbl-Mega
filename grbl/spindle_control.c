@@ -381,7 +381,7 @@ debug_pin_write(1, DEBUG_1_PIN);
             /* call itself recursively until header pattern is found of bytes available is exhausted */
             serial2_rewind(1); /*rewind one position to attempt decoding from next byte as two bytes are consumed in the header pattern detection */
             system_set_exec_heartbeat_command_flag(SPINDLE_READ_COMMAND);/* notify main loop that digital Spindle read shall be executed */            
-            printPgmString(PSTR("."));
+            //printPgmString(PSTR("."));
         } //else{ //if ( (header_byte1 == DIGITAL_SPINDLE_MSG_HEADER_BYTE) && (header_byte2 == DIGITAL_SPINDLE_MSG_HEADER_BYTE) ){
             
     } //if ( bytes_available >= DIGITAL_SPINDLE_MESSAGE_SIZE){
