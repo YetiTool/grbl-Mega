@@ -690,7 +690,7 @@ void tmc_standstill_off(void){
 /* clear limit switch after homing cycle found the end stop*/
 void tmc_homing_reset_limits(void){
 #ifdef TMC_SG_BASED_HOMING
-    st_tmc.stall_alarm_enabled = true; /* enable the alarm in case it was disabled */
+    st_tmc.stall_alarm_enabled = settings.enable_stall_guard; /* enable the alarm in case it was disabled */
 
     /* clear limit switch */
     LIMIT_PORT &= ~(LIMIT_MASK_OUTPUT); // Normal low operation. Set pin high to trigger ISR
@@ -794,10 +794,10 @@ void tmc_globals_reset(void)
     st_tmc.step_counter[Y_AXIS] = 0;
     st_tmc.step_counter[Z_AXIS] = 0;
 
-    st_tmc.current_scale_state  = CURRENT_SCALE_ACTIVE;  /* global holding effective current scale */
-    homing_sg_read_ongoing      = false;                 /* global flag indicating stall guard read process is ongoing */
-    st_tmc.sg_read_active_axes  = 0;                     /* global variable to hold current axis that is being homed */
-    st_tmc.stall_alarm_enabled  = true;                  /* global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm      */
+    st_tmc.current_scale_state  = CURRENT_SCALE_ACTIVE;         /* global holding effective current scale */
+    homing_sg_read_ongoing      = false;                        /* global flag indicating stall guard read process is ongoing */
+    st_tmc.sg_read_active_axes  = 0;                            /* global variable to hold current axis that is being homed */
+    st_tmc.stall_alarm_enabled  = settings.enable_stall_guard;  /* global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm      */
     st_tmc.calibration_enabled  = false;
 
 }

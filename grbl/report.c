@@ -211,7 +211,9 @@ void report_grbl_settings() {
   report_util_float_setting(31,settings.rpm_min,N_DECIMAL_RPMVALUE);
   report_util_uint8_setting(32,bit_istrue(settings.flags,BITFLAG_LASER_MODE));
   report_util_float_setting(50,settings.product_code,2); /* BK mod for EL-92 add parameter "product code" in the Atmega flash */
-  report_util_uint8_setting(51,settings.digital_spindle_enabled); /* Mafell digital spindle enable flag in persistent store */
+  report_util_uint8_setting(51,settings.digital_spindle_enabled);   /* Mafell digital spindle enable flag in persistent store */
+  report_util_uint8_setting(52,settings.mains_frequency_hz);        /* mains frequency is required to reset bruch timer on digital spindle. Could be 50 or 60 Hz */
+  report_util_uint8_setting(53,settings.enable_stall_guard);        /* Stall guard is disabled by default */
   
   // Print axis settings
   uint8_t idx, set_idx;

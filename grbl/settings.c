@@ -108,7 +108,9 @@ void settings_restore(uint8_t restore_flag) {
     settings.max_travel[Z_AXIS] = (-DEFAULT_Z_MAX_TRAVEL);
 
     settings.product_code = 0.03F; /* BK mod requested by Ed to be efficient in production (override this setting on reset is not a good idea. This will work until we have the new product code. But if customer with newer product code would ever issue reset settings it will revert the code to 3.. It is flawed, but acceptable.) */
-    settings.digital_spindle_enabled = 0; /* digital spindle is disabled by default */
+    settings.digital_spindle_enabled = 0;   /* digital spindle is disabled by default */
+    settings.mains_frequency_hz = 50;       /* mains frequency is required to reset bruch timer on digital spindle. Could be 50 or 60 Hz */
+    settings.enable_stall_guard = 0;        /* Stall guard is disabled by default */
 
     write_global_settings();
   }
@@ -298,6 +300,8 @@ uint8_t settings_store_global_setting(uint8_t parameter, float value) {
         break;
       case 50: settings.product_code = value; break; /* BK mod for EL-92 add parameter "product code" in the Atmega flash */
       case 51: settings.digital_spindle_enabled = value; break; /* Mafell digital spindle enable flag */
+      case 52: settings.mains_frequency_hz = value; break;      /* mains frequency is required to reset bruch timer on digital spindle. Could be 50 or 60 Hz */
+      case 53: settings.enable_stall_guard = value; break;      /* Stall guard is disabled by default */
       default:
         return(STATUS_INVALID_STATEMENT);
     }

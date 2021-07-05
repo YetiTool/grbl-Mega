@@ -570,7 +570,7 @@ void tmc_compute_and_apply_calibration(void){
     st_tmc.calibration_enabled = 0;    
     
     /*reenable alarm */
-    st_tmc.stall_alarm_enabled  = true;                  /* global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm      */
+    st_tmc.stall_alarm_enabled  = settings.enable_stall_guard;     /* global holding desired stall behaviour: if "true" then stall guard value below the limit will trigger alarm      */
     
     /* restore the max step period after calibration */
     min_step_period_idx_compute();

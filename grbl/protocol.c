@@ -1221,7 +1221,7 @@ void execute_RTL_command(){
         case RESET_DIGITAL_SPINDLE_BRUSH_TIME:
             /* data must be exactly 0 bytes*/
             if (data_len == 0){
-                spindle_digital_brush_timer_reset(0); /* 0: 50Hz, 1: 60Hz */
+                spindle_digital_brush_timer_reset(); 
             }
             else{ //if (data_len == 1){
                 report_status_message(ASMCNC_RTL_LEN_ERROR);

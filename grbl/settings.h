@@ -111,6 +111,8 @@ typedef struct {
   float homing_pulloff;
   float product_code; /* BK mod for EL-92 add parameter "product code" in the Atmega flash */
   uint8_t digital_spindle_enabled; /* Mafell digital spindle enable flag in persistent store */
+  uint8_t mains_frequency_hz;      /* mains frequency is required to reset bruch timer on digital spindle. Could be 50 or 60 Hz */
+  uint8_t enable_stall_guard;      /* Stall guard is disabled by default */  
 } settings_t;
 extern settings_t settings;
 

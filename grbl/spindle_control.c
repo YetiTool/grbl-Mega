@@ -417,8 +417,8 @@ uint8_t get_spindle_AC_state(void)
     return 0;
 }
 
-#define SPINDLE_BRUSH_RESET_OFFSET_MS   10  /* ms due to heavy filtering high to low level decay is ~20ms, this offset is to normailse chances to receive 0 and 1 bits by Mafell spindle */
-#define SPINDLE_BRUSH_RESET_PERIOD_50HZ 160 /* ms */
+#define SPINDLE_BRUSH_RESET_OFFSET_MS   10  /* ms due to heavy filtering high to low level decay is ~20ms, this offset is to normalise chances to receive 0 and 1 bits by Mafell spindle */
+#define SPINDLE_BRUSH_RESET_PERIOD_50HZ 160 /* 8 cycles of 20ms (1/50Hz) 160 +/- 5 ms */
 #define SPINDLE_BRUSH_RESET_PERIOD_60HZ 133 /* ms */
 
 /* Mafell digital spindle brush timer reset 
@@ -432,10 +432,10 @@ Precondition for a reset:
 3.  As threshold for a "High" 0.6V +/-0.08 V is required. The threshold for a "Low" is 0V+0.2V.
 Note: The motor starts from 0.8V and stops when it falls below 0.6V.
 */
-void spindle_digital_brush_timer_reset(uint8_t AC_is_60Hz){
-
+void spindle_digital_brush_timer_reset(void){
+    
     uint8_t brush_reset_byte_duration = SPINDLE_BRUSH_RESET_PERIOD_50HZ;
-    if ( AC_is_60Hz == 1) {
+    if ( settings.mains_frequency_hz == 60 ) {
         brush_reset_byte_duration = SPINDLE_BRUSH_RESET_PERIOD_60HZ;
     }
     
