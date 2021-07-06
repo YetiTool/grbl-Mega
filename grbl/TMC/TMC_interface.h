@@ -251,7 +251,7 @@ void tmc_globals_reset(void); /* reset all tmc global variables to known init st
 void tmc_calibration_init(uint8_t calibration_axis); /* clear calibration matrix and get ready for data collection */
 void tmc_compute_and_apply_calibration(void); /* stop calibration and compute coefficients based on accumulated data */
 void tmc_report_calibration(void); /* print out calibration data */
-void tmc_report_status(void);
+void tmc_report_status(uint8_t controller_id);
 void tmc_report_SG_delta(void);
 
 

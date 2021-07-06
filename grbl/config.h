@@ -296,8 +296,8 @@
 #define REPORT_WCO_REFRESH_IDLE_COUNT 12  // (2-255) Must be less than or equal to the busy count
 #define REPORT_ADC_REFRESH_BUSY_COUNT 51  // (2-255)
 #define REPORT_ADC_REFRESH_IDLE_COUNT 14  // (2-255) Must be less than or equal to the busy count
-#define REPORT_TMC_REFRESH_BUSY_COUNT 30  // (2-255)
-#define REPORT_TMC_REFRESH_IDLE_COUNT 10  // (2-255) Must be less than or equal to the busy count
+#define REPORT_TMC_REFRESH_BUSY_COUNT 50  // (2-255)
+#define REPORT_TMC_REFRESH_IDLE_COUNT 20  // (2-255) Must be less than or equal to the busy count
 
 // The temporal resolution of the acceleration management subsystem. A higher number gives smoother
 // acceleration, particularly noticeable on machines that run at very high feedrates, but may negatively

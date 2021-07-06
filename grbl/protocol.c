@@ -620,7 +620,7 @@ void protocol_exec_rt_system()
 #ifdef ENABLE_TMC_FEEDBACK_MONITOR
       /* print out TMC registers data */
       if (rt_exec & TMC_REGISTERS_REPORT) {
-          sys.report_TMC_registers = TOTAL_TMCS;
+          sys.report_TMC_registers_for_controller = TOTAL_TMCS;
       }
 #endif
       

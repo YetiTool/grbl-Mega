@@ -675,50 +675,70 @@ void tmc_report_SG_delta(void){
     stall_guard_statistics_reset();
 }
 
-/* print full TMC statistics hex string out to UART */
-void tmc_report_status(void){
-    
+///* print full TMC statistics hex string out to UART */
+//void tmc_report_status(void){
+    //
+  //#ifdef ENABLE_TMC_FEEDBACK_MONITOR
+      ///* cycle through all motors */
+      //uint8_t controller_id;
+      //TMC2590TypeDef *tmc2590;
+      //uint8_t hex_byte_buffer[HEX_BYTES_LEN];
+      //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+	      //tmc2590 = get_TMC_controller(controller_id);
+//
+	      ///* pack values to hex string
+	      //* motor                       param                   range, bits bytes   hex bytes
+	      //* X1                          stallGuardCurrentValue   10          2       4
+	      //* X1                          coolStepCurrentValue     5
+	      //* X1                          StatusBits              8           1       2
+	      //* X1                          DiagnosticBits          10          3       6
+	      //* X1                          MSTEP                   10
+	      //* */
+	      ///* split the data into nibbles and convert to hex string through the lookup table */
+	      //hex_byte_buffer[0]  =  tmc2590->resp.stallGuardCurrentValue       & 0xFF; /* LSB 8 bits of SG */
+	      //hex_byte_buffer[1]  = (tmc2590->resp.stallGuardCurrentValue >> 8) & 0x03; /* MSB 2 bits of SG */
+	      //hex_byte_buffer[1] |=  tmc2590->resp.coolStepCurrentValue   << 2;
+	      //hex_byte_buffer[2]  =  tmc2590->resp.StatusBits;
+	      //hex_byte_buffer[3]  =  tmc2590->resp.DiagnosticBits              & 0xFF; /* LSB 8 bits of DiagnosticBits */
+	      //hex_byte_buffer[4]  = (tmc2590->resp.DiagnosticBits        >> 8) & 0x03; /* MSB 2 bits of DiagnosticBits */
+	      //hex_byte_buffer[4] |= (tmc2590->resp.mStepCurrentValue      << 2) & 0xFC; /* LSB 6 bits of MSTEP */
+	      //hex_byte_buffer[5]  = (tmc2590->resp.mStepCurrentValue      >> 6) & 0xF;  /* MSB 4 bits of MSTEP */
+	      ///* convert bytes to hex str  */
+	      //char hex_str_buffer[HEX_BYTES_LEN*2+1];
+	      //for (uint8_t i = 0; i < HEX_BYTES_LEN ; i ++){
+	          //hex_str_buffer[i*2+1] = ByteArrayToHexViaLookup[hex_byte_buffer[i]    & 0xF];        /* LSB 4 bits */
+	          //hex_str_buffer[i*2  ] = ByteArrayToHexViaLookup[hex_byte_buffer[i]>>4 & 0xF];        /* MSB 4 bits */
+	          ////printInteger( hex_byte_buffer[i] );
+	          ////printPgmString(PSTR(","));
+	      //}
+	      //hex_str_buffer[HEX_BYTES_LEN*2] = 0; /* terminator */
+	      //printString(hex_str_buffer);
+//
+      //} //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){      
+//
+  //#endif //#ifdef ENABLE_TMC_FEEDBACK_MONITOR        
+//}
+
+
+/* print full TMC statistics out to UART */
+void tmc_report_status(uint8_t controller_id){
+
   #ifdef ENABLE_TMC_FEEDBACK_MONITOR
       /* cycle through all motors */
-      uint8_t controller_id;
       TMC2590TypeDef *tmc2590;
-      uint8_t hex_byte_buffer[HEX_BYTES_LEN];
-      for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){
+      if ( (controller_id >= TMC_X1) && (controller_id < TOTAL_TMCS) ) {
 	      tmc2590 = get_TMC_controller(controller_id);
+          printInteger( tmc2590->thisMotor                      );          printPgmString(PSTR(","));
+          printInteger( tmc2590->resp.stallGuardCurrentValue    );          printPgmString(PSTR(","));
+          printInteger( tmc2590->resp.coolStepCurrentValue      );          printPgmString(PSTR(","));
+          printInteger( tmc2590->resp.StatusBits                );          printPgmString(PSTR(","));
+          printInteger( tmc2590->resp.DiagnosticBits            );          printPgmString(PSTR(","));
+          printInteger( tmc2590->resp.mStepCurrentValue         );
+      } //if ( (controller_id >= TMC_X1) && (controller_id < TOTAL_TMCS) ) {
 
-	      /* pack values to hex string
-	      * motor                       param                   range, bits bytes   hex bytes
-	      * X1                          stallGuardCurrentValue   10          2       4
-	      * X1                          coolStepCurrentValue     5
-	      * X1                          StatusBits              8           1       2
-	      * X1                          DiagnosticBits          10          3       6
-	      * X1                          MSTEP                   10
-	      * */
-	      /* split the data into nibbles and convert to hex string through the lookup table */
-	      hex_byte_buffer[0]  =  tmc2590->resp.stallGuardCurrentValue       & 0xFF; /* LSB 8 bits of SG */
-	      hex_byte_buffer[1]  = (tmc2590->resp.stallGuardCurrentValue >> 8) & 0x03; /* MSB 2 bits of SG */
-	      hex_byte_buffer[1] |=  tmc2590->resp.coolStepCurrentValue   << 2;
-	      hex_byte_buffer[2]  =  tmc2590->resp.StatusBits;
-	      hex_byte_buffer[3]  =  tmc2590->resp.DiagnosticBits              & 0xFF; /* LSB 8 bits of DiagnosticBits */
-	      hex_byte_buffer[4]  = (tmc2590->resp.DiagnosticBits        >> 8) & 0x03; /* MSB 2 bits of DiagnosticBits */
-	      hex_byte_buffer[4] |= (tmc2590->resp.mStepCurrentValue      << 2) & 0xFC; /* LSB 6 bits of MSTEP */
-	      hex_byte_buffer[5]  = (tmc2590->resp.mStepCurrentValue      >> 6) & 0xF;  /* MSB 4 bits of MSTEP */
-	      /* convert bytes to hex str  */
-	      char hex_str_buffer[HEX_BYTES_LEN*2+1];
-	      for (uint8_t i = 0; i < HEX_BYTES_LEN ; i ++){
-	          hex_str_buffer[i*2+1] = ByteArrayToHexViaLookup[hex_byte_buffer[i]    & 0xF];        /* LSB 4 bits */
-	          hex_str_buffer[i*2  ] = ByteArrayToHexViaLookup[hex_byte_buffer[i]>>4 & 0xF];        /* MSB 4 bits */
-	          //printInteger( hex_byte_buffer[i] );
-	          //printPgmString(PSTR(","));
-	      }
-	      hex_str_buffer[HEX_BYTES_LEN*2] = 0; /* terminator */
-	      printString(hex_str_buffer);
-
-      } //for (controller_id = TMC_X1; controller_id < TOTAL_TMCS; controller_id++){      
-
-  #endif //#ifdef ENABLE_TMC_FEEDBACK_MONITOR    
-    
+  #endif //#ifdef ENABLE_TMC_FEEDBACK_MONITOR        
 }
+
 
 
 void tmc_load_stall_guard_calibration(void){

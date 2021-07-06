@@ -601,6 +601,7 @@ void report_realtime_status()
     } //if (lim_pin_state | ctrl_pin_state | prb_pin_state | prb_hold_state | enclosure_state | spare1_state | ac_sense_state ) {
   #endif //#ifdef REPORT_FIELD_PIN_STATE
 
+  // Report Mafell spindle feedback data (analog or digital)
   #ifdef ENABLE_SPINDLE_LOAD_MONITOR
       if (settings.digital_spindle_enabled == 1){ /* for digital spindle report load, temperature and kill time */
           if (get_spindle_AC_state()){
@@ -620,22 +621,18 @@ void report_realtime_status()
           printInteger( spindle_load_mV );    
       }
   #endif //#ifdef ENABLE_SPINDLE_LOAD_MONITOR
-
-
-  
+ 
+  // Report thermal sensors and voltages measurements 
   #ifdef ENABLE_TEMPERATURE_MONITOR
     if (sys.report_adc_counter > 0) { sys.report_adc_counter--; }
     else {  
       if (sys.state & (STATE_HOMING | STATE_CYCLE | STATE_HOLD | STATE_JOG | STATE_SAFETY_DOOR)) {
         sys.report_adc_counter = (REPORT_ADC_REFRESH_BUSY_COUNT-1); // Reset counter for slow refresh
       } else { sys.report_adc_counter = (REPORT_ADC_REFRESH_IDLE_COUNT-1); }
-      if (sys.report_wco_counter == 0) { sys.report_wco_counter = 1; } // Set override on next report.
-      if (sys.report_ovr_counter == 0) { sys.report_ovr_counter = 1; } // Set override on next report.
-      //if (sys.report_tmc_counter == 0) { sys.report_tmc_counter = 1; } // Set override on next report.
-	  
-	  
-      printPgmString(PSTR(STATUS_TC_IDENTIFIER));
-      
+      if (sys.report_wco_counter == 0) { sys.report_wco_counter = 1; } // skip print wco on this report.
+      if (sys.report_ovr_counter == 0) { sys.report_ovr_counter = 1; } // skip print override on this report.
+      if (sys.report_tmc_counter == 0) { sys.report_tmc_counter = 1; } // skip print TMC stat on this report.
+      printPgmString(PSTR(STATUS_TC_IDENTIFIER));      
       printInteger( get_TMC_temperature()           ); printPgmString(PSTR(","));
       printInteger( get_PCB_temperature()           ); printPgmString(PSTR(","));
       printInteger( get_MOT_temperature_cent()      );
@@ -644,10 +641,10 @@ void report_realtime_status()
       printInteger( get_VDD_5V_dustshoe_mV()        ); printPgmString(PSTR(","));
       printInteger( get_VDD_24V_mV()                ); printPgmString(PSTR(","));
       printInteger( get_Spindle_speed_Signal_mV()   );
-} //    if (sys.report_adc_counter > 0) { sys.report_adc_counter--; }
-
+    } //    if (sys.report_adc_counter > 0) { sys.report_adc_counter--; }
   #endif //#ifdef ENABLE_TEMPERATURE_MONITOR
   
+  // Report Trinamic feedback data: Stall guard measurements in running state or status data (fast in idle state and slow in running state)
   #ifdef ENABLE_TMC_FEEDBACK_MONITOR
     if (sys.report_tmc_counter > 0) { 
 		sys.report_tmc_counter--; 
@@ -658,19 +655,27 @@ void report_realtime_status()
         }            
 	}
     else { /* full TMC statistics report */
-	    if (sys.state & (STATE_HOMING | STATE_CYCLE | STATE_HOLD | STATE_JOG | STATE_SAFETY_DOOR)) {
+	    if (sys.state & (STATE_HOMING | STATE_CYCLE | STATE_HOLD | STATE_JOG | STATE_SAFETY_DOOR)) { 
 		    sys.report_tmc_counter = (REPORT_TMC_REFRESH_BUSY_COUNT-1); // Reset counter for slow refresh
 		} else { sys.report_tmc_counter = (REPORT_TMC_REFRESH_IDLE_COUNT-1); }
-		if (sys.report_wco_counter == 0) { sys.report_wco_counter = 1; } // Set override on next report.
-		if (sys.report_ovr_counter == 0) { sys.report_ovr_counter = 1; } // Set override on next report.
-        printPgmString(PSTR(STATUS_TM_IDENTIFIER));
-        tmc_report_status();
+        //printPgmString(PSTR(STATUS_TM_IDENTIFIER));
+        //tmc_report_status();         
+        sys.report_TMC_status_for_controller = TOTAL_TMCS;
     }        
     
-    if ( sys.report_TMC_registers > 0 ){
+    if (sys.report_TMC_status_for_controller > 0){
+		if (sys.report_wco_counter == 0) { sys.report_wco_counter = 1; } // skip print wco on this report.
+		if (sys.report_ovr_counter == 0) { sys.report_ovr_counter = 1; } // skip print override on this report.
+        if (sys.report_adc_counter == 0) { sys.report_adc_counter = 1; } // skip print ADC override on next report.
+        printPgmString(PSTR(STATUS_TM_IDENTIFIER));
+        tmc_report_status(sys.report_TMC_status_for_controller - 1);
+        sys.report_TMC_status_for_controller-- ;
+    }
+    
+    if ( sys.report_TMC_registers_for_controller > 0 ){
         printPgmString(PSTR(STATUS_TREG_IDENTIFIER));
-        tmc_report_registers(sys.report_TMC_registers - 1);
-        sys.report_TMC_registers-- ;
+        tmc_report_registers(sys.report_TMC_registers_for_controller - 1);
+        sys.report_TMC_registers_for_controller-- ;
     }
   #endif //#ifdef ENABLE_TMC_FEEDBACK_MONITOR
 
