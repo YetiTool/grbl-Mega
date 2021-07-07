@@ -472,24 +472,14 @@ void store_stall_info(uint8_t  lastStallsMotor, uint16_t lastStallsSG, uint16_t 
     flashStatistics.totalStallsDetected++; /* increment total reset count */
 }
 
-void report_last_stall_info(void){
-    printInteger( flashStatistics.lastStallsMotor[0]        ); printPgmString(PSTR(","));
-    printInteger( flashStatistics.lastStallsStepUs[0]       ); printPgmString(PSTR(","));/* actual step in us */
-    printInteger( flashStatistics.lastStallsSG[0]           ); printPgmString(PSTR(","));
-    printInteger( flashStatistics.lastStallsSGcalibrated[0] );
-}
-
-void report_stall_info(void){
-    printPgmString(PSTR("Stalls statistics:\n"));
-    uint8_t i;
-    for (i=0; i<FLASH_STAT_FIFO_SIZE; i++){
-        printPgmString(PSTR("M: "));        printInteger(flashStatistics.lastStallsMotor[i]);           printPgmString(PSTR(", "));
-        printPgmString(PSTR("SG: "));       printInteger(flashStatistics.lastStallsSG[i]);              printPgmString(PSTR(", "));
-        printPgmString(PSTR("calibr: "));   printInteger(flashStatistics.lastStallsSGcalibrated[i]);    printPgmString(PSTR(", "));
-        printPgmString(PSTR("step: "));     printInteger(flashStatistics.lastStallsStepUs[i]);          printPgmString(PSTR("us, "));
-        printPgmString(PSTR("travel: "));   printInteger(flashStatistics.lastStallsTravel[i]);          printPgmString(PSTR("mm, "));
-        printPgmString(PSTR("\n"));
-    }
+void report_stall_info(uint8_t stall_idx){
+    if ( (stall_idx < FLASH_STAT_FIFO_SIZE) && (stall_idx >= 0 ) ) {
+        printInteger( flashStatistics.lastStallsMotor[stall_idx]        ); printPgmString(PSTR(","));
+        printInteger( flashStatistics.lastStallsStepUs[stall_idx]       ); printPgmString(PSTR(","));/* actual step in us */
+        printInteger( flashStatistics.lastStallsSG[stall_idx]           ); printPgmString(PSTR(","));
+        printInteger( flashStatistics.lastStallsSGcalibrated[stall_idx] ); printPgmString(PSTR(","));
+        printInteger( flashStatistics.lastStallsTravel[stall_idx] );
+    }    
 }
 
 uint32_t getLocalRunTimeSeconds(void){

@@ -66,8 +66,7 @@ uint32_t get_return_addr(void); /* return address from the latest stack dump */
 void uptime_increment(void);
 void report_statistics(void);
 void store_stall_info(uint8_t  lastStallsMotor, uint16_t lastStallsSG, uint16_t lastStallsSGcalibrated,  uint16_t lastStallsStepUs);
-void report_stall_info(void);
-void report_last_stall_info(void);
+void report_stall_info(uint8_t stall_idx);
 void report_last_wdt_addresses(void);
 
 uint8_t flashStatisticsRestore(void);

@@ -512,7 +512,7 @@ void process_global_command(uint8_t command, uint32_t value){
 
         /* report list of last stalls with associated freeze frame */
         case REPORT_STALLS:
-            report_stall_info();
+            sys.report_last_stall = FLASH_STAT_FIFO_SIZE; //indicate to report engine that last stalls statistics need to be printed out            
         break;
 
         default:
@@ -940,6 +940,7 @@ void tmc_store_stall_info(uint8_t  lastStallsMotor, uint16_t lastStallsSG, uint1
         /* store stall only if it is not due to homing, where stall is used to detect the end stop */
         store_stall_info(lastStallsMotor, lastStallsSG, lastStallsSGcalibrated,  lastStallsStepUs);
         sys.report_last_stall = 1; //indicate to report engine that stall happened and its statistics need to be printed out
+        sys.state = STATE_ALARM;
         report_realtime_status(); /* force status printout to let console know about the Stall Guard alarm before ALARM lock is executed */
     }//if ( !homing_sg_read_ongoing ) {
 }

@@ -685,11 +685,11 @@ void report_realtime_status()
         sys.report_statistics = 0;
     }
     
-    if ( sys.report_last_stall == 1 ){
+    if ( sys.report_last_stall > 0 ){
         printPgmString(PSTR(STATUS_SGAL_IDENTIFIER));
-        report_last_stall_info();
-        sys.report_last_stall = 0;
-    }
+        report_stall_info( FLASH_STAT_FIFO_SIZE - sys.report_last_stall ); //print starting from newest
+        sys.report_last_stall-- ;
+    }    
 
     if ( sys.report_alarm_reason == 1 ){
         lim_pin_state = limits_get_last_alarm_state();
